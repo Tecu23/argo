@@ -22,6 +22,9 @@ const (
 // If it is BLACK, it returns WHITE. If it is BOTh, it returns BLACK due to
 // the XOR operation, but generally BOTh is not used in normal gameplay logic.
 func (c Color) Opp() Color {
+	if c == BOTH {
+		return BOTH
+	}
 	return c ^ 0x1
 }
 

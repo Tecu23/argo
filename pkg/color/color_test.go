@@ -1,6 +1,8 @@
 package color
 
-import "testing"
+import (
+	"testing"
+)
 
 // TestColorConstants verifies that the Color constants are assigned correctly.
 func TestColorConstants(t *testing.T) {
@@ -26,8 +28,8 @@ func TestColorOpp(t *testing.T) {
 		t.Errorf("BLACK.Opp() should return WHITE, got %v", BLACK.Opp())
 	}
 	// BOTH -> BLACK (due to XOR operation)
-	if BOTH.Opp() != BLACK {
-		t.Errorf("BOTH.Opp() should return BLACK, got %v", BOTH.Opp())
+	if BOTH.Opp() != BOTH {
+		t.Errorf("BOTH.Opp() should return BOTH, got %v", BOTH.Opp())
 	}
 }
 
