@@ -17,6 +17,7 @@ type Board struct {
 	Occupancies [3]bitboard.Bitboard
 	Side        color.Color
 	EnPassant   int
+	Rule50      uint8
 	Castlings
 }
 
@@ -106,19 +107,10 @@ func (b Board) PrintBoard() {
 
 	fmt.Printf("\n    a b c d e f g h\n\n")
 
-	// print side to move
-	if b.Side == color.WHITE {
-		fmt.Printf(" Side:     %s\n", "white")
-	} else {
-		fmt.Printf(" Side:     %s\n", "black")
-	}
-
-	// print enpassant square
-	fmt.Printf(" Enpassant:   %s\n", util.Sq2Fen[b.EnPassant])
-
-	// print castling rights
-	fmt.Printf(" Castling:  %s\n\n", b.Castlings.String())
-
+	fmt.Printf("   Side:          %s\n", b.Side.String())
+	fmt.Printf("   Enpassant:     %s\n", util.Sq2Fen[b.EnPassant])
+	fmt.Printf("   Half Moves:    %d\n", b.Rule50)
+	fmt.Printf("   Castling:   %s\n\n", b.Castlings.String())
 	// fmt.Printf(" HashKey: 0x%X\n\n", b.Key)
 }
 
@@ -193,8 +185,15 @@ func (b *Board) ParseFEN(FEN string) {
 	}
 
 	// Cheking for 50 move rule
-	// Board.Rule50 = 0
-	// if len(remaining) > 3 {
-	// 	Board.Rule50 = parse50(remaining[3])
-	// }
+	b.Rule50 = 0
+	fmt.Println(remaining, remaining[3])
+	if len(remaining) > 3 {
+		cnt, err := strconv.Atoi(remaining[3])
+		fmt.Println(err)
+		if err != nil {
+			b.Rule50 = 0
+		}
+
+		b.Rule50 = uint8(cnt)
+	}
 }
