@@ -2,6 +2,15 @@ package attacks
 
 import "github.com/Tecu23/argov2/pkg/bitboard"
 
+// func GetBishopAttacks(sq int, occupancy Bitboard) Bitboard {
+// 	// calculate magic index
+// 	occupancy &= BishopMasks[sq]
+// 	occupancy *= BishopMagicNumbers[sq]
+// 	occupancy >>= 64 - BishopRelevantBits[sq]
+//
+// 	return BishopAttacks[sq][occupancy]
+// }
+
 // GenerateBishopAttacks computes the potential attack squares of a bishop placed on a given square,
 // assuming an *empty board* (no blocking pieces).
 //
