@@ -1,6 +1,57 @@
 // Package constants contains the shared variabled between the different packages
 package constants
 
+import "github.com/Tecu23/argov2/pkg/bitboard"
+
+// The constants below define row (rank) and file bitboards.
+// Each bitboard highlights all squares on a particular rank or file.
+//
+// For example, Row1 is 0x00000000000000FF, which in binary sets bits
+// corresponding to the bottom rank (from White's perspective).
+// Similarly, FileA is 0x0101010101010101, which sets all squares in the 'a' file.
+const (
+	Row1 = bitboard.Bitboard(0x00000000000000FF) // Represents rank 1 (a1-h1)
+	Row2 = bitboard.Bitboard(0x000000000000FF00) // Rank 2 (a2-h2)
+	Row3 = bitboard.Bitboard(0x0000000000FF0000) // Rank 3 (a3-h3)
+	Row4 = bitboard.Bitboard(0x00000000FF000000) // Rank 4 (a4-h4)
+	Row5 = bitboard.Bitboard(0x000000FF00000000) // Rank 5 (a5-h5)
+	Row6 = bitboard.Bitboard(0x0000FF0000000000) // Rank 6 (a6-h6)
+	Row7 = bitboard.Bitboard(0x00FF000000000000) // Rank 7 (a7-h7)
+	Row8 = bitboard.Bitboard(0xFF00000000000000) // Rank 8 (a8-h8)
+
+	FileA = bitboard.Bitboard(0x0101010101010101) // File a (a1, a2, ..., a8)
+	FileB = bitboard.Bitboard(0x0202020202020202) // File b
+	FileC = bitboard.Bitboard(0x0404040404040404) // File c
+	FileD = bitboard.Bitboard(0x0808080808080808) // File d
+	FileE = bitboard.Bitboard(0x1010101010101010) // File e
+	FileF = bitboard.Bitboard(0x2020202020202020) // File f
+	FileG = bitboard.Bitboard(0x4040404040404040) // File g
+	FileH = bitboard.Bitboard(0x8080808080808080) // File h
+)
+
+// The constants below define directional offsets used for moving
+// pieces or generating attacks on the board.
+// Each direction represents a shift in terms of the bit index:
+//
+// N  (North) = +8: move up one rank (higher-indexed rank)
+// S  (South) = -8: move down one rank (lower-indexed rank)
+// E  (East)  = +1: move one file to the right
+// W  (West)  = -1: move one file to the left
+//
+// NW = +7 and NE = +9 represent diagonal moves. Similarly, SW and SE are defined
+// relative to these directions. Shifting a bitboard by these constants simulates
+// piece movement or attack generation in the given direction.
+const (
+	E  = +1  // Move one square to the right (east)
+	W  = -1  // Move one square to the left (west)
+	N  = 8   // Move one rank up (north)
+	S  = -8  // Move one rank down (south)
+	NW = +7  // Move one square diagonally northwest
+	NE = +9  // Move one square diagonally northeast
+	SW = -NE // Move diagonally southwest (negative of northeast)
+	SE = -NW // Move diagonally southeast (negative of northwest)
+)
+
 // The constants below represent indices for each square on a chessboard.
 // They follow a top-left (A8) to bottom-right (H1) indexing, starting with A8 as 0.
 // The first rank (from White's perspective) is at the bottom (A1 to H1) and the eighth rank at the top (A8 to H8).

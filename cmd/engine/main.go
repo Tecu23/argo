@@ -2,14 +2,21 @@
 package main
 
 import (
+	"github.com/Tecu23/argov2/pkg/attacks"
 	"github.com/Tecu23/argov2/pkg/bitboard"
-	"github.com/Tecu23/argov2/pkg/constants"
 )
 
 func main() {
-	b := bitboard.Bitboard(0)
+	initHelpers()
 
-	b.Set(constants.E2)
+	for sq := 0; sq < 64; sq++ {
+		b := bitboard.Bitboard(attacks.KingAttacks[sq])
+		b.PrintBitboard()
+	}
+}
 
-	b.PrintBitboard()
+func initHelpers() {
+	// attacks.InitPawnAttacks()
+	attacks.InitKnightAttacks()
+	attacks.InitKingAttacks()
 }
