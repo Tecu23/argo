@@ -2,26 +2,31 @@ package attacks
 
 import "github.com/Tecu23/argov2/pkg/bitboard"
 
-// func GetRookAttacks(sq int, occupancy Bitboard) Bitboard {
-// 	// calculate magic index
-// 	occupancy &= RookMasks[sq]
-// 	occupancy *= RookMagicNumbers[sq]
-// 	occupancy >>= 64 - RookRelevantBits[sq]
+// GetRookAttacks returns the attack bitboard for a rook placed on square 'sq'
+// given a particular occupancy bitboard of the board.
 //
-// 	return RookAttacks[sq][occupancy]
-// }
+// Steps:
+//  1. Intersection with RookMasks[sq] to isolate relevant occupancy bits.
+//     This focuses on the subset of squares that affect rook moves from 'sq'.
+//  2. Multiply by rookMagicNumbers[sq] (the magic number), which together with a shift
+//     will map this occupancy pattern to a unique index.
+//  3. Shift right by (64 - rookRelevantBits[sq]) to get the final index.
+//  4. Use this index to retrieve the precomputed attack bitboard from RookAttacks[sq].
+//
+// This approach uses magic bitboards to achieve O(1) rook move generation.
+func GetRookAttacks(sq int, occupancy bitboard.Bitboard) bitboard.Bitboard {
+	// calculate magic index
+	occupancy &= rookMasks[sq]
+	occupancy *= rookMagicNumbers[sq]
+	occupancy >>= 64 - rookRelevantBits[sq]
 
-// GenerateRookAttacks computes potential rook attacks from a given square assuming
-// an *almost* empty board (no blockers), but this function stops at rank/file <= 6 and >= 1,
-// which might be an incomplete logic or a partial version of a function. Normally, you would
-// iterate fully to the edge of the board (0 to 7). Here, it seems to stop earlier.
-//
-// The board indexing convention: A8=0 at the top-left, and H1=63 at the bottom-right.
-// Each rank increases going down (A7=8, A6=16, ...), and each file increases going right.
-//
-// Rooks move vertically and horizontally, so this function adds bits along the same
-// rank and file from the starting square, but only within certain bounds.
-func GenerateRookAttacks(square int) bitboard.Bitboard {
+	return RookAttacks[sq][occupancy]
+}
+
+// generateRookPossibleBlockers computes the potential blocker squares of a rook placed on a given square,
+// We only iterate till the second to last in each direction, because a blocker in the last square will not
+// affect the possible moves generation. This gice 12 possible blockers with 2^12 possible blocker combinations
+func generateRookPossibleBlockers(square int) bitboard.Bitboard {
 	attacks := bitboard.Bitboard(0)
 
 	// init rank & files
@@ -51,17 +56,14 @@ func GenerateRookAttacks(square int) bitboard.Bitboard {
 	return attacks
 }
 
-// GenerateRookAttacksOnTheFly computes rook attacks for a given square and a given
+// generateRookAttacks computes rook attacks for a given square and a given
 // occupancy bitboard "block" that represents which squares are occupied. The rook
 // attack rays stop when they encounter a block.
-//
-// Unlike GenerateRookAttacks, this function goes fully to the edges of the board (0 to 7).
-// When a blocker is hit on a particular square, that direction is stopped.
 //
 // Parameters:
 // - square: the position of the rook (0-based index on an 8x8 board with A8=0).
 // - block: bitboard of occupied squares that can block the rook.
-func GenerateRookAttacksOnTheFly(square int, block bitboard.Bitboard) bitboard.Bitboard {
+func generateRookAttacks(square int, block bitboard.Bitboard) bitboard.Bitboard {
 	attacks := bitboard.Bitboard(0)
 
 	// init rank & files

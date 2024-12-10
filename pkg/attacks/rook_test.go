@@ -10,13 +10,13 @@ import (
 // TestGenerateRookAttacks checks that some basic cases produce expected results.
 func TestGenerateRookAttacks(t *testing.T) {
 	// Consider a rook on D4
-	ra := GenerateRookAttacks(constants.D4)
+	ra := generateRookPossibleBlockers(constants.D4)
 	if ra.Count() == 0 {
 		t.Error("Expected some rook attacks from D4, got none.")
 	}
 
 	// Check a corner like A1:
-	raA1 := GenerateRookAttacks(constants.A1)
+	raA1 := generateBishopPossibleBlockers(constants.A1)
 	if raA1.Count() == 0 {
 		t.Error("Expected some rook attacks from A1, got none.")
 	}
@@ -28,7 +28,7 @@ func TestGenerateRookAttacksOnTheFly(t *testing.T) {
 	block := bitboard.Bitboard(0)
 	block.Set(constants.D7)
 
-	ra := GenerateRookAttacksOnTheFly(constants.D4, block)
+	ra := generateRookAttacks(constants.D4, block)
 
 	// Check that D6 square is attacked:
 	if !ra.Test(constants.D6) {
@@ -48,7 +48,7 @@ func TestGenerateRookAttacksOnTheFly(t *testing.T) {
 	block = bitboard.Bitboard(0)
 	block.Set(constants.F4)
 
-	ra = GenerateRookAttacksOnTheFly(constants.D4, block)
+	ra = generateRookAttacks(constants.D4, block)
 
 	// Check that E4 square is attacked:
 	if !ra.Test(constants.E4) {

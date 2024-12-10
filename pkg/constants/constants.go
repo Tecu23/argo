@@ -3,6 +3,17 @@ package constants
 
 import "github.com/Tecu23/argov2/pkg/bitboard"
 
+// Piece constants are an enumeration for piece types.
+// They help identify which piece's attack mask or magic to use.
+const (
+	Pawn int = iota
+	Knight
+	Bishop
+	Rook
+	Queen
+	King
+)
+
 // The constants below define row (rank) and file bitboards.
 // Each bitboard highlights all squares on a particular rank or file.
 //

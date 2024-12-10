@@ -2,26 +2,29 @@ package attacks
 
 import "github.com/Tecu23/argov2/pkg/bitboard"
 
-// func GetBishopAttacks(sq int, occupancy Bitboard) Bitboard {
-// 	// calculate magic index
-// 	occupancy &= BishopMasks[sq]
-// 	occupancy *= BishopMagicNumbers[sq]
-// 	occupancy >>= 64 - BishopRelevantBits[sq]
+// GetBishopAttacks returns the attack bitboard for a bishop placed on square 'sq'
+// given a particular occupancy bitboard of the board.
 //
-// 	return BishopAttacks[sq][occupancy]
-// }
+// Steps are similar to GetRookAttacks but use bishop-specific masks, magic numbers,
+// and relevant bits count:
+// 1. Intersection with BishopMasks[sq] to consider only relevant occupancy bits.
+// 2. Multiply by bishopMagicNumbers[sq] and shift to obtain a unique index.
+// 3. Use that index to look up the precomputed attack bitboard from BishopAttacks[sq].
+//
+// This provides O(1) bishop move generation after precomputation.
+func GetBishopAttacks(sq int, occupancy bitboard.Bitboard) bitboard.Bitboard {
+	// calculate magic index
+	occupancy &= bishopMasks[sq]
+	occupancy *= bishopMagicNumbers[sq]
+	occupancy >>= 64 - bishopRelevantBits[sq]
 
-// GenerateBishopAttacks computes the potential attack squares of a bishop placed on a given square,
-// assuming an *empty board* (no blocking pieces).
-//
-// The board is indexed from 0 to 63, where A8 = 0, B8 = 1, ..., H8 = 7, A7 = 8, ..., H1 = 63.
-// This means row (rank) = square / 8 and file = square % 8.
-//
-// This function stops generating attacks before the last rank/file (uses <= 6 checks).
-// It seems intended to produce a subset or is an older version of code. Normally, you'd iterate
-// until the edge of the board (0 <= r,f <= 7). Here, it stops at rank/file 6 for some reason,
-// which may be intentional or a leftover from partial logic.
-func GenerateBishopAttacks(square int) bitboard.Bitboard {
+	return BishopAttacks[sq][occupancy]
+}
+
+// benerateBishopPossibleBlockers computes the potential blocker squares of a bishop placed on a given square,
+// We only iterate till the second to last in each direction, because a blocker in the last square will not
+// affect the possible moves generation. This gice 9 possible blockers with 2^9 possible blocker combinations
+func generateBishopPossibleBlockers(square int) bitboard.Bitboard {
 	attacks := bitboard.Bitboard(0)
 
 	// init rank & files
@@ -54,18 +57,14 @@ func GenerateBishopAttacks(square int) bitboard.Bitboard {
 	return attacks
 }
 
-// GenerateBishopAttacksOnTheFly computes the potential attack squares of a bishop placed on a given square,
+// generateBishopAttacks computes the potential attack squares of a bishop placed on a given square,
 // considering the given bitboard "block" which represents occupied squares. If a blocked square is encountered,
 // the bishop's attack ray stops in that direction.
-//
-// This function uses full 0 to 7 range checks for rank/file, which aligns with the entire board dimension.
 //
 // Parameters:
 // - square: The position of the bishop on a 0-63 indexed board.
 // - block:  A bitboard representing occupied squares that might block the bishop.
-//
-// The bishop attacks diagonally in all four directions. As soon as a blocked square is found, that ray stops.
-func GenerateBishopAttacksOnTheFly(square int, block bitboard.Bitboard) bitboard.Bitboard {
+func generateBishopAttacks(square int, block bitboard.Bitboard) bitboard.Bitboard {
 	attacks := bitboard.Bitboard(0)
 
 	// init rank & files
