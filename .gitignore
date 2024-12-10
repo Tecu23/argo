@@ -1,2 +1,6 @@
+# Binary output files
+bin/
+
+# Coverage files
 cover.html
 cover.out
