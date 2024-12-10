@@ -14,6 +14,22 @@ const (
 	King
 )
 
+const (
+	WP = iota
+	WN
+	WB
+	WR
+	WQ
+	WK
+	BP
+	BN
+	BB
+	BR
+	BQ
+	BK
+	Empty = 15
+)
+
 // The constants below define row (rank) and file bitboards.
 // Each bitboard highlights all squares on a particular rank or file.
 //
@@ -149,4 +165,26 @@ const (
 	F1
 	G1
 	H1
+)
+
+/*
+*           CASTLINGS CONSTANTS
+ */
+/*
+- 0001 -- 1 -> white king can castle to the king side
+- 0010 -- 2 -> white king can castle to the queen side
+- 0100 -- 4 -> black king can castle to the king side
+- 1000 -- 8 -> black king can castle to the queen side
+
+ex.
+	    1111 -> both side can castle in both directons
+
+		1001 -> black king => queen side
+		     -> white king => king side
+*/
+const (
+	ShortW = uint(0x1)
+	LongW  = uint(0x2)
+	ShortB = uint(0x4)
+	LongB  = uint(0x8)
 )
