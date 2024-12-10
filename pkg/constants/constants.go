@@ -14,6 +14,7 @@ const (
 	King
 )
 
+// Constants for piece encoding, castling, etc. Provided here for completeness.
 const (
 	WP = iota
 	WN
@@ -183,8 +184,8 @@ ex.
 		     -> white king => king side
 */
 const (
-	ShortW = uint(0x1)
-	LongW  = uint(0x2)
-	ShortB = uint(0x4)
-	LongB  = uint(0x8)
+	ShortW = uint(0x1) // White short castlings right
+	LongW  = uint(0x2) // White long castlings right
+	ShortB = uint(0x4) // Black short castlings right
+	LongB  = uint(0x8) // Black long castlings right
 )

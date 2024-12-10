@@ -1,3 +1,5 @@
+// Package board contains the board representation and all board helper functions.
+// This package will handle move generation
 package board
 
 import (
@@ -5,6 +7,20 @@ import (
 
 	"github.com/Tecu23/argov2/pkg/constants"
 )
+
+// CastlingRights is an array that helps update castling rights
+// when a certain square is moved from or to. Its values represent bit masks
+// that modify the current castling availability.
+var CastlingRights = []uint{
+	13, 15, 15, 15, 12, 15, 15, 14,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	7, 15, 15, 15, 3, 15, 15, 11,
+}
 
 /*
 	castling  move    in       in
@@ -21,9 +37,11 @@ king & rooks didn't move:       1111 & 1111  =  1111    15
    black queen's rook moved:       1111 & 0111  =  0111    7
 */
 
-// Castlings represents the castling possibilities for a given position
+// Castlings represents the current castling rights as a bitfield.
 type Castlings uint
 
+// ParseCastlings parses the FEN castling substring (e.g., "KQkq") and returns
+// the corresponding castling rights bitfield.
 func ParseCastlings(fenCastl string) Castlings {
 	c := uint(0)
 
@@ -47,7 +65,7 @@ func ParseCastlings(fenCastl string) Castlings {
 	return Castlings(c)
 }
 
-// String returns the string represantion of the castling
+// String returns a string representation of the current castling rights (e.g., "KQkq" or "-").
 func (c Castlings) String() string {
 	flags := ""
 	if uint(c)&constants.ShortW != 0 {

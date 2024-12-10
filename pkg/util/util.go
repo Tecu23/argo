@@ -1,22 +1,24 @@
-// Package util contains all the utility functions
+// Package util contains utility functions for piece conversion, timing, and square indexing.
 package util
 
 import (
+	"time"
+
 	"github.com/Tecu23/argov2/pkg/color"
 	"github.com/Tecu23/argov2/pkg/constants"
 )
 
-// piece char definitions
+// PcFen contains pieces in Fen format for validation
 const (
 	PcFen = "PpNnBbRrQqKk     "
 )
 
-// ASCIIPieces representation of chess pieces
+// ASCIIPieces maps piece indices to ASCII representation for printing.
 const (
 	ASCIIPieces = "PNBRQKpnbrqk"
 )
 
-// Fen2pc convert pieceString to pc int
+// Fen2pc converts a Fen piece character to an internal piece index.
 func Fen2pc(c string) int {
 	for p, x := range ASCIIPieces {
 		if string(x) == c {
@@ -26,7 +28,7 @@ func Fen2pc(c string) int {
 	return constants.Empty
 }
 
-// PcColor returns the color of a piece
+// PcColor returns WHITE if pc < 6, otherwise BLACK, identifying piece color by its index.
 func PcColor(pc int) color.Color {
 	if pc < 6 {
 		return color.WHITE
@@ -34,13 +36,14 @@ func PcColor(pc int) color.Color {
 	return color.BLACK
 }
 
-// Fen2Sq maps fen-sq to int
-var Fen2Sq = make(map[string]int)
+// Fen2Sq and Sq2Fen convert between algebraic notation (e.g., "e4") and internal square indices.
+var (
+	Fen2Sq = make(map[string]int)
+	Sq2Fen = make(map[int]string)
+)
 
-// Sq2Fen maps int-sq to fen
-var Sq2Fen = make(map[int]string)
-
-// InitFen2Sq should initialize the square map from string to int and int to string
+// InitFen2Sq initializes the Fen2Sq and Sq2Fen maps for all squares. This allows easy
+// conversion between numeric indices and coordinate notation.
 func InitFen2Sq() {
 	Fen2Sq["a1"] = constants.A1
 	Fen2Sq["a2"] = constants.A2
@@ -187,4 +190,10 @@ func InitFen2Sq() {
 	Sq2Fen[constants.H7] = "h7"
 	Sq2Fen[constants.H8] = "h8"
 	Sq2Fen[-1] = "-"
+}
+
+// GetTimeInMiliseconds returns current time in milliseconds since Unix epoch.
+// Used for timing operations like perft tests.
+func GetTimeInMiliseconds() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
 }

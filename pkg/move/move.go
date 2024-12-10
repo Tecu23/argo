@@ -1,3 +1,6 @@
+// Package move contains the move and move list representation and all move helper functions.
+// Move is represented as 64 bit unsigned integer where some bits represent some part of the move
+// The first 6 bits keep the source square, the next 6 bits keep the target square and so on...
 package move
 
 import (
@@ -20,7 +23,10 @@ import (
    1000 0000 0000 0000 0000 0000 castling flag              0x800000
 */
 
-// Shift and Mask Constants
+// Move encoding uses a 64-bit integer to store source, target, piece, promoted piece,
+// and flags for capture, double push, en passant, and castling.
+//
+// Bit layout commented above shows how each part is stored in the move integer.
 const (
 	SourceMask     = 0x3f
 	TargetMask     = 0xfc0
@@ -43,10 +49,11 @@ const (
 	NoMove = Move(0)
 )
 
-// Move is a representation of a move in binary format
+// Move is a 64-bit unsigned integer that encodes a chess move.
 type Move uint64
 
-// EncodeMove creates a new move from every detail we need
+// EncodeMove creates a move from components: source, target, piece, promoted piece, capture flag,
+// double-push flag, en passant flag, and castling flag.
 func EncodeMove(
 	source, target, piece, promoted, capture, doublePush, enpassant, castling int,
 ) Move {
@@ -70,36 +77,37 @@ func (m Move) GetTarget() int {
 	return int(m&TargetMask) >> TargetShift
 }
 
-// GetPiece should retrieve the target square of a move
+// GetPiece should retrieve the piece that is moved
 func (m Move) GetPiece() int {
 	return int(m&PieceMask) >> PieceShift
 }
 
-// GetPromoted should retrieve the target square of a move
+// GetPromoted should retrieve the promoted piece if it exists
 func (m Move) GetPromoted() int {
 	return int(m&PromotedMask) >> PromotedShift
 }
 
-// GetCapture should retrieve the target square of a move
+// GetCapture should retrieve the capture flag
 func (m Move) GetCapture() int {
 	return int(m&CaptureMask) >> CaptureShift
 }
 
-// GetDoublePush should retrieve the target square of a move
+// GetDoublePush should retrieve the double push flag
 func (m Move) GetDoublePush() int {
 	return int(m&DoublePushMask) >> DoublePushShift
 }
 
-// GetEnpassant should retrieve the target square of a move
+// GetEnpassant should retrieve the en passant flag
 func (m Move) GetEnpassant() int {
 	return int(m&EnpassantMask) >> EnpassantShift
 }
 
-// GetCastling should retrieve the target square of a move
+// GetCastling should retrieve the castling flah
 func (m Move) GetCastling() int {
 	return int(m&CastlingMask) >> CastlingShift
 }
 
+// String prints the move in algebraic notation (e.g. "e2e4").
 func (m Move) String() string {
 	return fmt.Sprintf(
 		"%s%s",
@@ -108,7 +116,7 @@ func (m Move) String() string {
 	)
 }
 
-// PrintMove should print the a move
+// PrintMove prints a detailed move description including promoted piece, capture, etc.
 func (m Move) PrintMove() {
 	fmt.Printf(
 		"%s%s",
