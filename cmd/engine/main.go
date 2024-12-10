@@ -3,21 +3,19 @@ package main
 
 import (
 	"github.com/Tecu23/argov2/pkg/attacks"
-	"github.com/Tecu23/argov2/pkg/bitboard"
+	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/constants"
+	"github.com/Tecu23/argov2/pkg/util"
 )
 
 func main() {
 	initHelpers()
 
-	b := bitboard.Bitboard(0)
+	fen := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 "
 
-	b.Set(constants.F4)
-	b.Set(constants.C4)
-	b.Set(constants.D2)
-	att := attacks.GetQueenAttacks(constants.D4, b)
-
-	att.PrintBitboard()
+	b := board.Board{}
+	b.ParseFEN(fen)
+	b.PrintBoard()
 }
 
 func initHelpers() {
@@ -26,4 +24,6 @@ func initHelpers() {
 	attacks.InitKingAttacks()
 	attacks.InitSliderPiecesAttacks(constants.Bishop)
 	attacks.InitSliderPiecesAttacks(constants.Rook)
+
+	util.InitFen2Sq()
 }
