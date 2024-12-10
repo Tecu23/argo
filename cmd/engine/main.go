@@ -2,30 +2,28 @@
 package main
 
 import (
-	"bufio"
-	"os"
-
 	"github.com/Tecu23/argov2/pkg/attacks"
+	"github.com/Tecu23/argov2/pkg/bitboard"
 	"github.com/Tecu23/argov2/pkg/constants"
-	"github.com/Tecu23/argov2/pkg/magic"
 )
 
 func main() {
 	initHelpers()
 
-	mask := attacks.GenerateRookAttacks(constants.A1)
+	b := bitboard.Bitboard(0)
 
-	for i := 0; i < 4096; i++ {
-		occ := magic.SetOccupancy(i, mask.Count(), mask)
-		occ.PrintBitboard()
-		input := bufio.NewScanner(os.Stdin)
-		input.Scan()
+	b.Set(constants.F4)
+	b.Set(constants.C4)
+	b.Set(constants.D2)
+	att := attacks.GetQueenAttacks(constants.D4, b)
 
-	}
+	att.PrintBitboard()
 }
 
 func initHelpers() {
 	attacks.InitPawnAttacks()
 	attacks.InitKnightAttacks()
 	attacks.InitKingAttacks()
+	attacks.InitSliderPiecesAttacks(constants.Bishop)
+	attacks.InitSliderPiecesAttacks(constants.Rook)
 }
