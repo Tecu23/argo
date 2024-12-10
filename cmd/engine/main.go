@@ -3,15 +3,13 @@ package main
 
 import (
 	"github.com/Tecu23/argov2/pkg/attacks"
-	"github.com/Tecu23/argov2/pkg/bitboard"
-	"github.com/Tecu23/argov2/pkg/color"
 )
 
 func main() {
 	initHelpers()
 
 	for sq := 0; sq < 64; sq++ {
-		b := bitboard.Bitboard(attacks.PawnAttacks[color.WHITE][sq])
+		b := attacks.GenerateBishopAttacks(sq)
 		b.PrintBitboard()
 	}
 }

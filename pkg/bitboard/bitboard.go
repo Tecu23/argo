@@ -103,5 +103,5 @@ func (b Bitboard) PrintBitboard() {
 	fmt.Print("\n")
 	fmt.Printf("    a b c d e f g h\n\n")
 
-	fmt.Printf("Bitboard: %X\n\n", b)
+	fmt.Printf("Bitboard: %#x\n\n", uint64(b))
 }
