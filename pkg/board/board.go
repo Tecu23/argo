@@ -186,10 +186,8 @@ func (b *Board) ParseFEN(FEN string) {
 
 	// Cheking for 50 move rule
 	b.Rule50 = 0
-	fmt.Println(remaining, remaining[3])
 	if len(remaining) > 3 {
 		cnt, err := strconv.Atoi(remaining[3])
-		fmt.Println(err)
 		if err != nil {
 			b.Rule50 = 0
 		}
