@@ -32,16 +32,16 @@ func generateKingAttacks(square int) bitboard.Bitboard {
 	// Each line corresponds to a direction the king can move:
 	// NW, N, NE, E, W, SW, S, SE
 	// File masks (^FileA, ^FileH) prevent wrapping around edges.
-	attacks |= (b & ^FileA) << NW
-	attacks |= b << N
-	attacks |= (b & ^FileH) << NE
+	attacks |= (b & ^FileA) << 7
+	attacks |= b << 8
+	attacks |= (b & ^FileH) << 9
 
-	attacks |= (b & ^FileH) << E
-	attacks |= (b & ^FileA) >> E
+	attacks |= (b & ^FileH) << 1
+	attacks |= (b & ^FileA) >> 1
 
-	attacks |= (b & ^FileH) >> NW
-	attacks |= b >> N
-	attacks |= (b & ^FileA) >> NE
+	attacks |= (b & ^FileH) >> 7
+	attacks |= b >> 8
+	attacks |= (b & ^FileA) >> 9
 
 	return attacks
 }

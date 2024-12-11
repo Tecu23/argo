@@ -186,9 +186,9 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		if ep != 0 {
 			b.SetSq(Empty, src)
 			if clr == color.WHITE {
-				b.SetSq(Empty, tgt+S)
+				b.SetSq(Empty, tgt+8)
 			} else {
-				b.SetSq(Empty, tgt+N)
+				b.SetSq(Empty, tgt-8)
 			}
 
 			b.SetSq(pc, tgt)
@@ -249,10 +249,10 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		// Double push pawn update
 		if dblPwn != 0 {
 			if clr == color.WHITE {
-				b.EnPassant = src + N
+				b.EnPassant = src - 8
 				// b.Key ^= EnpassantKeys[src+N]
 			} else {
-				b.EnPassant = src + S
+				b.EnPassant = src + 8
 				// b.Key ^= EnpassantKeys[src+S]
 			}
 		}

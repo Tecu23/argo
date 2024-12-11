@@ -60,29 +60,6 @@ const (
 	FileH = bitboard.Bitboard(0x8080808080808080) // File h
 )
 
-// The constants below define directional offsets used for moving
-// pieces or generating attacks on the board.
-// Each direction represents a shift in terms of the bit index:
-//
-// N  (North) = +8: move up one rank (higher-indexed rank)
-// S  (South) = -8: move down one rank (lower-indexed rank)
-// E  (East)  = +1: move one file to the right
-// W  (West)  = -1: move one file to the left
-//
-// NW = +7 and NE = +9 represent diagonal moves. Similarly, SW and SE are defined
-// relative to these directions. Shifting a bitboard by these constants simulates
-// piece movement or attack generation in the given direction.
-const (
-	E  = +1  // Move one square to the right (east)
-	W  = -1  // Move one square to the left (west)
-	N  = 8   // Move one rank up (north)
-	S  = -8  // Move one rank down (south)
-	NW = +7  // Move one square diagonally northwest
-	NE = +9  // Move one square diagonally northeast
-	SW = -NE // Move diagonally southwest (negative of northeast)
-	SE = -NW // Move diagonally southeast (negative of northwest)
-)
-
 // The constants below represent indices for each square on a chessboard.
 // They follow a top-left (A8) to bottom-right (H1) indexing, starting with A8 as 0.
 // The first rank (from White's perspective) is at the bottom (A1 to H1) and the eighth rank at the top (A8 to H8).

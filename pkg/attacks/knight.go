@@ -35,20 +35,20 @@ func generateKnightAttacks(square int) bitboard.Bitboard {
 	// For example, NW+N means: move one rank up+left, then another rank up.
 
 	// Up-Left moves:
-	attacks |= (b & ^FileA) << (NW + N)
-	attacks |= (b & ^FileA & ^FileB) << (NW + W)
+	attacks |= (b & ^FileA) << (7 + 8)
+	attacks |= (b & ^FileA & ^FileB) << (7 + -1)
 
 	// Down-Left moves:
-	attacks |= (b & ^FileA & ^FileB) >> (NE + E)
-	attacks |= (b & ^FileA) >> (NE + N)
+	attacks |= (b & ^FileA & ^FileB) >> (9 + 1)
+	attacks |= (b & ^FileA) >> (9 + 8)
 
 	// Up-Right moves:
-	attacks |= (b & ^FileH) >> (NW + N)
-	attacks |= (b & ^FileH & ^FileG) >> (NW + W)
+	attacks |= (b & ^FileH) >> (7 + 8)
+	attacks |= (b & ^FileH & ^FileG) >> (7 + -1)
 
 	// Down-Right moves:
-	attacks |= (b & ^FileH & ^FileG) << (NE + E)
-	attacks |= (b & ^FileH) << (NE + N)
+	attacks |= (b & ^FileH & ^FileG) << (9 + 1)
+	attacks |= (b & ^FileH) << (9 + 8)
 
 	return attacks
 }

@@ -39,10 +39,10 @@ func (b *Board) GenerateMoves(movelist *move.Movelist) {
 			if piece == WP {
 				for bitboard != 0 {
 					sourceSq = bitboard.FirstOne()
-					targetSq = sourceSq + N
+					targetSq = sourceSq - 8
 
 					// quiet pawn moves
-					if !(targetSq < A1) && !b.Occupancies[color.BOTH].Test(targetSq) {
+					if !(targetSq < A8) && !b.Occupancies[color.BOTH].Test(targetSq) {
 						// pawn promotion
 						if sourceSq >= A7 && sourceSq <= H7 {
 							movelist.AddMove(
@@ -99,8 +99,8 @@ func (b *Board) GenerateMoves(movelist *move.Movelist) {
 							movelist.AddMove(move.EncodeMove(sourceSq, targetSq, piece, 0, 0, 0, 0, 0))
 
 							// two square ahead move
-							if (sourceSq >= A2 && sourceSq <= H2) && !b.Occupancies[color.BOTH].Test(targetSq+N) {
-								movelist.AddMove(move.EncodeMove(sourceSq, targetSq+N, piece, 0, 0, 1, 0, 0))
+							if (sourceSq >= A2 && sourceSq <= H2) && !b.Occupancies[color.BOTH].Test(targetSq-8) {
+								movelist.AddMove(move.EncodeMove(sourceSq, targetSq-8, piece, 0, 0, 1, 0, 0))
 							}
 						}
 					}
@@ -220,10 +220,10 @@ func (b *Board) GenerateMoves(movelist *move.Movelist) {
 			if piece == BP {
 				for bitboard != 0 {
 					sourceSq = bitboard.FirstOne()
-					targetSq = sourceSq + S
+					targetSq = sourceSq + 8
 
 					// quiet pawn moves
-					if !(targetSq < 0 || targetSq > H8) && !b.Occupancies[color.BOTH].Test(targetSq) {
+					if !(targetSq < 0 || targetSq > H1) && !b.Occupancies[color.BOTH].Test(targetSq) {
 						// pawn promotion
 						if sourceSq >= A2 && sourceSq <= H2 {
 							movelist.AddMove(move.EncodeMove(sourceSq, targetSq, piece, BQ, 0, 0, 0, 0))
@@ -235,8 +235,8 @@ func (b *Board) GenerateMoves(movelist *move.Movelist) {
 							movelist.AddMove(move.EncodeMove(sourceSq, targetSq, piece, 0, 0, 0, 0, 0))
 
 							// two square ahead move
-							if (sourceSq >= A7 && sourceSq <= H7) && !b.Occupancies[color.BOTH].Test(targetSq+S) {
-								movelist.AddMove(move.EncodeMove(sourceSq, targetSq+S, piece, 0, 0, 1, 0, 0))
+							if (sourceSq >= A7 && sourceSq <= H7) && !b.Occupancies[color.BOTH].Test(targetSq+8) {
+								movelist.AddMove(move.EncodeMove(sourceSq, targetSq+8, piece, 0, 0, 1, 0, 0))
 							}
 						}
 					}

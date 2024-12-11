@@ -37,15 +37,15 @@ func generatePawnAttacks(square int, side color.Color) bitboard.Bitboard {
 	if side == color.WHITE {
 		// White pawn attacks move up and diagonally (towards higher ranks)
 		// SW attack (if not on file A)
-		attacks |= (b & ^FileA) >> NE
+		attacks |= (b & ^FileA) >> 9
 		// SE attack (if not on file H)
-		attacks |= (b & ^FileH) >> NW
+		attacks |= (b & ^FileH) >> 7
 	} else {
 		// Black pawn attacks move down and diagonally (towards lower ranks)
 		// NW attack (if not on file A)
-		attacks |= (b & ^FileA) << NW
+		attacks |= (b & ^FileA) << 7
 		// NE attack (if not on file H)
-		attacks |= (b & ^FileH) << NE
+		attacks |= (b & ^FileH) << 9
 	}
 
 	return attacks
