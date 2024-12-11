@@ -1,5 +1,5 @@
 // Package board contains the board representation and all board helper functions.
-// This package will handle move generation
+// This package will handle move geration
 package board
 
 import (
@@ -351,7 +351,7 @@ func (b *Board) ParseMove(moveString string) move.Move {
 
 // PrintBoard prints the board state in a human-readable format with ranks and files.
 func (b Board) PrintBoard() {
-	for rank := 7; rank >= 0; rank-- {
+	for rank := 0; rank < 8; rank++ {
 		for file := 0; file < 8; file++ {
 			if file == 0 {
 				fmt.Printf("%d  ", rank+1)
@@ -394,9 +394,8 @@ func (b *Board) ParseFEN(FEN string) {
 	sq := 0
 
 	// Parse the ranks from top (rank=7) to bottom (rank=0)
-	for row := 7; row >= 0; row-- {
+	for row := 0; row < 8; row++ {
 		for sq = row * 8; sq < row*8+8; {
-
 			char := string(FEN[fenIdx])
 			fenIdx++
 
