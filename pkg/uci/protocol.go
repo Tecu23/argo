@@ -9,45 +9,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
+	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/board"
-	"github.com/Tecu23/argov2/pkg/constants"
-	"github.com/Tecu23/argov2/pkg/move"
+	. "github.com/Tecu23/argov2/pkg/constants"
 )
-
-type UciScore struct {
-	Centipawns int
-	Mate       int
-}
-
-type SearchInfo struct {
-	Score    UciScore
-	Depth    int
-	Nodes    int64
-	Time     time.Duration
-	MainLine []move.Move
-}
-
-type LimitsType struct {
-	Ponder         bool
-	Infinite       bool
-	WhiteTime      int
-	BlackTime      int
-	WhiteIncrement int
-	BlackIncrement int
-	MoveTime       int
-	MovesToGo      int
-	Depth          int
-	Nodes          int
-	Mate           int
-}
-
-type SearchParams struct {
-	Boards   []board.Board
-	Limits   LimitsType
-	Progress func(si SearchInfo)
-}
 
 type Engine interface {
 	Prepare()
@@ -68,7 +34,7 @@ type Protocol struct {
 }
 
 func New(name, author, version string, engine Engine, options []Option) *Protocol {
-	initBoard, err := board.ParseFEN(constants.StartPosition)
+	initBoard, err := board.ParseFEN(StartPosition)
 	if err != nil {
 		panic(err)
 	}
@@ -214,7 +180,7 @@ func (uci *Protocol) positionCommand(fields []string) error {
 	var fen string
 	movesIndex := findIndexString(args, "moves")
 	if token == "startpos" {
-		fen = constants.StartPosition
+		fen = StartPosition
 	} else if token == "fen" {
 		if movesIndex == -1 {
 			fen = strings.Join(args[1:], " ")

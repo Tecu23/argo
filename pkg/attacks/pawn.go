@@ -5,7 +5,7 @@ package attacks
 import (
 	"github.com/Tecu23/argov2/pkg/bitboard"
 	"github.com/Tecu23/argov2/pkg/color"
-	"github.com/Tecu23/argov2/pkg/constants"
+	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
 // PawnAttacks is a lookup table that stores the attack bitboards for pawns
@@ -16,7 +16,7 @@ var PawnAttacks [2][64]bitboard.Bitboard
 // InitPawnAttacks precomputes the pawn attacks for both white and black pawns
 // on every square. This is done at startup for fast lookups during move generation.
 func InitPawnAttacks() {
-	for sq := constants.A8; sq <= constants.H1; sq++ {
+	for sq := A8; sq <= H1; sq++ {
 		PawnAttacks[color.WHITE][sq] = generatePawnAttacks(sq, color.WHITE)
 		PawnAttacks[color.BLACK][sq] = generatePawnAttacks(sq, color.BLACK)
 	}
@@ -37,15 +37,15 @@ func generatePawnAttacks(square int, side color.Color) bitboard.Bitboard {
 	if side == color.WHITE {
 		// White pawn attacks move up and diagonally (towards higher ranks)
 		// SW attack (if not on file A)
-		attacks |= (b & ^constants.FileA) >> constants.NE
+		attacks |= (b & ^FileA) >> NE
 		// SE attack (if not on file H)
-		attacks |= (b & ^constants.FileH) >> constants.NW
+		attacks |= (b & ^FileH) >> NW
 	} else {
 		// Black pawn attacks move down and diagonally (towards lower ranks)
 		// NW attack (if not on file A)
-		attacks |= (b & ^constants.FileA) << constants.NW
+		attacks |= (b & ^FileA) << NW
 		// NE attack (if not on file H)
-		attacks |= (b & ^constants.FileH) << constants.NE
+		attacks |= (b & ^FileH) << NE
 	}
 
 	return attacks

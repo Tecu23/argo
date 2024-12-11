@@ -8,7 +8,7 @@ import (
 	"github.com/Tecu23/argov2/pkg/attacks"
 	"github.com/Tecu23/argov2/pkg/bitboard"
 	"github.com/Tecu23/argov2/pkg/color"
-	"github.com/Tecu23/argov2/pkg/constants"
+	. "github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/move"
 	"github.com/Tecu23/argov2/pkg/util"
 )
@@ -58,14 +58,14 @@ func (b *Board) TakeBack(cpy Board) {
 	*b = cpy
 }
 
-// SetSq places a piece on a given square (or clears it if piece == constants.Empty).
+// SetSq places a piece on a given square (or clears it if piece == Empty).
 // It updates both piece bitboards and occupancy bitboards accordingly.
 func (b *Board) SetSq(piece, sq int) {
 	pieceColor := util.PcColor(piece)
 
 	// If there is a piece on the square, remove it first
 	if b.Occupancies[color.BOTH].Test(sq) {
-		for p := constants.WP; p <= constants.BK; p++ {
+		for p := WP; p <= BK; p++ {
 			if b.Bitboards[p].Test(sq) {
 				b.Bitboards[p].Clear(sq)
 			}
@@ -77,7 +77,7 @@ func (b *Board) SetSq(piece, sq int) {
 	}
 
 	// If setting an empty piece, we just return after clearing.
-	if piece == constants.Empty {
+	if piece == Empty {
 		return
 	}
 
@@ -99,60 +99,60 @@ func (b *Board) SetSq(piece, sq int) {
 func (b *Board) IsSquareAttacked(sq int, side color.Color) bool {
 	if side == color.WHITE {
 		// Check White's pawns, knights, king, bishops, rooks, queen attacks
-		if attacks.PawnAttacks[color.BLACK][sq]&b.Bitboards[constants.WP] != 0 {
+		if attacks.PawnAttacks[color.BLACK][sq]&b.Bitboards[WP] != 0 {
 			return true
 		}
 
-		if attacks.KnightAttacks[sq]&b.Bitboards[constants.WN] != 0 {
+		if attacks.KnightAttacks[sq]&b.Bitboards[WN] != 0 {
 			return true
 		}
 
-		if attacks.KingAttacks[sq]&b.Bitboards[constants.WK] != 0 {
+		if attacks.KingAttacks[sq]&b.Bitboards[WK] != 0 {
 			return true
 		}
 
 		bishopAttacks := attacks.GetBishopAttacks(sq, b.Occupancies[color.BOTH])
 
-		if bishopAttacks&b.Bitboards[constants.WB] != 0 {
+		if bishopAttacks&b.Bitboards[WB] != 0 {
 			return true
 		}
 		rookAttacks := attacks.GetRookAttacks(sq, b.Occupancies[color.BOTH])
 
-		if rookAttacks&b.Bitboards[constants.WR] != 0 {
+		if rookAttacks&b.Bitboards[WR] != 0 {
 			return true
 		}
 		queenAttacks := attacks.GetQueenAttacks(sq, b.Occupancies[color.BOTH])
 
-		if queenAttacks&b.Bitboards[constants.WQ] != 0 {
+		if queenAttacks&b.Bitboards[WQ] != 0 {
 			return true
 		}
 	} else {
 		// Check Black's pawns, knights, king, bishops, rooks, queen attacks
-		if attacks.PawnAttacks[color.WHITE][sq]&b.Bitboards[constants.BP] != 0 {
+		if attacks.PawnAttacks[color.WHITE][sq]&b.Bitboards[BP] != 0 {
 			return true
 		}
 
-		if attacks.KnightAttacks[sq]&b.Bitboards[constants.BN] != 0 {
+		if attacks.KnightAttacks[sq]&b.Bitboards[BN] != 0 {
 			return true
 		}
 
-		if attacks.KingAttacks[sq]&b.Bitboards[constants.BK] != 0 {
+		if attacks.KingAttacks[sq]&b.Bitboards[BK] != 0 {
 			return true
 		}
 
 		bishopAttacks := attacks.GetBishopAttacks(sq, b.Occupancies[color.BOTH])
 
-		if bishopAttacks&b.Bitboards[constants.BB] != 0 {
+		if bishopAttacks&b.Bitboards[BB] != 0 {
 			return true
 		}
 		rookAttacks := attacks.GetRookAttacks(sq, b.Occupancies[color.BOTH])
 
-		if rookAttacks&b.Bitboards[constants.BR] != 0 {
+		if rookAttacks&b.Bitboards[BR] != 0 {
 			return true
 		}
 		queenAttacks := attacks.GetQueenAttacks(sq, b.Occupancies[color.BOTH])
 
-		if queenAttacks&b.Bitboards[constants.BQ] != 0 {
+		if queenAttacks&b.Bitboards[BQ] != 0 {
 			return true
 		}
 	}
@@ -184,11 +184,11 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 
 		// Handle en passant
 		if ep != 0 {
-			b.SetSq(constants.Empty, src)
+			b.SetSq(Empty, src)
 			if clr == color.WHITE {
-				b.SetSq(constants.Empty, tgt+constants.S)
+				b.SetSq(Empty, tgt+S)
 			} else {
-				b.SetSq(constants.Empty, tgt+constants.N)
+				b.SetSq(Empty, tgt+N)
 			}
 
 			b.SetSq(pc, tgt)
@@ -198,17 +198,17 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 			// Check for checks to ensure move legality
 			var kingPos int
 			if b.Side == color.WHITE {
-				if b.Bitboards[constants.BK] == 0 {
+				if b.Bitboards[BK] == 0 {
 					b.TakeBack(copyB)
 					return false
 				}
-				kingPos = b.Bitboards[constants.BK].FirstOne()
+				kingPos = b.Bitboards[BK].FirstOne()
 			} else {
-				if b.Bitboards[constants.WK] == 0 {
+				if b.Bitboards[WK] == 0 {
 					b.TakeBack(copyB)
 					return false
 				}
-				kingPos = b.Bitboards[constants.WK].FirstOne()
+				kingPos = b.Bitboards[WK].FirstOne()
 			}
 			if b.IsSquareAttacked(kingPos, b.Side) {
 				// take back
@@ -216,9 +216,9 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 				return false
 			}
 			if b.Side == color.WHITE {
-				b.Bitboards[constants.BK].Set(kingPos)
+				b.Bitboards[BK].Set(kingPos)
 			} else {
-				b.Bitboards[constants.WK].Set(kingPos)
+				b.Bitboards[WK].Set(kingPos)
 			}
 
 			return true
@@ -228,36 +228,36 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		if cast != 0 {
 			switch tgt {
 			// WHITE Short Castle
-			case constants.G1:
-				b.SetSq(constants.Empty, constants.H1)
-				b.SetSq(constants.WR, constants.F1)
+			case G1:
+				b.SetSq(Empty, H1)
+				b.SetSq(WR, F1)
 			// WHITE Long Castle
-			case constants.C1:
-				b.SetSq(constants.Empty, constants.A1)
-				b.SetSq(constants.WR, constants.D1)
+			case C1:
+				b.SetSq(Empty, A1)
+				b.SetSq(WR, D1)
 			// BLACK Short Castle
-			case constants.G8:
-				b.SetSq(constants.Empty, constants.H8)
-				b.SetSq(constants.BR, constants.F8)
+			case G8:
+				b.SetSq(Empty, H8)
+				b.SetSq(BR, F8)
 			// BLACK Long Castle
-			case constants.C8:
-				b.SetSq(constants.Empty, constants.A8)
-				b.SetSq(constants.BR, constants.D8)
+			case C8:
+				b.SetSq(Empty, A8)
+				b.SetSq(BR, D8)
 			}
 		}
 
 		// Double push pawn update
 		if dblPwn != 0 {
 			if clr == color.WHITE {
-				b.EnPassant = src + constants.N
-				// b.Key ^= EnpassantKeys[src+constants.N]
+				b.EnPassant = src + N
+				// b.Key ^= EnpassantKeys[src+N]
 			} else {
-				b.EnPassant = src + constants.S
-				// b.Key ^= EnpassantKeys[src+constants.S]
+				b.EnPassant = src + S
+				// b.Key ^= EnpassantKeys[src+S]
 			}
 		}
 
-		b.SetSq(constants.Empty, src)
+		b.SetSq(Empty, src)
 
 		if prom != 0 {
 			b.SetSq(prom, tgt)
@@ -275,17 +275,17 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		// Check if own king is in check after the move
 		var kingPos int
 		if b.Side == color.WHITE {
-			if b.Bitboards[constants.BK] == 0 {
+			if b.Bitboards[BK] == 0 {
 				b.TakeBack(copyB)
 				return false
 			}
-			kingPos = b.Bitboards[constants.BK].FirstOne()
+			kingPos = b.Bitboards[BK].FirstOne()
 		} else {
-			if b.Bitboards[constants.WK] == 0 {
+			if b.Bitboards[WK] == 0 {
 				b.TakeBack(copyB)
 				return false
 			}
-			kingPos = b.Bitboards[constants.WK].FirstOne()
+			kingPos = b.Bitboards[WK].FirstOne()
 		}
 		if b.IsSquareAttacked(kingPos, b.Side) {
 			// take back
@@ -293,9 +293,9 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 			return false
 		}
 		if b.Side == color.WHITE {
-			b.Bitboards[constants.BK].Set(kingPos)
+			b.Bitboards[BK].Set(kingPos)
 		} else {
-			b.Bitboards[constants.WK].Set(kingPos)
+			b.Bitboards[WK].Set(kingPos)
 		}
 	} else { // capture moves
 		if m.GetCapture() != 0 {
@@ -323,16 +323,16 @@ func (b *Board) ParseMove(moveString string) move.Move {
 
 			if prom != 0 {
 				// Check if promotion matches requested piece
-				if (prom == constants.WQ || prom == constants.BQ) && moveString[4] == 'q' {
+				if (prom == WQ || prom == BQ) && moveString[4] == 'q' {
 					return mv
 				}
-				if (prom == constants.WR || prom == constants.BR) && moveString[4] == 'r' {
+				if (prom == WR || prom == BR) && moveString[4] == 'r' {
 					return mv
 				}
-				if (prom == constants.WB || prom == constants.BB) && moveString[4] == 'b' {
+				if (prom == WB || prom == BB) && moveString[4] == 'b' {
 					return mv
 				}
-				if (prom == constants.WN || prom == constants.BN) && moveString[4] == 'n' {
+				if (prom == WN || prom == BN) && moveString[4] == 'n' {
 					return mv
 				}
 				continue // continue the loop on wrong promotions
@@ -354,7 +354,7 @@ func (b Board) PrintBoard() {
 			piece := -1
 
 			// loop over all piece bitboards
-			for bb := constants.WP; bb <= constants.BK; bb++ {
+			for bb := WP; bb <= BK; bb++ {
 				if b.Bitboards[bb].Test(rank*8 + file) {
 					piece = bb
 				}

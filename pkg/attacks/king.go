@@ -4,7 +4,7 @@ package attacks
 
 import (
 	"github.com/Tecu23/argov2/pkg/bitboard"
-	"github.com/Tecu23/argov2/pkg/constants"
+	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
 // KingAttacks is a lookup table where KingAttacks[sq] gives a bitboard of all squares
@@ -15,7 +15,7 @@ var KingAttacks [64]bitboard.Bitboard
 // for a king placed on each square. After this, KingAttacks can be used directly
 // to find king moves without recomputing them each time.
 func InitKingAttacks() {
-	for sq := constants.A8; sq <= constants.H1; sq++ {
+	for sq := A8; sq <= H1; sq++ {
 		KingAttacks[sq] = generateKingAttacks(sq)
 	}
 }
@@ -31,17 +31,17 @@ func generateKingAttacks(square int) bitboard.Bitboard {
 
 	// Each line corresponds to a direction the king can move:
 	// NW, N, NE, E, W, SW, S, SE
-	// File masks (^constants.FileA, ^constants.FileH) prevent wrapping around edges.
-	attacks |= (b & ^constants.FileA) << constants.NW
-	attacks |= b << constants.N
-	attacks |= (b & ^constants.FileH) << constants.NE
+	// File masks (^FileA, ^FileH) prevent wrapping around edges.
+	attacks |= (b & ^FileA) << NW
+	attacks |= b << N
+	attacks |= (b & ^FileH) << NE
 
-	attacks |= (b & ^constants.FileH) << constants.E
-	attacks |= (b & ^constants.FileA) >> constants.E
+	attacks |= (b & ^FileH) << E
+	attacks |= (b & ^FileA) >> E
 
-	attacks |= (b & ^constants.FileH) >> constants.NW
-	attacks |= b >> constants.N
-	attacks |= (b & ^constants.FileA) >> constants.NE
+	attacks |= (b & ^FileH) >> NW
+	attacks |= b >> N
+	attacks |= (b & ^FileA) >> NE
 
 	return attacks
 }

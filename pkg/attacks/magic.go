@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Tecu23/argov2/pkg/bitboard"
-	"github.com/Tecu23/argov2/pkg/constants"
+	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
 // BishopMasks and RookMasks store bitboards representing the "attack mask" from each square
@@ -32,15 +32,15 @@ func InitMagic() {
 	fmt.Printf("const Bitboard rookMagics[64] = {\n")
 
 	// loop over 64 board squares
-	for sq := constants.A1; sq <= constants.H8; sq++ {
-		fmt.Printf("    %x,\n", findMagicNumbers(sq, rookRelevantBits[sq], constants.Rook))
+	for sq := A1; sq <= H8; sq++ {
+		fmt.Printf("    %x,\n", findMagicNumbers(sq, rookRelevantBits[sq], Rook))
 	}
 
 	fmt.Printf("};\n\nconst U64 bishop_magics[64] = {\n")
 
 	// loop over 64 board squares
-	for sq := constants.A1; sq <= constants.H8; sq++ {
-		fmt.Printf("    %x,\n", findMagicNumbers(sq, bishopRelevantBits[sq], constants.Bishop))
+	for sq := A1; sq <= H8; sq++ {
+		fmt.Printf("    %x,\n", findMagicNumbers(sq, bishopRelevantBits[sq], Bishop))
 	}
 
 	fmt.Printf("};\n\n")
@@ -99,7 +99,7 @@ func findMagicNumbers(square, relevantBits int, piece int) bitboard.Bitboard {
 
 	var maskAttacks bitboard.Bitboard
 	// mask piece attack
-	if piece == constants.Bishop {
+	if piece == Bishop {
 		maskAttacks = generateBishopPossibleBlockers(square)
 	} else {
 		maskAttacks = generateRookPossibleBlockers(square)
@@ -114,7 +114,7 @@ func findMagicNumbers(square, relevantBits int, piece int) bitboard.Bitboard {
 		occupancy[count] = SetOccupancy(count, relevantBits, maskAttacks)
 
 		// init attacks
-		if piece == constants.Bishop {
+		if piece == Bishop {
 			attacks[count] = generateBishopAttacks(square, occupancy[count])
 		} else {
 			attacks[count] = generateRookAttacks(square, occupancy[count])

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Tecu23/argov2/pkg/color"
-	"github.com/Tecu23/argov2/pkg/constants"
+	. "github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/util"
 )
 
@@ -33,7 +33,7 @@ func ParseFEN(FEN string) (Board, error) {
 			// If char is a digit, skip that many squares
 			if i, err := strconv.Atoi(char); err == nil {
 				for j := 0; j < i; j++ {
-					b.SetSq(constants.Empty, sq)
+					b.SetSq(Empty, sq)
 					sq++
 				}
 				continue

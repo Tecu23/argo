@@ -4,7 +4,7 @@ package attacks
 
 import (
 	"github.com/Tecu23/argov2/pkg/bitboard"
-	"github.com/Tecu23/argov2/pkg/constants"
+	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
 // InitSliderPiecesAttacks initializes the magic-based attacks for sliding pieces (either bishop or rook).
@@ -13,11 +13,11 @@ import (
 // 2. Generates all possible attack configurations for each occupancy variation.
 // 3. Populates the BishopAttacks or RookAttacks lookup tables accordingly.
 //
-// 'piece' parameter should be constants.Bishop or constants.Rook.
+// 'piece' parameter should be Bishop or Rook.
 // After this initialization, attack lookups for those pieces are O(1).
 func InitSliderPiecesAttacks(piece int) {
 	// Loop over all 64 squares on the board.
-	for sq := constants.A8; sq <= constants.H1; sq++ {
+	for sq := A8; sq <= H1; sq++ {
 
 		// Initialize bishop & rook masks for the square.
 		// These masks represent all squares that can potentially affect the bishop/rook's moves from 'sq'.
@@ -27,7 +27,7 @@ func InitSliderPiecesAttacks(piece int) {
 		// Determine which mask to use based on the piece type.
 		// For bishops, use the bishop mask; for rooks, use the rook mask.
 		var attackMask bitboard.Bitboard
-		if piece == constants.Bishop {
+		if piece == Bishop {
 			attackMask = generateBishopPossibleBlockers(sq)
 		} else {
 			attackMask = generateRookPossibleBlockers(sq)
@@ -48,7 +48,7 @@ func InitSliderPiecesAttacks(piece int) {
 		for count := 0; count < occupancyVariations; count++ {
 			// Build an occupancy bitboard for this particular subset of the attackMask.
 			occupancy := SetOccupancy(count, bitCount, attackMask)
-			if piece == constants.Bishop {
+			if piece == Bishop {
 
 				// Compute the magic index for the bishop based on occupancy.
 				magicIndex := occupancy * bishopMagicNumbers[sq] >> (64 - bishopRelevantBits[sq])

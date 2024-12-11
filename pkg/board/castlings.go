@@ -5,7 +5,7 @@ package board
 import (
 	"strings"
 
-	"github.com/Tecu23/argov2/pkg/constants"
+	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
 // CastlingRights is an array that helps update castling rights
@@ -50,16 +50,16 @@ func ParseCastlings(fenCastl string) Castlings {
 	}
 
 	if strings.Contains(fenCastl, "K") {
-		c |= constants.ShortW
+		c |= ShortW
 	}
 	if strings.Contains(fenCastl, "Q") {
-		c |= constants.LongW
+		c |= LongW
 	}
 	if strings.Contains(fenCastl, "k") {
-		c |= constants.ShortB
+		c |= ShortB
 	}
 	if strings.Contains(fenCastl, "q") {
-		c |= constants.LongB
+		c |= LongB
 	}
 
 	return Castlings(c)
@@ -68,16 +68,16 @@ func ParseCastlings(fenCastl string) Castlings {
 // String returns a string representation of the current castling rights (e.g., "KQkq" or "-").
 func (c Castlings) String() string {
 	flags := ""
-	if uint(c)&constants.ShortW != 0 {
+	if uint(c)&ShortW != 0 {
 		flags = "K"
 	}
-	if uint(c)&constants.LongW != 0 {
+	if uint(c)&LongW != 0 {
 		flags += "Q"
 	}
-	if uint(c)&constants.ShortB != 0 {
+	if uint(c)&ShortB != 0 {
 		flags += "k"
 	}
-	if uint(c)&constants.LongB != 0 {
+	if uint(c)&LongB != 0 {
 		flags += "q"
 	}
 	if flags == "" {
