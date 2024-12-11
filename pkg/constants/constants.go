@@ -3,6 +3,9 @@ package constants
 
 import "github.com/Tecu23/argov2/pkg/bitboard"
 
+// StartPosition holds the starting position of a chess game
+const StartPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 "
+
 // Piece constants are an enumeration for piece types.
 // They help identify which piece's attack mask or magic to use.
 const (

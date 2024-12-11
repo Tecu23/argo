@@ -4,8 +4,6 @@ package board
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/Tecu23/argov2/pkg/attacks"
 	"github.com/Tecu23/argov2/pkg/bitboard"
@@ -168,9 +166,6 @@ func (b *Board) IsSquareAttacked(sq int, side color.Color) bool {
 func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 	// If moveFlag == OnlyCaptures, we only proceed if this move is a capture move.
 	// Otherwise, we handle all moves.
-	// The code here includes logic for en passant, castling, double pushes, promotions,
-	// and ensures legality by checking king safety.
-	// Due to complexity, only high-level comments are given here.
 	if moveFlag == AllMoves {
 		// preserve board state
 		copyB := b.CopyBoard()
@@ -384,82 +379,6 @@ func (b Board) PrintBoard() {
 	// fmt.Printf(" HashKey: 0x%X\n\n", b.Key)
 }
 
-// ParseFEN sets the board state according to a given FEN string.
-// It places pieces, sets side to move, castling rights, and en passant square.
-// rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -
-func (b *Board) ParseFEN(FEN string) {
-	b.Reset()
-
-	fenIdx := 0
-	sq := 0
-
-	// Parse the ranks from top (rank=7) to bottom (rank=0)
-	for row := 0; row < 8; row++ {
-		for sq = row * 8; sq < row*8+8; {
-			char := string(FEN[fenIdx])
-			fenIdx++
-
-			if char == "/" {
-				continue
-			}
-
-			// If char is a digit, skip that many squares
-			if i, err := strconv.Atoi(char); err == nil {
-				for j := 0; j < i; j++ {
-					b.SetSq(constants.Empty, sq)
-					sq++
-				}
-				continue
-			}
-
-			// Otherwise, it should be a piece character
-			if !strings.Contains(util.PcFen, char) {
-				fmt.Printf("Invalid piece %s try next one", char)
-				continue
-			}
-
-			b.SetSq(util.Fen2pc(char), sq)
-			sq++
-		}
-	}
-
-	remaining := strings.Split(strings.TrimSpace(FEN[fenIdx:]), " ")
-
-	// Set side to move
-	if len(remaining) > 0 {
-		if remaining[0] == "w" {
-			b.Side = color.WHITE
-		} else if remaining[0] == "b" {
-			b.Side = color.BLACK
-		} else {
-			fmt.Printf("Remaining=%v; sq=%v;  fenIx=%v;", strings.Join(remaining, " "), sq, fenIdx)
-			fmt.Printf("%s invalid side to move color", remaining[0])
-			b.Side = color.WHITE
-		}
-	}
-
-	// Set castling rights
-	b.Castlings = 0
-	if len(remaining) > 1 {
-		b.Castlings = ParseCastlings(remaining[1])
-	}
-
-	// Set en passant square
-	b.EnPassant = -1
-	if len(remaining) > 2 {
-		if remaining[2] != "-" {
-			b.EnPassant = util.Fen2Sq[remaining[2]]
-		}
-	}
-
-	// Set halfmove clock (for 50-move rule)
-	b.Rule50 = 0
-	if len(remaining) > 3 {
-		cnt, err := strconv.Atoi(remaining[3])
-		if err != nil {
-			b.Rule50 = 0
-		}
-
-		b.Rule50 = uint8(cnt)
-	}
+func (b *Board) MakeMoveLAN(_ string) (Board, bool) {
+	return Board{}, true
 }
