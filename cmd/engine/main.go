@@ -2,23 +2,37 @@
 package main
 
 import (
-	"fmt"
-	"time"
+	"flag"
+	"log"
+	"os"
 
 	"github.com/Tecu23/argov2/pkg/attacks"
-	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/constants"
+	"github.com/Tecu23/argov2/pkg/engine"
+	"github.com/Tecu23/argov2/pkg/uci"
 	"github.com/Tecu23/argov2/pkg/util"
 )
 
+const (
+	name   = "ArGO"
+	author = "Tecu23"
+)
+
+var debug bool
+
 func main() {
+	flag.BoolVar(&debug, "debug", false, "specifies if engine ran on debug mode")
+	flag.Parse()
 	initHelpers()
 
-	b, _ := board.ParseFEN(constants.StartPosition)
-	start := time.Now()
-	nodes := board.PerftTest(&b, 6)
-	duration := time.Since(start)
-	fmt.Println(nodes, duration)
+	logger := log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)
+
+	options := engine.NewOptions()
+	engine := engine.NewEngine(options)
+
+	protocol := uci.New(name, author, "1.0.0", engine, []uci.Option{})
+
+	protocol.Run(logger)
 }
 
 func initHelpers() {
