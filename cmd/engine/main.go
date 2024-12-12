@@ -15,9 +15,8 @@ func main() {
 	initHelpers()
 
 	b, _ := board.ParseFEN(constants.StartPosition)
-
 	start := time.Now()
-	nodes := board.PerftDriver(&b, 7, 0)
+	nodes := board.PerftTest(&b, 7)
 	duration := time.Since(start)
 	fmt.Println(nodes, duration)
 }

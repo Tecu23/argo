@@ -5,24 +5,20 @@ package board
 import (
 	"fmt"
 
-	"github.com/Tecu23/argov2/pkg/move"
 	"github.com/Tecu23/argov2/pkg/util"
 )
 
 // PerftDriver is a recursive function for the performance test (perft).
 // Perft counts the number of positions reachable at a given depth.
 // It's used to validate move generation correctness.
-func PerftDriver(b *Board, depth int, nodes int64) int64 {
+func PerftDriver(b *Board, depth int) int64 {
 	// If depth=0, we've reached a leaf node, count it.
 	if depth == 0 {
-		nodes++
 		return 1
 	}
 
-	var mvlst move.Movelist
-	b.GenerateMoves(&mvlst)
-
 	nds := int64(0)
+	mvlst := b.GenerateMoves()
 
 	for _, mv := range mvlst {
 		copyB := b.CopyBoard()
@@ -31,43 +27,38 @@ func PerftDriver(b *Board, depth int, nodes int64) int64 {
 			continue
 		}
 
-		nds += PerftDriver(b, depth-1, nodes)
+		nds += PerftDriver(b, depth-1)
 
 		b.TakeBack(copyB)
 	}
-	nodes += nds
-	return nodes
+	return nds
 }
 
 // PerftTest runs a perft test at a given depth, printing the move counts from the initial moves,
 // and total nodes visited. Useful for debugging and verifying correctness of move generation.
-func PerftTest(b *Board, depth int, nodes int64) {
-	var whiteMoves move.Movelist
-
+func PerftTest(b *Board, depth int) int64 {
 	totalMoves := int64(0)
-
-	b.GenerateMoves(&whiteMoves)
-
+	whiteMoves := b.GenerateMoves()
 	fmt.Printf("\n  Performance test\n\n")
 	start := util.GetTimeInMiliseconds()
 
 	for _, m := range whiteMoves {
-		tmp_nodes := int64(0)
-
+		moveNodes := int64(0)
 		copyB := b.CopyBoard()
 
 		if !b.MakeMove(m, AllMoves) {
 			continue
 		}
-		PerftDriver(b, depth-1, tmp_nodes)
+		moveNodes = PerftDriver(b, depth-1)
 
 		// take back move
 		b.TakeBack(copyB)
 
-		fmt.Printf("%s: %d\n", m, nodes)
-
-		totalMoves += tmp_nodes
+		fmt.Printf("%s: %d\n", m, moveNodes)
+		totalMoves += moveNodes
 	}
 	// print results
 	fmt.Printf("\n Nodes: %d Time: %d\n\n ", totalMoves, util.GetTimeInMiliseconds()-start)
+
+	return totalMoves
 }

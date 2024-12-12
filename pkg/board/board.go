@@ -309,8 +309,7 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 // ParseMove takes a move string (like "e7e8q") and returns the corresponding Move object if valid.
 // It generates all moves, finds the one matching this string, and returns it. If not found, returns NoMove.
 func (b *Board) ParseMove(moveString string) move.Move {
-	var moves move.Movelist
-	b.GenerateMoves(&moves)
+	moves := b.GenerateMoves()
 
 	src := util.Fen2Sq[moveString[:2]]
 	tgt := util.Fen2Sq[moveString[2:4]]
@@ -349,7 +348,7 @@ func (b Board) PrintBoard() {
 	for rank := 0; rank < 8; rank++ {
 		for file := 0; file < 8; file++ {
 			if file == 0 {
-				fmt.Printf("%d  ", rank+1)
+				fmt.Printf("%d  ", 8-rank)
 			}
 			piece := -1
 
