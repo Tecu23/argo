@@ -61,37 +61,36 @@ func (b *Board) TakeBack(cpy Board) {
 // SetSq places a piece on a given square (or clears it if piece == Empty).
 // It updates both piece bitboards and occupancy bitboards accordingly.
 func (b *Board) SetSq(piece, sq int) {
-	pieceColor := util.PcColor(piece)
+	// Create a square mask once (1ULL << sq)
+	squareMask := bitboard.Bitboard(1) << uint(sq)
 
 	// If there is a piece on the square, remove it first
 	if b.Occupancies[color.BOTH].Test(sq) {
+		// Instead of testing each piece individually, we can use the square mask
+		// to clear the bit in all piece bitboards in one go
 		for p := WP; p <= BK; p++ {
-			if b.Bitboards[p].Test(sq) {
-				b.Bitboards[p].Clear(sq)
-			}
+			b.Bitboards[p] &^= squareMask
 		}
-
-		b.Occupancies[color.BOTH].Clear(sq)
-		b.Occupancies[color.WHITE].Clear(sq)
-		b.Occupancies[color.BLACK].Clear(sq)
+		// Clear the occupancy bits using the inverted mask
+		clearMask := ^squareMask
+		b.Occupancies[color.WHITE] &= clearMask
+		b.Occupancies[color.BLACK] &= clearMask
+		b.Occupancies[color.BOTH] &= clearMask
 	}
 
-	// If setting an empty piece, we just return after clearing.
+	// If setting an empty piece, we're done
 	if piece == Empty {
 		return
 	}
 
-	b.Bitboards[piece].Set(sq)
+	// Set the piece bitboard
+	b.Bitboards[piece] |= squareMask
 
-	if pieceColor == color.WHITE {
-		b.Occupancies[color.WHITE].Set(sq)
-	} else {
-		b.Occupancies[color.BLACK].Set(sq)
-	}
-
-	// Update BOTH occupancy as union of WHITE and BLACK
-	b.Occupancies[color.BOTH] |= b.Occupancies[color.WHITE]
-	b.Occupancies[color.BOTH] |= b.Occupancies[color.BLACK]
+	// Set the occupancy bitboards
+	// Use branching to avoid the if statement
+	colorIndex := util.PcColor(piece)
+	b.Occupancies[colorIndex] |= squareMask
+	b.Occupancies[color.BOTH] |= squareMask
 }
 
 // IsSquareAttacked checks if a given square is attacked by the specified side (WHITE or BLACK).
@@ -158,6 +157,8 @@ func (b *Board) IsSquareAttacked(sq int, side color.Color) bool {
 	}
 	return false
 }
+
+// TODO: REDO THIS for better performance
 
 // MakeMove attempts to make a move on the board. It updates board state (bitboards,
 // occupancy, castling, en passant) and returns true if successful. If the move leaves

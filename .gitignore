@@ -4,3 +4,9 @@ bin/
 # Coverage files
 cover.html
 cover.out
+
+# Profiling Variables
+.cpu.prof
+
+# PDF Profiling
+profile.pdf

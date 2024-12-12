@@ -16,7 +16,7 @@ func main() {
 
 	b, _ := board.ParseFEN(constants.StartPosition)
 	start := time.Now()
-	nodes := board.PerftTest(&b, 7)
+	nodes := board.PerftTest(&b, 6)
 	duration := time.Since(start)
 	fmt.Println(nodes, duration)
 }
