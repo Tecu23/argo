@@ -6,7 +6,7 @@ cover.html
 cover.out
 
 # Profiling Variables
-.cpu.prof
+cpu.prof
 
 # PDF Profiling
 profile.pdf
