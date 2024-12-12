@@ -28,7 +28,7 @@ type Board struct {
 	Side        color.Color
 	EnPassant   int
 	Rule50      uint8
-	Castlings
+	Castlings   Castlings
 }
 
 // Reset restores the board to an initial empty state and sets defaults.
@@ -308,11 +308,14 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 
 // ParseMove takes a move string (like "e7e8q") and returns the corresponding Move object if valid.
 // It generates all moves, finds the one matching this string, and returns it. If not found, returns NoMove.
-func (b *Board) ParseMove(moveString string) move.Move {
+func (b *Board) ParseMove(moveString string) (Board, bool) {
+	newB := b.CopyBoard()
 	moves := b.GenerateMoves()
 
 	src := util.Fen2Sq[moveString[:2]]
 	tgt := util.Fen2Sq[moveString[2:4]]
+
+	tmpMove := move.NoMove
 
 	for cnt := 0; cnt < len(moves); cnt++ {
 		mv := moves[cnt]
@@ -323,24 +326,35 @@ func (b *Board) ParseMove(moveString string) move.Move {
 			if prom != 0 {
 				// Check if promotion matches requested piece
 				if (prom == WQ || prom == BQ) && moveString[4] == 'q' {
-					return mv
+					tmpMove = mv
+					break
 				}
 				if (prom == WR || prom == BR) && moveString[4] == 'r' {
-					return mv
+					tmpMove = mv
+					break
 				}
 				if (prom == WB || prom == BB) && moveString[4] == 'b' {
-					return mv
+					tmpMove = mv
+					break
 				}
 				if (prom == WN || prom == BN) && moveString[4] == 'n' {
-					return mv
+					tmpMove = mv
+					break
 				}
 				continue // continue the loop on wrong promotions
 			}
 			// If no promotion needed or matches, return this move
-			return mv
+			tmpMove = mv
+			break
 		}
 	}
-	return move.NoMove
+
+	if tmpMove == move.NoMove {
+		return Board{}, false
+	}
+
+	newB.MakeMove(tmpMove, AllMoves)
+	return newB, true
 }
 
 // PrintBoard prints the board state in a human-readable format with ranks and files.
@@ -376,8 +390,4 @@ func (b Board) PrintBoard() {
 	fmt.Printf("   Half Moves:    %d\n", b.Rule50)
 	fmt.Printf("   Castling:   %s\n\n", b.Castlings.String())
 	// fmt.Printf(" HashKey: 0x%X\n\n", b.Key)
-}
-
-func (b *Board) MakeMoveLAN(_ string) (Board, bool) {
-	return Board{}, true
 }

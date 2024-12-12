@@ -199,10 +199,11 @@ func (uci *Protocol) positionCommand(fields []string) error {
 	boards := []board.Board{b}
 	if movesIndex >= 0 && movesIndex+1 < len(args) {
 		for _, smove := range args[movesIndex+1:] {
-			newBoard, ok := boards[len(boards)-1].MakeMoveLAN(smove)
+			newBoard, ok := boards[len(boards)-1].ParseMove(smove)
 			if !ok {
 				return errors.New("parse move failed")
 			}
+
 			boards = append(boards, newBoard)
 		}
 	}
