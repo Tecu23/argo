@@ -7,6 +7,7 @@ import (
 
 	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/color"
+	"github.com/Tecu23/argov2/pkg/evaluation"
 	"github.com/Tecu23/argov2/pkg/move"
 )
 
@@ -18,12 +19,14 @@ type mainLine struct {
 }
 
 type Engine struct {
+	nodes       int64
 	Options     Options
 	mainLine    mainLine
 	start       time.Time
 	progress    func(SearchInfo)
 	timeManager timeManager
 	cancel      context.CancelFunc
+	evaluator   evaluation.Evaluator
 }
 
 const (
@@ -35,7 +38,8 @@ const (
 
 func NewEngine(options Options) *Engine {
 	return &Engine{
-		Options: options,
+		Options:   options,
+		evaluator: *evaluation.NewEvaluator(),
 	}
 }
 

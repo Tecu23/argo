@@ -578,3 +578,224 @@ func (b *Board) GenerateMoves() []move.Move {
 
 	return result
 }
+
+// GenerateCaptures generates all capturing moves for the current position,
+// including pawn promotions which are considered tactical moves.
+func (b *Board) GenerateCaptures() []move.Move {
+	var result []move.Move
+	sourceSq, targetSq := 0, 0
+	bitboard, attcks := bitboard.Bitboard(0), bitboard.Bitboard(0)
+
+	for piece := WP; piece <= BK; piece++ {
+		bitboard = b.Bitboards[piece]
+
+		// Generate pawn captures
+		if b.Side == color.WHITE {
+			if piece == WP {
+				for bitboard != 0 {
+					sourceSq = bitboard.FirstOne()
+
+					// Pawn captures including promotions
+					attcks = attacks.PawnAttacks[color.WHITE][sourceSq] & b.Occupancies[color.BLACK]
+
+					for attcks != 0 {
+						targetSq = attcks.FirstOne()
+
+						// Handle promotion captures
+						if sourceSq >= A7 && sourceSq <= H7 {
+							result = append(
+								result,
+								move.EncodeMove(sourceSq, targetSq, piece, WQ, 1, 0, 0, 0),
+							)
+							result = append(
+								result,
+								move.EncodeMove(sourceSq, targetSq, piece, WR, 1, 0, 0, 0),
+							)
+							result = append(
+								result,
+								move.EncodeMove(sourceSq, targetSq, piece, WB, 1, 0, 0, 0),
+							)
+							result = append(
+								result,
+								move.EncodeMove(sourceSq, targetSq, piece, WN, 1, 0, 0, 0),
+							)
+						} else {
+							result = append(result, move.EncodeMove(sourceSq, targetSq, piece, 0, 1, 0, 0, 0))
+						}
+						attcks &= attcks - 1 // clear LSB
+					}
+
+					// En passant captures
+					if b.EnPassant != -1 {
+						enpassantAttacks := attacks.PawnAttacks[color.WHITE][sourceSq] & (1 << b.EnPassant)
+						if enpassantAttacks != 0 {
+							targetEnpassant := enpassantAttacks.FirstOne()
+							result = append(
+								result,
+								move.EncodeMove(sourceSq, targetEnpassant, piece, 0, 1, 0, 1, 0),
+							)
+						}
+					}
+					bitboard &= bitboard - 1 // clear LSB
+				}
+			}
+		} else { // Black pawns
+			if piece == BP {
+				for bitboard != 0 {
+					sourceSq = bitboard.FirstOne()
+
+					// Pawn captures including promotions
+					attcks = attacks.PawnAttacks[color.BLACK][sourceSq] & b.Occupancies[color.WHITE]
+
+					for attcks != 0 {
+						targetSq = attcks.FirstOne()
+
+						// Handle promotion captures
+						if sourceSq >= A2 && sourceSq <= H2 {
+							result = append(result, move.EncodeMove(sourceSq, targetSq, piece, BQ, 1, 0, 0, 0))
+							result = append(result, move.EncodeMove(sourceSq, targetSq, piece, BR, 1, 0, 0, 0))
+							result = append(result, move.EncodeMove(sourceSq, targetSq, piece, BB, 1, 0, 0, 0))
+							result = append(result, move.EncodeMove(sourceSq, targetSq, piece, BN, 1, 0, 0, 0))
+						} else {
+							result = append(result, move.EncodeMove(sourceSq, targetSq, piece, 0, 1, 0, 0, 0))
+						}
+						attcks &= attcks - 1 // clear LSB
+					}
+
+					// En passant captures
+					if b.EnPassant != -1 {
+						enpassantAttacks := attacks.PawnAttacks[color.BLACK][sourceSq] & (1 << b.EnPassant)
+						if enpassantAttacks != 0 {
+							targetEnpassant := enpassantAttacks.FirstOne()
+							result = append(result, move.EncodeMove(sourceSq, targetEnpassant, piece, 0, 1, 0, 1, 0))
+						}
+					}
+					bitboard &= bitboard - 1 // clear LSB
+				}
+			}
+		}
+
+		// Generate knight captures
+		if (b.Side == color.WHITE && piece == WN) || (b.Side == color.BLACK && piece == BN) {
+			for bitboard != 0 {
+				sourceSq = bitboard.FirstOne()
+				// Get attacks that hit enemy pieces
+				if b.Side == color.WHITE {
+					attcks = attacks.KnightAttacks[sourceSq] & b.Occupancies[color.BLACK]
+				} else {
+					attcks = attacks.KnightAttacks[sourceSq] & b.Occupancies[color.WHITE]
+				}
+
+				// Generate captures
+				for attcks != 0 {
+					targetSq = attcks.FirstOne()
+					result = append(
+						result,
+						move.EncodeMove(sourceSq, targetSq, piece, 0, 1, 0, 0, 0),
+					)
+					attcks &= attcks - 1
+				}
+				bitboard &= bitboard - 1
+			}
+		}
+
+		// Generate bishop captures
+		if (b.Side == color.WHITE && piece == WB) || (b.Side == color.BLACK && piece == BB) {
+			for bitboard != 0 {
+				sourceSq = bitboard.FirstOne()
+				if b.Side == color.WHITE {
+					attcks = attacks.GetBishopAttacks(
+						sourceSq,
+						b.Occupancies[color.BOTH],
+					) & b.Occupancies[color.BLACK]
+				} else {
+					attcks = attacks.GetBishopAttacks(sourceSq, b.Occupancies[color.BOTH]) & b.Occupancies[color.WHITE]
+				}
+
+				for attcks != 0 {
+					targetSq = attcks.FirstOne()
+					result = append(
+						result,
+						move.EncodeMove(sourceSq, targetSq, piece, 0, 1, 0, 0, 0),
+					)
+					attcks &= attcks - 1
+				}
+				bitboard &= bitboard - 1
+			}
+		}
+
+		// Generate rook captures
+		if (b.Side == color.WHITE && piece == WR) || (b.Side == color.BLACK && piece == BR) {
+			for bitboard != 0 {
+				sourceSq = bitboard.FirstOne()
+				if b.Side == color.WHITE {
+					attcks = attacks.GetRookAttacks(
+						sourceSq,
+						b.Occupancies[color.BOTH],
+					) & b.Occupancies[color.BLACK]
+				} else {
+					attcks = attacks.GetRookAttacks(sourceSq, b.Occupancies[color.BOTH]) & b.Occupancies[color.WHITE]
+				}
+
+				for attcks != 0 {
+					targetSq = attcks.FirstOne()
+					result = append(
+						result,
+						move.EncodeMove(sourceSq, targetSq, piece, 0, 1, 0, 0, 0),
+					)
+					attcks &= attcks - 1
+				}
+				bitboard &= bitboard - 1
+			}
+		}
+
+		// Generate queen captures
+		if (b.Side == color.WHITE && piece == WQ) || (b.Side == color.BLACK && piece == BQ) {
+			for bitboard != 0 {
+				sourceSq = bitboard.FirstOne()
+				if b.Side == color.WHITE {
+					attcks = attacks.GetQueenAttacks(
+						sourceSq,
+						b.Occupancies[color.BOTH],
+					) & b.Occupancies[color.BLACK]
+				} else {
+					attcks = attacks.GetQueenAttacks(sourceSq, b.Occupancies[color.BOTH]) & b.Occupancies[color.WHITE]
+				}
+
+				for attcks != 0 {
+					targetSq = attcks.FirstOne()
+					result = append(
+						result,
+						move.EncodeMove(sourceSq, targetSq, piece, 0, 1, 0, 0, 0),
+					)
+					attcks &= attcks - 1
+				}
+				bitboard &= bitboard - 1
+			}
+		}
+
+		// Generate king captures
+		if (b.Side == color.WHITE && piece == WK) || (b.Side == color.BLACK && piece == BK) {
+			for bitboard != 0 {
+				sourceSq = bitboard.FirstOne()
+				if b.Side == color.WHITE {
+					attcks = attacks.KingAttacks[sourceSq] & b.Occupancies[color.BLACK]
+				} else {
+					attcks = attacks.KingAttacks[sourceSq] & b.Occupancies[color.WHITE]
+				}
+
+				for attcks != 0 {
+					targetSq = attcks.FirstOne()
+					result = append(
+						result,
+						move.EncodeMove(sourceSq, targetSq, piece, 0, 1, 0, 0, 0),
+					)
+					attcks &= attcks - 1
+				}
+				bitboard &= bitboard - 1
+			}
+		}
+	}
+
+	return result
+}

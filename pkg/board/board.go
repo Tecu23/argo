@@ -392,3 +392,112 @@ func (b Board) PrintBoard() {
 	fmt.Printf("   Castling:   %s\n\n", b.Castlings.String())
 	// fmt.Printf(" HashKey: 0x%X\n\n", b.Key)
 }
+
+// InCheck determines if the current side to move is in check
+func (b *Board) InCheck() bool {
+	var kingPos int
+
+	// Find king position for the side to move
+	if b.Side == color.WHITE {
+		if b.Bitboards[WK] == 0 {
+			return false
+		}
+
+		kingPos = b.Bitboards[WK].FirstOne()
+		return b.IsSquareAttacked(kingPos, color.BLACK)
+	}
+
+	if b.Bitboards[BK] == 0 {
+		return false
+	}
+	kingPos = b.Bitboards[BK].FirstOne()
+	return b.IsSquareAttacked(kingPos, color.WHITE)
+}
+
+// IsCheckmate determines if the current position is checkmate
+func (b *Board) IsCheckmate() bool {
+	// If not in check, can't be checkmate
+	if !b.InCheck() {
+		return false
+	}
+
+	// Generate all possible moves
+	moves := b.GenerateMoves()
+
+	// Try each move to see if it gets us out of check
+	for _, mv := range moves {
+		copyB := b.CopyBoard()
+		if b.MakeMove(mv, AllMoves) {
+			b.TakeBack(copyB)
+			return false
+		}
+		b.TakeBack(copyB)
+	}
+
+	// No legal moves found while in check => checkmate
+	return true
+}
+
+// IsStalemate determines if the current position is stalemate
+func (b *Board) IsStalemate() bool {
+	// If in check, can't be stalemate
+	if b.InCheck() {
+		return false
+	}
+
+	// Generate all possible moves
+	moves := b.GenerateMoves()
+
+	// Try each move to see if it gets us out of check
+	for _, mv := range moves {
+		copyB := b.CopyBoard()
+		if b.MakeMove(mv, AllMoves) {
+			b.TakeBack(copyB)
+			return false // Found a legal move, not stalemate
+		}
+		b.TakeBack(copyB)
+	}
+
+	// No legal moves found while not in check => stalemate
+	return true
+}
+
+// IsInsufficientMaterial checks if there are enough pieces left for checkmate
+func (b *Board) IsInsufficientMaterial() bool {
+	// Get piece counts
+	whitePieceCount := (b.Bitboards[WP] | b.Bitboards[WR] | b.Bitboards[WQ]).Count()
+	blackPieceCount := (b.Bitboards[BP] | b.Bitboards[BR] | b.Bitboards[BQ]).Count()
+
+	// If any pawns, rooks, or queens exist, there's sufficient material
+	if whitePieceCount > 0 || blackPieceCount > 0 {
+		return false
+	}
+
+	whiteKnights := b.Bitboards[WN].Count()
+	blackKnights := b.Bitboards[BN].Count()
+	whiteBishops := b.Bitboards[WB].Count()
+	blackBishops := b.Bitboards[BB].Count()
+
+	// King vs King
+	if whiteKnights == 0 && blackKnights == 0 && whiteBishops == 0 && blackBishops == 0 {
+		return true
+	}
+
+	// King + minor piece vs King
+	if whiteKnights+whiteBishops <= 1 && blackKnights+blackBishops == 0 {
+		return true
+	}
+	if blackKnights+blackBishops <= 1 && whiteKnights+whiteBishops == 0 {
+		return true
+	}
+
+	// King + 2 knights vs King
+	if whiteKnights == 2 && whiteBishops == 0 && blackKnights == 0 && blackBishops == 0 {
+		return true
+	}
+	if blackKnights == 2 && blackBishops == 0 && whiteKnights == 0 && whiteBishops == 0 {
+		return true
+	}
+
+	return false
+}
