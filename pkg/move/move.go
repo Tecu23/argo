@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"unicode"
 
+	. "github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/util"
 )
 
@@ -109,10 +110,28 @@ func (m Move) GetCastling() int {
 
 // String prints the move in algebraic notation (e.g. "e2e4").
 func (m Move) String() string {
+	if m == NoMove {
+		return "0000"
+	}
+
+	sPromotion := ""
+	prom := m.GetPromoted()
+	if prom != 0 {
+		if prom == WQ || prom == BQ {
+			sPromotion = "q"
+		} else if prom == WR || prom == BR {
+			sPromotion = "r"
+		} else if prom == WB || prom == BB {
+			sPromotion = "b"
+		} else if prom == WN || prom == BN {
+			sPromotion = "n"
+		}
+	}
 	return fmt.Sprintf(
-		"%s%s",
+		"%s%s%s",
 		util.Sq2Fen[m.GetSource()],
 		util.Sq2Fen[m.GetTarget()],
+		sPromotion,
 	)
 }
 

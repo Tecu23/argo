@@ -1,6 +1,9 @@
 # Binary output files
 bin/
 
+# Release output files
+dist/
+
 # Coverage files
 cover.html
 cover.out

@@ -11,16 +11,27 @@ import (
 )
 
 // search performs the actual search logic
-func (e *Engine) search(ctx context.Context, board board.Board, tm *timeManager) SearchInfo {
+func (e *Engine) search(ctx context.Context, b board.Board, tm *timeManager) SearchInfo {
 	// Generate all legal moves
-	moves := board.GenerateMoves()
-	if len(moves) == 0 {
+	moves := b.GenerateMoves()
+	legalMoves := []move.Move{}
+
+	for _, mv := range moves {
+		copyB := b.CopyBoard()
+		if !b.MakeMove(mv, board.AllMoves) {
+			continue
+		}
+		b.TakeBack(copyB)
+		legalMoves = append(legalMoves, mv)
+	}
+
+	if len(legalMoves) == 0 {
 		return SearchInfo{}
 	}
 
 	// Select random move
-	randomIndex := rand.Intn(len(moves))
-	bestMove := moves[randomIndex]
+	randomIndex := rand.Intn(len(legalMoves))
+	bestMove := legalMoves[randomIndex]
 
 	// Store in main line
 	e.mainLine.moves = []move.Move{bestMove}
