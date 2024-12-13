@@ -60,6 +60,18 @@ const (
 	FileH = bitboard.Bitboard(0x8080808080808080) // File h
 )
 
+var Files = [8]bitboard.Bitboard{
+	bitboard.Bitboard(0x0101010101010101), // File a (a1, a2, ..., a8)
+	bitboard.Bitboard(0x0202020202020202), // File b
+	bitboard.Bitboard(0x0404040404040404), // File c
+	bitboard.Bitboard(0x0808080808080808), // File d
+	bitboard.Bitboard(0x1010101010101010), // File e
+	bitboard.Bitboard(0x2020202020202020), // File f
+	bitboard.Bitboard(0x4040404040404040), // File g
+	bitboard.Bitboard(0x8080808080808080), // File h
+
+}
+
 // The constants below represent indices for each square on a chessboard.
 // They follow a top-left (A8) to bottom-right (H1) indexing, starting with A8 as 0.
 // The first rank (from White's perspective) is at the bottom (A1 to H1) and the eighth rank at the top (A8 to H8).
