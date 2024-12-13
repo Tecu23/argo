@@ -3,10 +3,10 @@ package engine
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/Tecu23/argov2/internal/types"
+	"github.com/Tecu23/argov2/pkg/color"
 	"github.com/Tecu23/argov2/pkg/move"
 )
 
@@ -18,10 +18,12 @@ type mainLine struct {
 }
 
 type Engine struct {
-	Options  Options
-	mainLine mainLine
-	start    time.Time
-	progress func(SearchInfo)
+	Options     Options
+	mainLine    mainLine
+	start       time.Time
+	progress    func(SearchInfo)
+	timeManager timeManager
+	cancel      context.CancelFunc
 }
 
 const (
@@ -39,19 +41,35 @@ func NewEngine(options Options) *Engine {
 
 func (e *Engine) Prepare() {}
 
-func (e *Engine) Search(ctx context.Context, searchParams SearchParams) SearchInfo {
+// Search is the main entry point for starting a search
+func (e *Engine) Search(ctx context.Context, params SearchParams) SearchInfo {
 	e.start = time.Now()
 	e.mainLine = mainLine{}
-	e.progress = searchParams.Progress
+	e.progress = params.Progress
 
-	fmt.Println("Called search")
+	// Get current position
+	currentBoard := params.Boards[len(params.Boards)-1]
 
-	for {
-		fmt.Println("Searching...")
-		time.Sleep(2 * time.Second)
-	}
+	// Setup time manager
+	done := ctx.Done()
+	tm := newTimeManager(params.Limits, currentBoard.Side == color.BLACK, done, e.cancel)
 
-	return SearchInfo{}
+	// Start actual search
+	return e.search(ctx, currentBoard, tm)
 }
 
 func (e *Engine) Clear() {}
+
+// createSearchInfo creates a SearchInfo struct from current engine state
+func (e *Engine) createSearchInfo() SearchInfo {
+	return SearchInfo{
+		Score: UciScore{
+			Centipawns: e.mainLine.score,
+			Mate:       0,
+		},
+		Depth:    e.mainLine.depth,
+		Nodes:    e.mainLine.nodes,
+		Time:     time.Since(e.start),
+		MainLine: e.mainLine.moves,
+	}
+}

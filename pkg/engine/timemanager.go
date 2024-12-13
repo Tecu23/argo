@@ -2,150 +2,144 @@ package engine
 
 import (
 	"context"
-	"math"
 	"time"
 
 	. "github.com/Tecu23/argov2/internal/types"
-	"github.com/Tecu23/argov2/pkg/board"
-	"github.com/Tecu23/argov2/pkg/color"
 	"github.com/Tecu23/argov2/pkg/move"
 )
 
-const (
-	maxDifficulty   = 2
-	minBranchFactor = 0.75
-	maxBranchFactor = 1.5
-)
-
+// timeManager handle all time-related decisions during search
 type timeManager struct {
-	start        time.Time
-	limits       LimitsType
-	side         bool
-	difficulty   float64
-	lastScore    int
-	lastBestMove move.Move
-	done         <-chan struct{}
-	cancel       context.CancelFunc
+	start             time.Time          // When search started
+	allocated         time.Duration      // Time allocated for this move
+	maxTime           time.Duration      // Maximum time allowed
+	limits            LimitsType         // UCI time control limits
+	side              bool               // Side to move (false=white, true=black)
+	lastScore         int                // Previous iteration score
+	scoreChanged      bool               // If score changed significantly from the last iteration
+	lastBestMove      move.Move          // Previous iteration best move
+	searchStable      bool               // If best move hasn't changed in recent iterations
+	movesUntilControl int                // Estimated moves until next time control
+	done              <-chan struct{}    // Channel to signal completion
+	cancel            context.CancelFunc // Function to cancel search
 }
 
 func newTimeManager(
-	ctx context.Context,
-	start time.Time,
 	limits LimitsType,
-	b *board.Board,
+	side bool,
+	done <-chan struct{},
+	cancel context.CancelFunc,
 ) *timeManager {
 	tm := &timeManager{
-		start:      start,
-		limits:     limits,
-		side:       b.Side == color.WHITE,
-		difficulty: 1,
+		start:  time.Now(),
+		limits: limits,
+		side:   side,
+		done:   done,
+		cancel: cancel,
 	}
 
-	var cancel context.CancelFunc
-
-	if limits.MoveTime > 0 || limits.WhiteTime > 0 || limits.BlackTime > 0 {
-		var maximum time.Duration
-		if limits.MoveTime > 0 {
-			maximum = time.Duration(limits.MoveTime) * time.Millisecond
-		} else {
-			maximum = tm.calculateTimeLimit(maxDifficulty, maxBranchFactor)
-		}
-		ctx, cancel = context.WithDeadline(ctx, start.Add(maximum))
-	} else {
-		ctx, cancel = context.WithCancel(ctx)
-	}
-
-	tm.done = ctx.Done()
-	tm.cancel = cancel
+	tm.calculateTimeAllocation()
 	return tm
 }
 
-func (tm *timeManager) IsDone() bool {
+func (tm *timeManager) calculateTimeAllocation() {
+	// Handle fixed move time
+	if tm.limits.MoveTime > 0 {
+		tm.allocated = time.Duration(tm.limits.MoveTime) * time.Millisecond
+		tm.maxTime = tm.allocated
+		return
+	}
+
+	// Handle infinite/ponder
+	if tm.limits.Infinite || tm.limits.Ponder {
+		tm.allocated = 24 * time.Hour // Effectively infinite
+		tm.maxTime = tm.allocated
+		return
+	}
+
+	// Get relevant time and increment
+	var baseTime, increment int
+	if !tm.side { // White
+		baseTime = tm.limits.WhiteTime
+		increment = tm.limits.WhiteIncrement
+	} else {
+		baseTime = tm.limits.WhiteTime
+		increment = tm.limits.WhiteIncrement
+	}
+
+	// Calculate moves until time control
+	if tm.limits.MovesToGo > 0 {
+		tm.movesUntilControl = tm.limits.MovesToGo
+	} else {
+		tm.movesUntilControl = 30 // Default estimate
+	}
+
+	// Calculate base allocation
+	remainingTime := time.Duration(baseTime) * time.Millisecond
+	incTime := time.Duration(increment) * time.Millisecond
+
+	// Basic time management: allocate remaining time / moves plus some increment
+	tm.allocated = (remainingTime / time.Duration(tm.movesUntilControl)) + (incTime / 2)
+
+	// Set maximum time to prevent going over
+	tm.maxTime = minTime(remainingTime/4, tm.allocated*2)
+}
+
+func (tm *timeManager) shouldStop() bool {
+	// Checkm for external stop signal
 	select {
 	case <-tm.done:
 		return true
 	default:
+	}
+
+	// Don't stop if infinite or pondering
+	if tm.limits.Infinite || tm.limits.Ponder {
 		return false
 	}
+
+	elapsed := time.Since(tm.start)
+
+	// Always stop if exceeded maximum time
+	if elapsed >= tm.maxTime {
+		return true
+	}
+
+	// Consider stopping at allocated time if search is stable
+	if elapsed >= tm.allocated && tm.searchStable {
+		return true
+	}
+
+	// Consider stopping at allocated time if score has not changed
+	if elapsed >= tm.allocated && !tm.scoreChanged {
+		return true
+	}
+
+	return false
 }
 
-func (tm *timeManager) OnNodesChanged(nodes int) {
-	if tm.limits.Nodes > 0 && nodes >= tm.limits.Nodes {
-		tm.cancel()
-	}
+func (tm *timeManager) updateSearch(score int, bestMove move.Move) {
+	// Check if score changed significantly (more than 0.5 pawns)
+	tm.scoreChanged = abs(score-tm.lastScore) > 50
+
+	// Check if best move is stable
+	tm.searchStable = bestMove == tm.lastBestMove
+
+	tm.lastScore = score
+	tm.lastBestMove = bestMove
 }
 
-func (tm *timeManager) OnIterationComplete(line mainLine) {
-	if tm.limits.Infinite {
-		return
+// Helper functions
+func minTime(a, b time.Duration) time.Duration {
+	if a < b {
+		return a
 	}
-
-	if tm.limits.Depth != 0 && line.depth >= tm.limits.Depth {
-		tm.cancel()
-		return
-	}
-
-	if line.score >= winIn(line.depth-5) || line.score <= lossIn(line.depth-5) {
-		tm.cancel()
-		return
-	}
-
-	if tm.limits.WhiteTime > 0 || tm.limits.BlackTime > 0 {
-		if line.depth >= 5 {
-			if line.score < tm.lastScore-pawnValue/2 {
-				tm.difficulty = maxDifficulty
-			} else if line.moves[0] != tm.lastBestMove {
-				tm.difficulty = math.Max(1.5, tm.difficulty)
-			} else {
-				tm.difficulty = math.Max(0.95, 0.9*tm.difficulty)
-			}
-		}
-
-		tm.lastScore = line.score
-		tm.lastBestMove = line.moves[0]
-		optimum := tm.calculateTimeLimit(tm.difficulty, minBranchFactor)
-		if time.Since(tm.start) >= optimum {
-			tm.cancel()
-			return
-		}
-	}
+	return b
 }
 
-func (tm *timeManager) Close() {
-	tm.cancel()
-}
-
-func (tm *timeManager) calculateTimeLimit(difficulty, branchFactor float64) time.Duration {
-	const (
-		DefaultMovesToGo = 40
-		MoveOverhead     = 300 * time.Millisecond
-		MinTimeLimit     = 1 * time.Millisecond
-	)
-	var main, inc time.Duration
-	if tm.side {
-		main = time.Duration(tm.limits.WhiteTime) * time.Millisecond
-		inc = time.Duration(tm.limits.WhiteIncrement) * time.Millisecond
-	} else {
-		main = time.Duration(tm.limits.BlackTime) * time.Millisecond
-		inc = time.Duration(tm.limits.BlackIncrement) * time.Millisecond
+func abs(x int) int {
+	if x < 0 {
+		return -x
 	}
-	main -= MoveOverhead
-	if main < MinTimeLimit {
-		main = MinTimeLimit
-	}
-	moves := tm.limits.MovesToGo
-	if moves == 0 || moves > DefaultMovesToGo {
-		moves = DefaultMovesToGo
-	}
-	total := float64(main) + float64(moves-1)*float64(inc)
-	timeLimit := time.Duration(
-		difficulty * branchFactor * total / (difficulty*maxBranchFactor + float64(moves-1)),
-	)
-	if timeLimit > main {
-		timeLimit = main
-	}
-	if timeLimit < MinTimeLimit {
-		timeLimit = MinTimeLimit
-	}
-	return timeLimit
+	return x
 }
