@@ -15,147 +15,197 @@ const (
 	MateDepth = 48_000
 )
 
-func (e *Engine) search(ctx context.Context, b board.Board, tm *timeManager) SearchInfo {
+// search performs the actual search logic
+func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) SearchInfo {
 	e.nodes = 0
+
 	var bestMove move.Move
+	var bestScore int
 
-	// CHANGED: Added variables to track best move per iteration
-	var bestMoveAtDepth move.Move
-	var bestScoreAtDepth int
+	// Engine will only loop up to depth limit, regardless of time
+	maxDepth := MaxDepth
+	if tm.limits.Depth > 0 {
+		maxDepth = tm.limits.Depth
+	}
 
-	for depth := 1; depth <= MaxDepth; depth++ {
-		// CHANGED: Initialize best score for this iteration
-		bestScoreAtDepth = -Infinity
-		bestMoveAtDepth = move.Move(0)
+	// Iterative deepeing
+	for depth := 1; depth <= maxDepth; depth++ {
+		score, mv := e.searchRoot(ctx, b, depth)
 
-		moves := b.GenerateMoves()
+		if mv != move.NoMove {
+			// Store best move and score
+			bestMove = mv
+			bestScore = score
 
-		// CHANGED: Root move search loop
-		for _, mv := range moves {
-			copyB := b.CopyBoard()
-			if !b.MakeMove(mv, board.AllMoves) {
-				continue
-			}
-
-			// CHANGED: Proper negamax call with correct bounds
-			score := -e.alphaBeta(ctx, b, depth-1, -Infinity, -bestScoreAtDepth)
-
-			b.TakeBack(copyB)
-
-			if ctx.Err() != nil {
-				if bestMove != move.Move(0) {
-					return e.createSearchInfo()
-				}
-			}
-
-			// CHANGED: Update best move if score is better
-			if score > bestScoreAtDepth {
-				bestScoreAtDepth = score
-				bestMoveAtDepth = mv
-			}
+			// Update search info
+			e.mainLine.moves = []move.Move{bestMove}
+			e.mainLine.score = bestScore
+			e.mainLine.depth = depth
+			e.mainLine.nodes = e.nodes
 		}
 
-		// CHANGED: Update best move after iteration is complete
-		bestMove = bestMoveAtDepth
-
-		e.mainLine.moves = []move.Move{bestMove}
-		e.mainLine.score = bestScoreAtDepth // CHANGED: Use score from iteration
-		e.mainLine.depth = depth
-		e.mainLine.nodes = e.nodes
-
+		// Report progress
 		if e.progress != nil {
 			e.progress(e.createSearchInfo())
 		}
 
-		tm.updateSearch(bestScoreAtDepth, bestMove)
-
-		if tm.shouldStop() || ctx.Err() != nil {
+		// Check if we should stop
+		if tm.IsDone() || ctx.Err() != nil {
 			break
 		}
+
+		// Update time manager
+		tm.OnNodesChanged(int(e.nodes))
+	}
+
+	searchInfo := e.createSearchInfo()
+
+	// Ensure we have a move to return
+	if len(searchInfo.MainLine) == 0 && bestMove != move.NoMove {
+		searchInfo.MainLine = []move.Move{bestMove}
 	}
 
 	return e.createSearchInfo()
 }
 
-func (e *Engine) alphaBeta(ctx context.Context, b board.Board, depth, alpha, beta int) int {
-	if ctx.Err() != nil {
-		return 0
-	}
+// searchRoot performs alpha-beta search at the root level
+func (e *Engine) searchRoot(ctx context.Context, b *board.Board, depth int) (int, move.Move) {
+	alpha := -Infinity
+	beta := Infinity
+	var bestMove move.Move
 
-	e.nodes++
-
-	// CHANGED: Better base cases
-	if depth == 0 {
-		return e.quiescence(ctx, b, alpha, beta)
-	}
-
-	// CHANGED: Check for draws first
-	if b.IsStalemate() || b.IsInsufficientMaterial() {
-		return 0
-	}
-
-	// CHANGED: Proper mate detection
-	if b.IsCheckmate() {
-		return -MateScore + int(e.nodes) // Shorter mates are preferred
-	}
-
+	// Generate moves at root
 	moves := b.GenerateMoves()
-	if len(moves) == 0 {
-		if b.InCheck() {
-			return -MateScore + int(e.nodes)
-		}
-		return 0 // Stalemate
-	}
 
-	// CHANGED: Proper move loop with alpha-beta
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
 		if !b.MakeMove(mv, board.AllMoves) {
 			continue
 		}
 
+		// Search this position
 		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha)
 
 		b.TakeBack(copyB)
 
+		// Check for search abort
+		if ctx.Err() != nil {
+			return 0, move.NoMove
+		}
+
+		// Update best score if we found a better score
+		if score > alpha {
+			alpha = score
+			bestMove = mv
+		}
+
+	}
+
+	return alpha, bestMove
+}
+
+// alphaBeta performs the main alpha-beta search
+func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, beta int) int {
+	// exit early if time exceeeded
+	if (e.nodes & 1023) == 0 {
+		if ctx.Err() != nil {
+			// This ensures the move won't be selected
+			// as it will always be worse than any real evaluation
+			if depth&1 == 0 {
+				return -Infinity // for maximizing player
+			}
+			return Infinity // for minimizing player
+		}
+	}
+
+	// Increment node counter
+	e.nodes++
+
+	// Check for terminal positions
+	if b.IsCheckmate() {
+		return -MateScore + int(e.nodes) // Prefer shorter mates
+	}
+
+	if b.IsStalemate() || b.IsInsufficientMaterial() {
+		return 0
+	}
+
+	// Base case: evaluate leaf nodes
+	if depth <= 0 {
+		return e.quiescence(ctx, b, alpha, beta)
+	}
+
+	// Generate moves
+	moves := b.GenerateMoves()
+	hasLegalMoves := false
+
+	// Search all moves {
+	for _, mv := range moves {
+		copyB := b.CopyBoard()
+		if !b.MakeMove(mv, board.AllMoves) {
+			continue
+		}
+
+		hasLegalMoves = true
+		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha)
+
+		b.TakeBack(copyB)
+
+		// Check for search abort
 		if ctx.Err() != nil {
 			return 0
 		}
 
+		// Alpha-beta pruning
 		if score >= beta {
-			return beta // Beta cutoff
+			return beta
 		}
+
 		if score > alpha {
-			alpha = score // Alpha update
+			alpha = score
 		}
+	}
+
+	// Check for chechmate/stalemate
+	if !hasLegalMoves {
+		if b.InCheck() {
+			return -MateScore + int(e.nodes)
+		}
+		return 0
 	}
 
 	return alpha
 }
 
-func (e *Engine) quiescence(ctx context.Context, b board.Board, alpha, beta int) int {
-	if ctx.Err() != nil {
-		return 0
+// quiescence performs capture-only search to reach quiet position
+func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta int) int {
+	if (e.nodes & 4095) == 0 {
+		if ctx.Err() != nil {
+			// Use same logic as alpha-beta for consistency
+			if e.nodes&1 == 0 {
+				return -Infinity
+			}
+			return Infinity
+		}
 	}
 
 	e.nodes++
 
-	// CHANGED: Added stand-pat evaluation
-	standPat := e.evaluator.Evaluate(&b)
-
-	if standPat >= beta {
+	// Stand-pat score
+	score := e.evaluator.Evaluate(b)
+	if score >= beta {
 		return beta
 	}
-	if alpha < standPat {
-		alpha = standPat
+
+	if score > alpha {
+		alpha = score
 	}
 
-	// CHANGED: Use GenerateCaptures instead of GenerateMoves
+	// Generate captures
 	moves := b.GenerateCaptures()
 
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
-		// CHANGED: Use OnlyCaptures flag
 		if !b.MakeMove(mv, board.OnlyCaptures) {
 			continue
 		}
@@ -165,12 +215,16 @@ func (e *Engine) quiescence(ctx context.Context, b board.Board, alpha, beta int)
 		b.TakeBack(copyB)
 
 		if ctx.Err() != nil {
-			return 0
+			if e.nodes&1 == 0 {
+				return -Infinity
+			}
+			return Infinity
 		}
 
 		if score >= beta {
 			return beta
 		}
+
 		if score > alpha {
 			alpha = score
 		}

@@ -29,6 +29,7 @@ type Board struct {
 	EnPassant   int
 	Rule50      uint8
 	Castlings   Castlings
+	MoveNumber  int
 }
 
 // Reset restores the board to an initial empty state and sets defaults.
@@ -36,6 +37,8 @@ func (b *Board) Reset() {
 	b.Side = color.WHITE
 	b.EnPassant = -1
 	b.Castlings = 0
+	b.Rule50 = 0
+	b.MoveNumber = 0
 
 	for i := 0; i < 12; i++ {
 		b.Bitboards[i] = 0
@@ -222,6 +225,9 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 				b.Bitboards[WK].Set(kingPos)
 			}
 
+			if b.Side == color.BLACK {
+				b.MoveNumber++
+			}
 			return true
 		}
 
@@ -303,6 +309,10 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 			return b.MakeMove(m, AllMoves)
 		}
 		return false // 0 means don't make it
+	}
+
+	if b.Side == color.BLACK {
+		b.MoveNumber++
 	}
 	return true
 }
@@ -396,6 +406,7 @@ func (b Board) PrintBoard() {
 // InCheck determines if the current side to move is in check
 func (b *Board) InCheck() bool {
 	var kingPos int
+	var kingBB bitboard.Bitboard
 
 	// Find king position for the side to move
 	if b.Side == color.WHITE {
@@ -403,14 +414,16 @@ func (b *Board) InCheck() bool {
 			return false
 		}
 
-		kingPos = b.Bitboards[WK].FirstOne()
+		kingBB = b.Bitboards[WK]
+		kingPos = kingBB.FirstOne()
 		return b.IsSquareAttacked(kingPos, color.BLACK)
 	}
 
 	if b.Bitboards[BK] == 0 {
 		return false
 	}
-	kingPos = b.Bitboards[BK].FirstOne()
+	kingBB = b.Bitboards[BK]
+	kingPos = kingBB.FirstOne()
 	return b.IsSquareAttacked(kingPos, color.WHITE)
 }
 

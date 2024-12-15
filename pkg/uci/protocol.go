@@ -64,6 +64,7 @@ func (uci *Protocol) Run(logger *log.Logger) {
 				fmt.Println(searchInfoToUci(si))
 				searchResult = si
 			} else {
+
 				if len(searchResult.MainLine) != 0 {
 					fmt.Printf("bestmove %v\n", searchResult.MainLine[0])
 				}

@@ -59,7 +59,7 @@ build:
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
 		-tags "$(BUILD_TAGS)" \
 		-ldflags "$(LDFLAGS)" \
-		-o $(BIN_DIR)/$(VERSION)/$(BINARY_NAME)$(if $(filter windows,$(GOOS)),.exe,) \
+		-o $(BIN_DIR)/$(VERSION)/$(BINARY_NAME)_$(GOOS)_$(GOARCH)$(if $(filter windows,$(GOOS)),.exe,) \
 		$(MAIN_PKG)
 
 build-all: build-linux build-windows build-darwin

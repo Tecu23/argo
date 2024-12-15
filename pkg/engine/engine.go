@@ -6,7 +6,6 @@ import (
 	"time"
 
 	. "github.com/Tecu23/argov2/internal/types"
-	"github.com/Tecu23/argov2/pkg/color"
 	"github.com/Tecu23/argov2/pkg/evaluation"
 	"github.com/Tecu23/argov2/pkg/move"
 )
@@ -24,17 +23,10 @@ type Engine struct {
 	mainLine    mainLine
 	start       time.Time
 	progress    func(SearchInfo)
-	timeManager timeManager
+	timeManager *timeManager
 	cancel      context.CancelFunc
 	evaluator   evaluation.Evaluator
 }
-
-const (
-	maxDepth   = 100
-	infinity   = 50000
-	mateScore  = 49000
-	mateHeight = 48000
-)
 
 func NewEngine(options Options) *Engine {
 	return &Engine{
@@ -54,12 +46,11 @@ func (e *Engine) Search(ctx context.Context, params SearchParams) SearchInfo {
 	// Get current position
 	currentBoard := params.Boards[len(params.Boards)-1]
 
-	// Setup time manager
-	done := ctx.Done()
-	tm := newTimeManager(params.Limits, currentBoard.Side == color.BLACK, done, e.cancel)
+	e.timeManager = newTimeManager(ctx, e.start, params.Limits, &currentBoard)
+	defer e.timeManager.Close()
 
 	// Start actual search
-	return e.search(ctx, currentBoard, tm)
+	return e.search(ctx, &currentBoard, e.timeManager)
 }
 
 func (e *Engine) Clear() {}
