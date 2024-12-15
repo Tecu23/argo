@@ -650,3 +650,12 @@ func (b *Board) updateHashForMove(m move.Move) {
 func (b *Board) Hash() uint64 {
 	return b.hash
 }
+
+func (b *Board) GetPieceAt(square int) int {
+	for piece := WP; piece <= BK; piece++ {
+		if b.Bitboards[piece].Test(square) {
+			return piece
+		}
+	}
+	return Empty
+}

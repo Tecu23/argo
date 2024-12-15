@@ -3,6 +3,7 @@ package evaluation
 import (
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/color"
+	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
 type Evaluator struct {
@@ -36,4 +37,23 @@ func (e *Evaluator) Evaluate(board *board.Board) int {
 	}
 
 	return score
+}
+
+func GetPieceValue(piece int) int {
+	switch piece {
+	case WP, BP:
+		return 100 // Pawn value
+	case WN, BN:
+		return 320 // Knight value
+	case WB, BB:
+		return 330 // Bishop value
+	case WR, BR:
+		return 500 // Rook value
+	case WQ, BQ:
+		return 900 // Queen value
+	case WK, BK:
+		return 20000 // King value
+	default:
+		return 0
+	}
 }

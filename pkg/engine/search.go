@@ -2,9 +2,11 @@ package engine
 
 import (
 	"context"
+	"sort"
 
 	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/board"
+	"github.com/Tecu23/argov2/pkg/evaluation"
 	"github.com/Tecu23/argov2/pkg/move"
 )
 
@@ -14,6 +16,44 @@ const (
 	MateScore = 49_000
 	MateDepth = 48_000
 )
+
+type MoveScore struct {
+	move  move.Move
+	score int
+}
+
+func (e *Engine) orderMoves(moves []move.Move, b *board.Board, ttMove move.Move) []move.Move {
+	scores := make([]MoveScore, len(moves))
+
+	for i, mv := range moves {
+		score := 0
+
+		// TT move gets highest priority
+		if mv == ttMove {
+			score = 20000
+		} else if mv.GetCapture() != 0 {
+			// MVV-LVA scoring
+			victim := b.GetPieceAt(mv.GetTarget())
+			aggressor := b.GetPieceAt(mv.GetSource())
+			score = 10000 + (evaluation.GetPieceValue(victim) - evaluation.GetPieceValue(aggressor)/10)
+		}
+
+		scores[i] = MoveScore{mv, score}
+	}
+
+	// Sort moves by score
+	sort.Slice(scores, func(i, j int) bool {
+		return scores[i].score > scores[j].score
+	})
+
+	// Extract sorted moves
+	sortedMoves := make([]move.Move, len(moves))
+	for i, ms := range scores {
+		sortedMoves[i] = ms.move
+	}
+
+	return sortedMoves
+}
 
 // search performs the actual search logic
 func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) SearchInfo {
@@ -31,8 +71,11 @@ func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) Se
 
 	// Iterative deepeing
 	for depth := 1; depth <= maxDepth; depth++ {
-		score, mv := e.searchRoot(ctx, b, depth)
+		if tm.IsDone() || ctx.Err() != nil {
+			break
+		}
 
+		score, mv := e.searchRoot(ctx, b, depth)
 		if mv != move.NoMove {
 			// Store best move and score
 			bestMove = mv
@@ -60,13 +103,12 @@ func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) Se
 	}
 
 	searchInfo := e.createSearchInfo()
-
 	// Ensure we have a move to return
 	if len(searchInfo.MainLine) == 0 && bestMove != move.NoMove {
 		searchInfo.MainLine = []move.Move{bestMove}
 	}
 
-	return e.createSearchInfo()
+	return searchInfo
 }
 
 // searchRoot performs alpha-beta search at the root level
@@ -74,9 +116,17 @@ func (e *Engine) searchRoot(ctx context.Context, b *board.Board, depth int) (int
 	alpha := -Infinity
 	beta := Infinity
 	var bestMove move.Move
+	originalAlpha := alpha
 
 	// Generate moves at root
 	moves := b.GenerateMoves()
+
+	var ttMove move.Move
+	if entry, ok := e.tt.Probe(b.Hash()); ok {
+		ttMove = entry.BestMove
+	}
+
+	moves = e.orderMoves(moves, b, ttMove)
 
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
@@ -85,7 +135,7 @@ func (e *Engine) searchRoot(ctx context.Context, b *board.Board, depth int) (int
 		}
 
 		// Search this position
-		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha)
+		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, 1)
 
 		b.TakeBack(copyB)
 
@@ -98,38 +148,50 @@ func (e *Engine) searchRoot(ctx context.Context, b *board.Board, depth int) (int
 		if score > alpha {
 			alpha = score
 			bestMove = mv
+			if alpha >= beta {
+				break
+			}
 		}
 
 	}
+	// Store in TT
+	flag := TTExact
+	if alpha <= originalAlpha {
+		flag = TTAlpha
+	} else if alpha >= beta {
+		flag = TTBeta
+	}
+	e.tt.Store(b.Hash(), alpha, depth, flag, bestMove)
 
 	return alpha, bestMove
 }
 
 // alphaBeta performs the main alpha-beta search
-func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, beta int) int {
+func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, beta, ply int) int {
 	// Increment node counter
 	e.nodes++
+	originalAlpha := alpha
 
 	// TT Lookup
 	hash := b.Hash()
 	if entry, ok := e.tt.Probe(hash); ok {
 		if entry.Depth >= depth {
+			score := adjustScore(entry.Score, ply)
 			switch entry.Flag {
 			case TTExact:
 				return entry.Score
 			case TTAlpha:
-				if entry.Score <= alpha {
+				if score <= alpha {
 					return alpha
 				}
 			case TTBeta:
-				if entry.Score >= beta {
+				if score >= beta {
 					return beta
 				}
 			}
 		}
 	}
 
-	// exit early if time exceeeded
 	if (e.nodes & 1023) == 0 {
 		if ctx.Err() != nil {
 			// This ensures the move won't be selected
@@ -139,6 +201,11 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 			}
 			return Infinity // for minimizing player
 		}
+	}
+
+	// Check extension
+	if b.InCheck() {
+		depth++
 	}
 
 	// Check for terminal positions
@@ -152,11 +219,19 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 
 	// Base case: evaluate leaf nodes
 	if depth <= 0 {
-		return e.quiescence(ctx, b, alpha, beta)
+		return e.quiescence(ctx, b, alpha, beta, ply)
 	}
 
 	// Generate moves
 	moves := b.GenerateMoves()
+	var ttMove move.Move
+
+	if entry, ok := e.tt.Probe(hash); ok {
+		ttMove = entry.BestMove
+	}
+
+	moves = e.orderMoves(moves, b, ttMove)
+
 	hasLegalMoves := false
 	var bestMove move.Move
 	bestScore := -Infinity
@@ -169,7 +244,7 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 		}
 
 		hasLegalMoves = true
-		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha)
+		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, ply+1)
 		b.TakeBack(copyB)
 
 		// Check for search abort
@@ -185,12 +260,13 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 		if score > bestScore {
 			bestScore = score
 			bestMove = mv
-		}
-
-		alpha = max(alpha, score)
-		if alpha >= beta {
-			e.tt.Store(hash, beta, depth, TTBeta, mv)
-			return beta
+			if score > alpha {
+				alpha = score
+				if alpha >= beta {
+					e.tt.Store(hash, beta, depth, TTBeta, mv)
+					return beta
+				}
+			}
 		}
 	}
 
@@ -203,11 +279,9 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 	}
 
 	// Store position in TT
-	var flag TTFlag
-	if bestScore <= alpha {
+	flag := TTExact
+	if bestScore <= originalAlpha {
 		flag = TTAlpha
-	} else {
-		flag = TTExact
 	}
 	e.tt.Store(hash, bestScore, depth, flag, bestMove)
 
@@ -215,16 +289,8 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 }
 
 // quiescence performs capture-only search to reach quiet position
-func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta int) int {
+func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta, ply int) int {
 	e.nodes++
-
-	// TT Lookup for quiescence
-	hash := b.Hash()
-	if entry, ok := e.tt.Probe(hash); ok {
-		if entry.Flag == TTExact {
-			return entry.Score
-		}
-	}
 
 	if (e.nodes & 4095) == 0 {
 		if ctx.Err() != nil {
@@ -236,18 +302,26 @@ func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta int
 		}
 	}
 
+	// Check for terminal positions
+	if b.IsCheckmate() {
+		return -MateScore + int(e.nodes) // Prefer shorter mates
+	}
+
+	if b.IsStalemate() || b.IsInsufficientMaterial() {
+		return 0
+	}
+
 	// Stand-pat score
 	score := e.evaluator.Evaluate(b)
 	if score >= beta {
 		return beta
 	}
 
-	if score > alpha {
-		alpha = score
-	}
+	alpha = max(alpha, score)
 
 	// Generate captures
 	moves := b.GenerateCaptures()
+	moves = e.orderMoves(moves, b, move.NoMove) // Order captures
 
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
@@ -255,12 +329,11 @@ func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta int
 			continue
 		}
 
-		score := -e.quiescence(ctx, b, -beta, -alpha)
-
+		score := -e.quiescence(ctx, b, -beta, -alpha, ply+1)
 		b.TakeBack(copyB)
 
 		if ctx.Err() != nil {
-			if e.nodes&1 == 0 {
+			if ply&1 == 0 {
 				return -Infinity
 			}
 			return Infinity
@@ -269,12 +342,19 @@ func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta int
 		if score >= beta {
 			return beta
 		}
+		alpha = max(alpha, score)
 
-		if score > alpha {
-			alpha = score
-		}
 	}
 
-	e.tt.Store(hash, alpha, 0, TTExact, move.Move(0))
 	return alpha
+}
+
+func adjustScore(score, ply int) int {
+	if score >= MateScore-MaxDepth {
+		return score - ply
+	}
+	if score <= -MateScore+MaxDepth {
+		return score + ply
+	}
+	return score
 }
