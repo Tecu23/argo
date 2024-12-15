@@ -94,5 +94,7 @@ func ParseFEN(FEN string) (Board, error) {
 		b.Rule50 = uint8(cnt)
 	}
 
+	b.calculateHash()
+
 	return b, nil
 }

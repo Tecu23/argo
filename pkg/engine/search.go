@@ -18,6 +18,7 @@ const (
 // search performs the actual search logic
 func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) SearchInfo {
 	e.nodes = 0
+	e.tt.NewSearch()
 
 	var bestMove move.Move
 	var bestScore int
@@ -106,6 +107,28 @@ func (e *Engine) searchRoot(ctx context.Context, b *board.Board, depth int) (int
 
 // alphaBeta performs the main alpha-beta search
 func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, beta int) int {
+	// Increment node counter
+	e.nodes++
+
+	// TT Lookup
+	hash := b.Hash()
+	if entry, ok := e.tt.Probe(hash); ok {
+		if entry.Depth >= depth {
+			switch entry.Flag {
+			case TTExact:
+				return entry.Score
+			case TTAlpha:
+				if entry.Score <= alpha {
+					return alpha
+				}
+			case TTBeta:
+				if entry.Score >= beta {
+					return beta
+				}
+			}
+		}
+	}
+
 	// exit early if time exceeeded
 	if (e.nodes & 1023) == 0 {
 		if ctx.Err() != nil {
@@ -117,9 +140,6 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 			return Infinity // for minimizing player
 		}
 	}
-
-	// Increment node counter
-	e.nodes++
 
 	// Check for terminal positions
 	if b.IsCheckmate() {
@@ -138,6 +158,8 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 	// Generate moves
 	moves := b.GenerateMoves()
 	hasLegalMoves := false
+	var bestMove move.Move
+	bestScore := -Infinity
 
 	// Search all moves {
 	for _, mv := range moves {
@@ -148,21 +170,27 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 
 		hasLegalMoves = true
 		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha)
-
 		b.TakeBack(copyB)
 
 		// Check for search abort
 		if ctx.Err() != nil {
-			return 0
+			// This ensures the move won't be selected
+			// as it will always be worse than any real evaluation
+			if depth&1 == 0 {
+				return -Infinity // for maximizing player
+			}
+			return Infinity // for minimizing player
 		}
 
-		// Alpha-beta pruning
-		if score >= beta {
+		if score > bestScore {
+			bestScore = score
+			bestMove = mv
+		}
+
+		alpha = max(alpha, score)
+		if alpha >= beta {
+			e.tt.Store(hash, beta, depth, TTBeta, mv)
 			return beta
-		}
-
-		if score > alpha {
-			alpha = score
 		}
 	}
 
@@ -174,11 +202,30 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 		return 0
 	}
 
-	return alpha
+	// Store position in TT
+	var flag TTFlag
+	if bestScore <= alpha {
+		flag = TTAlpha
+	} else {
+		flag = TTExact
+	}
+	e.tt.Store(hash, bestScore, depth, flag, bestMove)
+
+	return bestScore
 }
 
 // quiescence performs capture-only search to reach quiet position
 func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta int) int {
+	e.nodes++
+
+	// TT Lookup for quiescence
+	hash := b.Hash()
+	if entry, ok := e.tt.Probe(hash); ok {
+		if entry.Flag == TTExact {
+			return entry.Score
+		}
+	}
+
 	if (e.nodes & 4095) == 0 {
 		if ctx.Err() != nil {
 			// Use same logic as alpha-beta for consistency
@@ -188,8 +235,6 @@ func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta int
 			return Infinity
 		}
 	}
-
-	e.nodes++
 
 	// Stand-pat score
 	score := e.evaluator.Evaluate(b)
@@ -230,5 +275,6 @@ func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta int
 		}
 	}
 
+	e.tt.Store(hash, alpha, 0, TTExact, move.Move(0))
 	return alpha
 }

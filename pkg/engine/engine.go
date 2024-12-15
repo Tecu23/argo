@@ -26,12 +26,14 @@ type Engine struct {
 	timeManager *timeManager
 	cancel      context.CancelFunc
 	evaluator   evaluation.Evaluator
+	tt          *TranspositionTable
 }
 
 func NewEngine(options Options) *Engine {
 	return &Engine{
 		Options:   options,
 		evaluator: *evaluation.NewEvaluator(),
+		tt:        NewTranspositionTable(32),
 	}
 }
 
@@ -53,7 +55,9 @@ func (e *Engine) Search(ctx context.Context, params SearchParams) SearchInfo {
 	return e.search(ctx, &currentBoard, e.timeManager)
 }
 
-func (e *Engine) Clear() {}
+func (e *Engine) Clear() {
+	e.tt.Clear()
+}
 
 // createSearchInfo creates a SearchInfo struct from current engine state
 func (e *Engine) createSearchInfo() SearchInfo {

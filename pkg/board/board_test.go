@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Tecu23/argov2/internal/hash"
 	"github.com/Tecu23/argov2/pkg/bitboard"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
@@ -14,6 +15,7 @@ import (
 
 func init() {
 	util.InitFen2Sq() // Make sure square mappings are initialized
+	hash.Init()
 }
 
 func TestSetSq(t *testing.T) {
@@ -199,6 +201,58 @@ func verifyBoardsMatch(b *Board, copy *Board) error {
 func boardsAreDifferent(b *Board, copy *Board) bool {
 	return verifyBoardsMatch(b, copy) != nil
 }
+
+// func TestHashConsistency(t *testing.T) {
+// 	tests := []struct {
+// 		name         string
+// 		moves        []string // Sequence of moves
+// 		expectedHash uint64   // Known correct hash
+// 	}{
+// 		{
+// 			name:  "Starting Position",
+// 			moves: []string{},
+// 			// Calculate expectedHash offline for start position
+// 		},
+// 		{
+// 			name:  "e4 e5",
+// 			moves: []string{"e2e4", "e7e5"},
+// 		},
+// 		{
+// 			name:  "Same Position Different Move Order",
+// 			moves: []string{"e2e4", "e7e5", "g1f3", "b8c6"},
+// 			// Should match hash of: g1f3, b8c6, e2e4, e7e5
+// 		},
+// 	}
+//
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			b := NewBoard()
+//
+// 			// Make moves
+// 			for _, move := range tt.moves {
+// 				b2, ok := b.ParseMove(move)
+// 				if !ok {
+// 					t.Fatalf("Failed to make move: %s", move)
+// 				}
+// 				b = &b2
+// 			}
+//
+// 			// Test make/unmake doesn't change hash
+// 			moves := b.GenerateMoves()
+// 			originalHash := b.Hash()
+//
+// 			for _, move := range moves {
+// 				copyB := b.CopyBoard()
+// 				if b.MakeMove(move, AllMoves) {
+// 					b.TakeBack(copyB)
+// 					if b.Hash() != originalHash {
+// 						t.Errorf("Hash changed after make/unmake: %v", move)
+// 					}
+// 				}
+// 			}
+// 		})
+// 	}
+// }
 
 // Benchmark tests
 func BenchmarkSetSq(b *testing.B) {

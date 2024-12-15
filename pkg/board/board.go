@@ -5,6 +5,7 @@ package board
 import (
 	"fmt"
 
+	"github.com/Tecu23/argov2/internal/hash"
 	"github.com/Tecu23/argov2/pkg/attacks"
 	"github.com/Tecu23/argov2/pkg/bitboard"
 	"github.com/Tecu23/argov2/pkg/color"
@@ -30,6 +31,7 @@ type Board struct {
 	Rule50      uint8
 	Castlings   Castlings
 	MoveNumber  int
+	hash        uint64
 }
 
 // Reset restores the board to an initial empty state and sets defaults.
@@ -47,6 +49,15 @@ func (b *Board) Reset() {
 	for i := 0; i < 3; i++ {
 		b.Occupancies[i] = 0
 	}
+
+	b.calculateHash()
+}
+
+func NewBoard() *Board {
+	b := &Board{}
+	b.Reset()
+	b.hash = b.calculateHash()
+	return b
 }
 
 // CopyBoard creates a copy of the board's current state.
@@ -61,39 +72,38 @@ func (b *Board) TakeBack(cpy Board) {
 	*b = cpy
 }
 
-// SetSq places a piece on a given square (or clears it if piece == Empty).
-// It updates both piece bitboards and occupancy bitboards accordingly.
+// SetSq should set a square sq to a particular piece pc
 func (b *Board) SetSq(piece, sq int) {
-	// Create a square mask once (1ULL << sq)
-	squareMask := bitboard.Bitboard(1) << uint(sq)
+	pieceColor := util.PcColor(piece)
 
-	// If there is a piece on the square, remove it first
 	if b.Occupancies[color.BOTH].Test(sq) {
-		// Instead of testing each piece individually, we can use the square mask
-		// to clear the bit in all piece bitboards in one go
+		// need to remove the piece
 		for p := WP; p <= BK; p++ {
-			b.Bitboards[p] &^= squareMask
+			if b.Bitboards[p].Test(sq) {
+				b.Bitboards[p].Clear(sq)
+				b.hash ^= hash.HashTable.PieceSquare[p*64+sq]
+			}
 		}
-		// Clear the occupancy bits using the inverted mask
-		clearMask := ^squareMask
-		b.Occupancies[color.WHITE] &= clearMask
-		b.Occupancies[color.BLACK] &= clearMask
-		b.Occupancies[color.BOTH] &= clearMask
+
+		b.Occupancies[color.BOTH].Clear(sq)
+		b.Occupancies[color.WHITE].Clear(sq)
+		b.Occupancies[color.BLACK].Clear(sq)
 	}
 
-	// If setting an empty piece, we're done
 	if piece == Empty {
 		return
 	}
+	b.hash ^= hash.HashTable.PieceSquare[piece*64+sq]
+	b.Bitboards[piece].Set(sq)
 
-	// Set the piece bitboard
-	b.Bitboards[piece] |= squareMask
+	if pieceColor == color.WHITE {
+		b.Occupancies[color.WHITE].Set(sq)
+	} else {
+		b.Occupancies[color.BLACK].Set(sq)
+	}
 
-	// Set the occupancy bitboards
-	// Use branching to avoid the if statement
-	colorIndex := util.PcColor(piece)
-	b.Occupancies[colorIndex] |= squareMask
-	b.Occupancies[color.BOTH] |= squareMask
+	b.Occupancies[color.BOTH] |= b.Occupancies[color.WHITE]
+	b.Occupancies[color.BOTH] |= b.Occupancies[color.BLACK]
 }
 
 // IsSquareAttacked checks if a given square is attacked by the specified side (WHITE or BLACK).
@@ -184,6 +194,11 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		ep := m.GetEnpassant()
 		cast := m.GetCastling()
 
+		// If there was an en passant square, remove it from hash
+		if b.EnPassant != -1 {
+			file := b.EnPassant % 8
+			b.hash ^= hash.HashTable.EnPassant[file]
+		}
 		b.EnPassant = -1
 
 		// Handle en passant
@@ -197,6 +212,7 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 
 			b.SetSq(pc, tgt)
 
+			b.hash ^= hash.HashTable.Side
 			b.Side = b.Side.Opp()
 
 			// Check for checks to ensure move legality
@@ -257,10 +273,10 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		if dblPwn != 0 {
 			if clr == color.WHITE {
 				b.EnPassant = src - 8
-				// b.Key ^= EnpassantKeys[src+N]
+				b.hash ^= hash.HashTable.EnPassant[(src-8)%8]
 			} else {
 				b.EnPassant = src + 8
-				// b.Key ^= EnpassantKeys[src+S]
+				b.hash ^= hash.HashTable.EnPassant[(src+8)%8]
 			}
 		}
 
@@ -273,10 +289,28 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		}
 
 		// Update castling rights if necessary
+		oldCastling := b.Castlings
 		b.Castlings &= Castlings(CastlingRights[src])
 		b.Castlings &= Castlings(CastlingRights[tgt])
 
+		// Update hash for changed castling rights
+		if oldCastling != b.Castlings {
+			if uint(oldCastling)&ShortW != uint(b.Castlings)&ShortW {
+				b.hash ^= hash.HashTable.Castling[0]
+			}
+			if uint(oldCastling)&LongW != uint(b.Castlings)&LongW {
+				b.hash ^= hash.HashTable.Castling[1]
+			}
+			if uint(oldCastling)&ShortB != uint(b.Castlings)&ShortB {
+				b.hash ^= hash.HashTable.Castling[2]
+			}
+			if uint(oldCastling)&LongB != uint(b.Castlings)&LongB {
+				b.hash ^= hash.HashTable.Castling[3]
+			}
+		}
+
 		// change side
+		b.hash ^= hash.HashTable.Side
 		b.Side = b.Side.Opp()
 
 		// Check if own king is in check after the move
@@ -513,4 +547,106 @@ func (b *Board) IsInsufficientMaterial() bool {
 	}
 
 	return false
+}
+
+func (b *Board) calculateHash() uint64 {
+	tmpHash := uint64(0)
+
+	// Hash Pieces
+	for piece := WP; piece <= BK; piece++ {
+		bb := b.Bitboards[piece]
+		for bb != 0 {
+			square := bb.FirstOne()
+			tmpHash ^= hash.HashTable.PieceSquare[piece*64+square]
+		}
+	}
+
+	// Hash Castling rights
+	if uint(b.Castlings)&ShortW != 0 {
+		tmpHash ^= hash.HashTable.Castling[0]
+	}
+	if uint(b.Castlings)&LongW != 0 {
+		tmpHash ^= hash.HashTable.Castling[1]
+	}
+	if uint(b.Castlings)&ShortB != 0 {
+		tmpHash ^= hash.HashTable.Castling[2]
+	}
+	if uint(b.Castlings)&LongB != 0 {
+		tmpHash ^= hash.HashTable.Castling[3]
+	}
+
+	// Hash en passant
+	if b.EnPassant != -1 {
+		file := b.EnPassant % 8
+		tmpHash ^= hash.HashTable.EnPassant[file]
+	}
+
+	// Hash side to move
+	if b.Side == color.WHITE {
+		tmpHash ^= hash.HashTable.Side
+	}
+
+	return tmpHash
+}
+
+// Update hash incrementally when making moves
+func (b *Board) updateHashForMove(m move.Move) {
+	from := m.GetSource()
+	to := m.GetTarget()
+	piece := m.GetPiece()
+	capture := m.GetCapture()
+	promotion := m.GetPromoted()
+
+	// Remove piece from source square
+	b.hash ^= hash.HashTable.PieceSquare[piece*64+from]
+
+	// Add piece to destination square
+	if promotion != 0 {
+		b.hash ^= hash.HashTable.PieceSquare[promotion*64+to]
+	} else {
+		b.hash ^= hash.HashTable.PieceSquare[piece*64+to]
+	}
+
+	// Handle Capture
+	if capture != 0 {
+		b.hash ^= hash.HashTable.PieceSquare[piece*64+to]
+	}
+
+	// Update en passant
+	if b.EnPassant != -1 {
+		file := b.EnPassant % 8
+		b.hash ^= hash.HashTable.EnPassant[file]
+	}
+
+	// Handle new en passant
+	if m.GetDoublePush() != 0 {
+		file := to % 8
+		b.hash ^= hash.HashTable.EnPassant[file]
+	}
+
+	// Update castling rights
+	oldRights := b.Castlings
+	newRights := b.Castlings & Castlings(CastlingRights[from]) & Castlings(CastlingRights[to])
+	if oldRights != newRights {
+		if uint(oldRights)&ShortW != uint(newRights)&ShortW {
+			b.hash ^= hash.HashTable.Castling[0]
+		}
+		if uint(oldRights)&LongW != uint(newRights)&LongW {
+			b.hash ^= hash.HashTable.Castling[1]
+		}
+		if uint(oldRights)&ShortB != uint(newRights)&LongB {
+			b.hash ^= hash.HashTable.Castling[2]
+		}
+		if uint(oldRights)&LongB != uint(newRights)&LongB {
+			b.hash ^= hash.HashTable.Castling[3]
+		}
+	}
+
+	// Switch side to move
+	b.hash ^= hash.HashTable.Side
+}
+
+// Hash method to get current hash
+func (b *Board) Hash() uint64 {
+	return b.hash
 }

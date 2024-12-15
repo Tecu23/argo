@@ -18,7 +18,7 @@ type ZobristHash struct {
 
 var HashTable *ZobristHash
 
-func init() {
+func Init() {
 	// use a fixed seed for reproducibility
 	const seed = 23
 

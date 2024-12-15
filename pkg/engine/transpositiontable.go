@@ -1,6 +1,10 @@
 package engine
 
-import "github.com/Tecu23/argov2/pkg/move"
+import (
+	"unsafe"
+
+	"github.com/Tecu23/argov2/pkg/move"
+)
 
 type TTFlag uint8
 
@@ -24,6 +28,26 @@ type TranspositionTable struct {
 	entries []TTEntry
 	size    int
 	age     uint8
+}
+
+func NewTranspositionTable(sizeInMB int) *TranspositionTable {
+	entrySize := unsafe.Sizeof(TTEntry{})
+	entriesCount := (sizeInMB * 1024 * 1024) / int(entrySize)
+	return &TranspositionTable{
+		entries: make([]TTEntry, entriesCount),
+		size:    entriesCount,
+		age:     0,
+	}
+}
+
+func (tt *TranspositionTable) NewSearch() {
+	tt.age++ // Increment age for new search
+}
+
+func (tt *TranspositionTable) Clear() {
+	for i := range tt.entries {
+		tt.entries[i] = TTEntry{}
+	}
 }
 
 func (tt *TranspositionTable) Store(key uint64, score, depth int, flag TTFlag, bestMove move.Move) {

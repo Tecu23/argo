@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Tecu23/argov2/internal/hash"
 	"github.com/Tecu23/argov2/pkg/attacks"
 	"github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/engine"
@@ -43,4 +44,6 @@ func initHelpers() {
 	attacks.InitSliderPiecesAttacks(constants.Rook)
 
 	util.InitFen2Sq()
+
+	hash.Init()
 }
