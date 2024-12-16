@@ -19,6 +19,8 @@ const (
 	author = "Tecu23"
 )
 
+var version = "?"
+
 var debug bool
 
 func main() {
@@ -31,7 +33,7 @@ func main() {
 	options := engine.NewOptions()
 	engine := engine.NewEngine(options)
 
-	protocol := uci.New(name, author, "1.0.0", engine, []uci.Option{})
+	protocol := uci.New(name, author, version, engine, []uci.Option{})
 
 	protocol.Run(logger)
 }
