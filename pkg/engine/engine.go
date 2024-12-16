@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Tecu23/argov2/internal/reduction"
 	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/evaluation"
 	"github.com/Tecu23/argov2/pkg/move"
@@ -18,22 +19,24 @@ type mainLine struct {
 }
 
 type Engine struct {
-	nodes       int64
-	Options     Options
-	mainLine    mainLine
-	start       time.Time
-	progress    func(SearchInfo)
-	timeManager *timeManager
-	cancel      context.CancelFunc
-	evaluator   evaluation.Evaluator
-	tt          *TranspositionTable
+	nodes          int64
+	Options        Options
+	mainLine       mainLine
+	start          time.Time
+	progress       func(SearchInfo)
+	timeManager    *timeManager
+	cancel         context.CancelFunc
+	evaluator      evaluation.Evaluator
+	tt             *TranspositionTable
+	reductionTable *reduction.Table
 }
 
 func NewEngine(options Options) *Engine {
 	return &Engine{
-		Options:   options,
-		evaluator: *evaluation.NewEvaluator(),
-		tt:        NewTranspositionTable(32),
+		Options:        options,
+		evaluator:      *evaluation.NewEvaluator(),
+		tt:             NewTranspositionTable(32),
+		reductionTable: reduction.New(),
 	}
 }
 

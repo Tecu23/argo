@@ -178,8 +178,20 @@ func (e *Engine) alphaBeta(
 	depth, alpha, beta, ply int,
 	tm *timeManager,
 ) int {
+	if (e.nodes & 1023) == 0 {
+		if ctx.Err() != nil || tm.IsDone() {
+			// This ensures the move won't be selected
+			// as it will always be worse than any real evaluation
+			if depth&1 == 0 {
+				return -Infinity // for maximizing player
+			}
+			return Infinity // for minimizing player
+		}
+	}
+
 	// Increment node counter
 	e.nodes++
+
 	originalAlpha := alpha
 
 	// TT Lookup
@@ -199,17 +211,6 @@ func (e *Engine) alphaBeta(
 					return beta
 				}
 			}
-		}
-	}
-
-	if (e.nodes & 1023) == 0 {
-		if ctx.Err() != nil || tm.IsDone() {
-			// This ensures the move won't be selected
-			// as it will always be worse than any real evaluation
-			if depth&1 == 0 {
-				return -Infinity // for maximizing player
-			}
-			return Infinity // for minimizing player
 		}
 	}
 
@@ -245,6 +246,8 @@ func (e *Engine) alphaBeta(
 	hasLegalMoves := false
 	var bestMove move.Move
 	bestScore := -Infinity
+	moveCount := 0
+	inCheck := b.InCheck()
 
 	// Search all moves {
 	for _, mv := range moves {
@@ -254,18 +257,28 @@ func (e *Engine) alphaBeta(
 		}
 
 		hasLegalMoves = true
-		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, ply+1, tm)
-		b.TakeBack(copyB)
+		moveCount++
 
-		// Check for search abort
-		if ctx.Err() != nil || tm.IsDone() {
-			// This ensures the move won't be selected
-			// as it will always be worse than any real evaluation
-			if depth&1 == 0 {
-				return -Infinity // for maximizing player
-			}
-			return Infinity // for minimizing player
+		var score int
+		isCapture := mv.GetCapture() != 0
+		givesCheck := b.InCheck()
+
+		reduction := 0
+		if depth >= 3 && moveCount > 4 && !inCheck && !isCapture && !givesCheck {
+			reduction = e.reductionTable.Get(depth, moveCount)
 		}
+
+		if reduction > 0 {
+			score = -e.alphaBeta(ctx, b, depth-1-reduction, -(alpha + 1), -alpha, ply+1, tm)
+
+			if score > alpha {
+				score = -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, ply+1, tm)
+			}
+		} else {
+			score = -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, ply+1, tm)
+		}
+
+		b.TakeBack(copyB)
 
 		if score > bestScore {
 			bestScore = score
