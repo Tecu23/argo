@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"time"
 
@@ -159,6 +160,8 @@ func (tm *timeManager) calculateTimeLimit(difficulty, branchFactor float64) time
 		DefaultMovesToGo = 40                     // Assume 40 moves remain if not specified
 		MoveOverhead     = 300 * time.Millisecond // Deduct a small overhead from the total time
 		MinTimeLimit     = 1 * time.Millisecond   // Minimnum allocated time (avoid zero or negatime)
+		EmergencyTime    = 10 * time.Second
+		CriticalTime     = 5 * time.Second
 	)
 
 	// Determine main time and increment based on which side is moving
@@ -216,4 +219,55 @@ func (tm *timeManager) calculateTimeLimit(difficulty, branchFactor float64) time
 		timeLimit = MinTimeLimit
 	}
 	return timeLimit
+}
+
+func (tm *timeManager) String() string {
+	sideStr := "Black"
+	if tm.side {
+		sideStr = "White"
+	}
+
+	doneSet := (tm.done != nil)
+	cancelSet := (tm.cancel != nil)
+
+	return fmt.Sprintf(`timeManager:
+  start:        %v
+  limits:
+    Ponder:         %t
+    Infinite:       %t
+    WhiteTime:      %d
+    BlackTime:      %d
+    WhiteIncrement: %d
+    BlackIncrement: %d
+    MoveTime:       %d
+    MovesToGo:      %d
+    Depth:          %d
+    Nodes:          %d
+    Mate:           %d
+  side:         %s
+  difficulty:   %.2f
+  lastScore:    %d
+  lastBestMove: %v
+  done:         %t
+  cancel:       %t
+`,
+		tm.start,
+		tm.limits.Ponder,
+		tm.limits.Infinite,
+		tm.limits.WhiteTime,
+		tm.limits.BlackTime,
+		tm.limits.WhiteIncrement,
+		tm.limits.BlackIncrement,
+		tm.limits.MoveTime,
+		tm.limits.MovesToGo,
+		tm.limits.Depth,
+		tm.limits.Nodes,
+		tm.limits.Mate,
+		sideStr,
+		tm.difficulty,
+		tm.lastScore,
+		tm.lastBestMove,
+		doneSet,
+		cancelSet,
+	)
 }

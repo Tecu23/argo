@@ -75,7 +75,7 @@ func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) Se
 			break
 		}
 
-		score, mv := e.searchRoot(ctx, b, depth)
+		score, mv := e.searchRoot(ctx, b, depth, tm)
 		if mv != move.NoMove {
 			// Store best move and score
 			bestMove = mv
@@ -112,7 +112,12 @@ func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) Se
 }
 
 // searchRoot performs alpha-beta search at the root level
-func (e *Engine) searchRoot(ctx context.Context, b *board.Board, depth int) (int, move.Move) {
+func (e *Engine) searchRoot(
+	ctx context.Context,
+	b *board.Board,
+	depth int,
+	tm *timeManager,
+) (int, move.Move) {
 	alpha := -Infinity
 	beta := Infinity
 	var bestMove move.Move
@@ -135,12 +140,12 @@ func (e *Engine) searchRoot(ctx context.Context, b *board.Board, depth int) (int
 		}
 
 		// Search this position
-		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, 1)
+		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, 1, tm)
 
 		b.TakeBack(copyB)
 
 		// Check for search abort
-		if ctx.Err() != nil {
+		if ctx.Err() != nil || tm.IsDone() {
 			return 0, move.NoMove
 		}
 
@@ -167,7 +172,12 @@ func (e *Engine) searchRoot(ctx context.Context, b *board.Board, depth int) (int
 }
 
 // alphaBeta performs the main alpha-beta search
-func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, beta, ply int) int {
+func (e *Engine) alphaBeta(
+	ctx context.Context,
+	b *board.Board,
+	depth, alpha, beta, ply int,
+	tm *timeManager,
+) int {
 	// Increment node counter
 	e.nodes++
 	originalAlpha := alpha
@@ -193,7 +203,7 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 	}
 
 	if (e.nodes & 1023) == 0 {
-		if ctx.Err() != nil {
+		if ctx.Err() != nil || tm.IsDone() {
 			// This ensures the move won't be selected
 			// as it will always be worse than any real evaluation
 			if depth&1 == 0 {
@@ -219,7 +229,7 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 
 	// Base case: evaluate leaf nodes
 	if depth <= 0 {
-		return e.quiescence(ctx, b, alpha, beta, ply)
+		return e.quiescence(ctx, b, alpha, beta, ply, tm)
 	}
 
 	// Generate moves
@@ -244,11 +254,11 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 		}
 
 		hasLegalMoves = true
-		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, ply+1)
+		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, ply+1, tm)
 		b.TakeBack(copyB)
 
 		// Check for search abort
-		if ctx.Err() != nil {
+		if ctx.Err() != nil || tm.IsDone() {
 			// This ensures the move won't be selected
 			// as it will always be worse than any real evaluation
 			if depth&1 == 0 {
@@ -289,11 +299,16 @@ func (e *Engine) alphaBeta(ctx context.Context, b *board.Board, depth, alpha, be
 }
 
 // quiescence performs capture-only search to reach quiet position
-func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta, ply int) int {
+func (e *Engine) quiescence(
+	ctx context.Context,
+	b *board.Board,
+	alpha, beta, ply int,
+	tm *timeManager,
+) int {
 	e.nodes++
 
 	if (e.nodes & 4095) == 0 {
-		if ctx.Err() != nil {
+		if ctx.Err() != nil || tm.IsDone() {
 			// Use same logic as alpha-beta for consistency
 			if e.nodes&1 == 0 {
 				return -Infinity
@@ -329,10 +344,10 @@ func (e *Engine) quiescence(ctx context.Context, b *board.Board, alpha, beta, pl
 			continue
 		}
 
-		score := -e.quiescence(ctx, b, -beta, -alpha, ply+1)
+		score := -e.quiescence(ctx, b, -beta, -alpha, ply+1, tm)
 		b.TakeBack(copyB)
 
-		if ctx.Err() != nil {
+		if ctx.Err() != nil || tm.IsDone() {
 			if ply&1 == 0 {
 				return -Infinity
 			}
