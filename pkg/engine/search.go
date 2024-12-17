@@ -265,7 +265,8 @@ func (e *Engine) alphaBeta(
 
 		reduction := 0
 		if depth >= 3 && moveCount > 4 && !inCheck && !isCapture && !givesCheck {
-			reduction = e.reductionTable.Get(depth, moveCount)
+			// reduction = e.reductionTable.Get(depth, moveCount)
+			reduction = 1
 		}
 
 		if reduction > 0 {

@@ -52,13 +52,13 @@ func (p *positionalEvaluator) Evaluate(board *board.Board) int {
 	blackKnights := board.Bitboards[BN]
 	for blackKnights != 0 {
 		sq := blackKnights.FirstOne()
-		score += p.pawnTable[sq]
+		score -= p.pawnTable[sq]
 	}
 
 	blackBishops := board.Bitboards[BB]
 	for blackBishops != 0 {
 		sq := blackBishops.FirstOne()
-		score += p.pawnTable[sq]
+		score -= p.pawnTable[sq]
 	}
 
 	return score
