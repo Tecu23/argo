@@ -11,10 +11,11 @@ import (
 )
 
 const (
-	MaxDepth  = 64
-	Infinity  = 50_000
-	MateScore = 49_000
-	MateDepth = 48_000
+	MaxDepth   = 64
+	Infinity   = 50_000
+	MateScore  = 49_000
+	MateDepth  = 48_000
+	MaxKillers = 2
 )
 
 type MoveScore struct {
@@ -22,20 +23,60 @@ type MoveScore struct {
 	score int
 }
 
-func (e *Engine) orderMoves(moves []move.Move, b *board.Board, ttMove move.Move) []move.Move {
+func (e *Engine) updateKillers(mv move.Move, ply int) {
+	if ply >= MaxDepth {
+		return
+	}
+	// Don't store captures as killer moves
+	if mv.GetCapture() != 0 {
+		return
+	}
+
+	// Don't store a move that's already a killer at this ply
+	for i := 0; i < MaxKillers; i++ {
+		if e.killerMoves[ply][i] == mv {
+			return
+		}
+	}
+
+	// Shift existing killers and insert new one at first position
+	for i := MaxKillers - 1; i > 0; i-- {
+		e.killerMoves[ply][i] = e.killerMoves[ply][i-1]
+	}
+	e.killerMoves[ply][0] = mv
+}
+
+func (e *Engine) orderMoves(
+	moves []move.Move,
+	b *board.Board,
+	ttMove move.Move,
+	ply int,
+) []move.Move {
 	scores := make([]MoveScore, len(moves))
+	stm := b.Side
 
 	for i, mv := range moves {
 		score := 0
 
 		// TT move gets highest priority
 		if mv == ttMove {
-			score = 20000
+			score = 2_000_000
 		} else if mv.GetCapture() != 0 {
 			// MVV-LVA scoring
 			victim := b.GetPieceAt(mv.GetTarget())
 			aggressor := b.GetPieceAt(mv.GetSource())
-			score = 10000 + (evaluation.GetPieceValue(victim) - evaluation.GetPieceValue(aggressor)/10)
+			score = 1_000_000 + (evaluation.GetPieceValue(victim) - evaluation.GetPieceValue(aggressor)/10)
+		} else {
+			for j := 0; j < MaxKillers; j++ {
+				if mv == e.killerMoves[ply][j] {
+					score = 900_000 - j*1000
+					break
+				}
+			}
+
+			if score == 0 {
+				score = e.historyTable.Get(stm, mv.GetSource(), mv.GetTarget())
+			}
 		}
 
 		scores[i] = MoveScore{mv, score}
@@ -59,6 +100,8 @@ func (e *Engine) orderMoves(moves []move.Move, b *board.Board, ttMove move.Move)
 func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) SearchInfo {
 	e.nodes = 0
 	e.tt.NewSearch()
+	e.historyTable.Clear()
+	e.killerMoves = [MaxDepth][MaxKillers]move.Move{}
 
 	var bestMove move.Move
 	var bestScore int
@@ -131,7 +174,7 @@ func (e *Engine) searchRoot(
 		ttMove = entry.BestMove
 	}
 
-	moves = e.orderMoves(moves, b, ttMove)
+	moves = e.orderMoves(moves, b, ttMove, 0)
 
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
@@ -239,7 +282,7 @@ func (e *Engine) alphaBeta(
 		ttMove = entry.BestMove
 	}
 
-	moves = e.orderMoves(moves, b, ttMove)
+	moves = e.orderMoves(moves, b, ttMove, ply)
 
 	hasLegalMoves := false
 	var bestMove move.Move
@@ -281,8 +324,15 @@ func (e *Engine) alphaBeta(
 			bestScore = score
 			bestMove = mv
 			if score > alpha {
+				if !isCapture && ply < MaxDepth {
+					e.historyTable.Update(copyB.Side, mv.GetSource(), mv.GetTarget(), 1)
+				}
 				alpha = score
 				if alpha >= beta {
+					if !isCapture && ply < MaxDepth {
+						e.updateKillers(mv, ply)
+						e.historyTable.Update(copyB.Side, mv.GetSource(), mv.GetTarget(), depth)
+					}
 					e.tt.Store(hash, beta, depth, TTBeta, mv)
 					return beta
 				}
@@ -346,7 +396,7 @@ func (e *Engine) quiescence(
 
 	// Generate captures
 	moves := b.GenerateCaptures()
-	moves = e.orderMoves(moves, b, move.NoMove) // Order captures
+	moves = e.orderMoves(moves, b, move.NoMove, ply) // Order captures
 
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
