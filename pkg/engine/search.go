@@ -135,14 +135,12 @@ func (e *Engine) searchRoot(
 
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
-		if !b.MakeMove(mv, board.AllMoves) {
+		if !copyB.MakeMove(mv, board.AllMoves) {
 			continue
 		}
 
 		// Search this position
-		score := -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, 1, tm)
-
-		b.TakeBack(copyB)
+		score := -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, 1, tm)
 
 		// Check for search abort
 		if ctx.Err() != nil || tm.IsDone() {
@@ -252,7 +250,7 @@ func (e *Engine) alphaBeta(
 	// Search all moves {
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
-		if !b.MakeMove(mv, board.AllMoves) {
+		if !copyB.MakeMove(mv, board.AllMoves) {
 			continue
 		}
 
@@ -261,7 +259,7 @@ func (e *Engine) alphaBeta(
 
 		var score int
 		isCapture := mv.GetCapture() != 0
-		givesCheck := b.InCheck()
+		givesCheck := copyB.InCheck()
 
 		reduction := 0
 		if depth >= 3 && moveCount > 4 && !inCheck && !isCapture && !givesCheck {
@@ -270,16 +268,14 @@ func (e *Engine) alphaBeta(
 		}
 
 		if reduction > 0 {
-			score = -e.alphaBeta(ctx, b, depth-1-reduction, -(alpha + 1), -alpha, ply+1, tm)
+			score = -e.alphaBeta(ctx, &copyB, depth-1-reduction, -(alpha + 1), -alpha, ply+1, tm)
 
 			if score > alpha {
-				score = -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, ply+1, tm)
+				score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, ply+1, tm)
 			}
 		} else {
-			score = -e.alphaBeta(ctx, b, depth-1, -beta, -alpha, ply+1, tm)
+			score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, ply+1, tm)
 		}
-
-		b.TakeBack(copyB)
 
 		if score > bestScore {
 			bestScore = score
@@ -354,12 +350,11 @@ func (e *Engine) quiescence(
 
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
-		if !b.MakeMove(mv, board.OnlyCaptures) {
+		if !copyB.MakeMove(mv, board.OnlyCaptures) {
 			continue
 		}
 
-		score := -e.quiescence(ctx, b, -beta, -alpha, ply+1, tm)
-		b.TakeBack(copyB)
+		score := -e.quiescence(ctx, &copyB, -beta, -alpha, ply+1, tm)
 
 		if ctx.Err() != nil || tm.IsDone() {
 			if ply&1 == 0 {
