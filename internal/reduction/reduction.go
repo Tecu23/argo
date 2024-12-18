@@ -7,9 +7,9 @@ type Table struct {
 }
 
 const (
-	BaseDepthReduction      = 0.75
-	BaseMoveNumReduction    = 0.75
-	MaxReduction            = 3
+	BaseDepthReduction      = 0.4
+	BaseMoveNumReduction    = 0.4
+	MaxReduction            = 2
 	MinDepthForReduction    = 3
 	MinMovesBeforeReduction = 4
 )

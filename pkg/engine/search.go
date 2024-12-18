@@ -23,28 +23,34 @@ type MoveScore struct {
 	score int
 }
 
-func (e *Engine) updateKillers(mv move.Move, ply int) {
-	if ply >= MaxDepth {
-		return
-	}
-	// Don't store captures as killer moves
-	if mv.GetCapture() != 0 {
-		return
-	}
-
-	// Don't store a move that's already a killer at this ply
-	for i := 0; i < MaxKillers; i++ {
-		if e.killerMoves[ply][i] == mv {
-			return
-		}
-	}
-
-	// Shift existing killers and insert new one at first position
-	for i := MaxKillers - 1; i > 0; i-- {
-		e.killerMoves[ply][i] = e.killerMoves[ply][i-1]
-	}
-	e.killerMoves[ply][0] = mv
-}
+// type SearchStats struct {
+// 	killerHits    int
+// 	historyHits   int
+// 	ttHits        int
+// 	betaCutoffs   int
+// 	movesSearched int
+// }
+//
+// // Print stats after search
+// func (e *Engine) printStats() {
+// 	total := float64(e.stats.movesSearched)
+// 	fmt.Printf(
+// 		"Beta cutoffs: %d (%.2f%%)\n",
+// 		e.stats.betaCutoffs,
+// 		float64(e.stats.betaCutoffs)/total*100,
+// 	)
+// 	fmt.Printf("TT hits: %d (%.2f%%)\n", e.stats.ttHits, float64(e.stats.ttHits)/total*100)
+// 	fmt.Printf(
+// 		"Killer hits: %d (%.2f%%)\n",
+// 		e.stats.killerHits,
+// 		float64(e.stats.killerHits)/total*100,
+// 	)
+// 	fmt.Printf(
+// 		"History hits: %d (%.2f%%)\n",
+// 		e.stats.historyHits,
+// 		float64(e.stats.historyHits)/total*100,
+// 	)
+// }
 
 func (e *Engine) orderMoves(
 	moves []move.Move,
@@ -52,34 +58,40 @@ func (e *Engine) orderMoves(
 	ttMove move.Move,
 	ply int,
 ) []move.Move {
+	// fmt.Printf("Ordering moves at ply %d\n", ply)
+
 	scores := make([]MoveScore, len(moves))
 	stm := b.Side
 
 	for i, mv := range moves {
 		score := 0
+		// reason := "quiet move"
 
 		// TT move gets highest priority
 		if mv == ttMove {
-			score = 2_000_000
+			// reason = "TT move"
+			score = 20000
 		} else if mv.GetCapture() != 0 {
 			// MVV-LVA scoring
 			victim := b.GetPieceAt(mv.GetTarget())
 			aggressor := b.GetPieceAt(mv.GetSource())
-			score = 1_000_000 + (evaluation.GetPieceValue(victim) - evaluation.GetPieceValue(aggressor)/10)
-		} else {
-			for j := 0; j < MaxKillers; j++ {
-				if mv == e.killerMoves[ply][j] {
-					score = 900_000 - j*1000
-					break
-				}
-			}
+			score = 10000 + (evaluation.GetPieceValue(victim) - evaluation.GetPieceValue(aggressor)/10)
+			// reason = fmt.Sprintf("capture (victim: %v, aggressor: %v)", victim, aggressor)
 
-			if score == 0 {
+		} else {
+
+			killerScore := e.killerTable.GetScore(mv, ply)
+			if killerScore > 0 {
+				score = killerScore
+				// reason = fmt.Sprintf("killer (slot: %d)", killerScore/100)
+			} else {
 				score = e.historyTable.Get(stm, mv.GetSource(), mv.GetTarget())
+				// reason = fmt.Sprintf("history (score: %d)", score)
 			}
 		}
-
 		scores[i] = MoveScore{mv, score}
+		// fmt.Printf("  Move: %s Score: %d Reason: %s\n", mv.String(), score, reason)
+
 	}
 
 	// Sort moves by score
@@ -89,6 +101,12 @@ func (e *Engine) orderMoves(
 
 	// Extract sorted moves
 	sortedMoves := make([]move.Move, len(moves))
+
+	// fmt.Println("After sorting:")
+	// for _, ms := range scores {
+	// 	fmt.Printf("  Move: %s Score: %d\n", ms.move.String(), ms.score)
+	// }
+
 	for i, ms := range scores {
 		sortedMoves[i] = ms.move
 	}
@@ -101,7 +119,7 @@ func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) Se
 	e.nodes = 0
 	e.tt.NewSearch()
 	e.historyTable.Clear()
-	e.killerMoves = [MaxDepth][MaxKillers]move.Move{}
+	e.killerTable.Clear()
 
 	var bestMove move.Move
 	var bestScore int
@@ -320,6 +338,19 @@ func (e *Engine) alphaBeta(
 			score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, ply+1, tm)
 		}
 
+		// if score >= beta {
+		// 	if mv == ttMove {
+		// 		e.stats.ttHits++
+		// 	} else if e.killerTable.IsKiller(mv, ply) {
+		// 		e.stats.killerHits++
+		// 	} else if score := e.historyTable.Get(copyB.Side, mv.GetSource(), mv.GetTarget()); score > 0 {
+		// 		e.stats.historyHits++
+		// 	}
+		// 	e.stats.betaCutoffs++
+		// }
+		//
+		// e.stats.movesSearched++
+
 		if score > bestScore {
 			bestScore = score
 			bestMove = mv
@@ -330,7 +361,7 @@ func (e *Engine) alphaBeta(
 				alpha = score
 				if alpha >= beta {
 					if !isCapture && ply < MaxDepth {
-						e.updateKillers(mv, ply)
+						e.killerTable.Update(mv, ply)
 						e.historyTable.Update(copyB.Side, mv.GetSource(), mv.GetTarget(), depth)
 					}
 					e.tt.Store(hash, beta, depth, TTBeta, mv)
