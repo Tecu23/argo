@@ -13,3 +13,6 @@ cpu.prof
 
 # PDF Profiling
 profile.pdf
+
+# Debug file
+debug.txt

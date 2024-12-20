@@ -20,6 +20,7 @@ const (
 	BishopPhase = 1
 	RookPhase   = 2
 	QueenPhase  = 4
+	TotalPhase  = 16 // 2*(4 + 4 + 4 + 2 + 1) = 30 (all pieces except kings)
 
 	// Evaluation weights
 	DefaultMaterialWeight      = 1.0

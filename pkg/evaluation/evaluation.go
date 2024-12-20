@@ -42,18 +42,43 @@ func (e *Evaluator) Evaluate(board *board.Board) int {
 func GetPieceValue(piece int) int {
 	switch piece {
 	case WP, BP:
-		return 100 // Pawn value
+		return PawnValue
 	case WN, BN:
-		return 320 // Knight value
+		return KnightValue
 	case WB, BB:
-		return 330 // Bishop value
+		return BishopValue
 	case WR, BR:
-		return 500 // Rook value
+		return RookValue
 	case WQ, BQ:
-		return 900 // Queen value
+		return QueenValue
 	case WK, BK:
-		return 20000 // King value
+		return KingValue
 	default:
 		return 0
 	}
+}
+
+// IsEndgame returns true if the position is in endgame phase
+func (e *Evaluator) IsEndgame(b *board.Board) bool {
+	// Simple material-based endgame detection
+	// Consider it endgame if either side has no queens or
+	// if total material (excluding kings and pawns) is low
+	const endgameMaterialThreshold = 1300 // roughly equivalent to a rook + bishop
+
+	materialWithoutKingsPawns := 0
+
+	// Count material for both sides, excluding kings and pawns
+	for sq := 0; sq < 64; sq++ {
+		piece := b.GetPieceAt(sq)
+		if piece == Empty {
+			continue
+		}
+
+		pieceType := piece % 6 // Get piece type without color
+		if pieceType != King && pieceType != Pawn {
+			materialWithoutKingsPawns += GetPieceValue(piece)
+		}
+	}
+
+	return materialWithoutKingsPawns <= endgameMaterialThreshold
 }
