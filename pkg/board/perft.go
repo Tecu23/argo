@@ -42,6 +42,8 @@ func PerftTest(b *Board, depth int) int64 {
 	fmt.Printf("\n  Performance test\n\n")
 	start := util.GetTimeInMiliseconds()
 
+	fmt.Println(start)
+
 	for _, m := range whiteMoves {
 		moveNodes := int64(0)
 		copyB := b.CopyBoard()
@@ -57,12 +59,16 @@ func PerftTest(b *Board, depth int) int64 {
 		fmt.Printf("%s: %d\n", m, moveNodes)
 		totalMoves += moveNodes
 	}
+
+	fmt.Println(util.GetTimeInMiliseconds())
 	// print results
 	fmt.Printf(
 		"\n Nodes: %d Time: %d, with: %d nodes/s\n\n ",
 		totalMoves,
 		util.GetTimeInMiliseconds()-start,
-		totalMoves/((util.GetTimeInMiliseconds()-start)/1000),
+		int(
+			float64(totalMoves)/float64((float64(util.GetTimeInMiliseconds()-start)/float64(1000))),
+		),
 	)
 
 	return totalMoves

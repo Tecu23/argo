@@ -1,7 +1,6 @@
 package board
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/Tecu23/argov2/pkg/attacks"
@@ -146,13 +145,6 @@ func TestMoveGeneration(t *testing.T) {
 			}
 
 			moves := b.GenerateMoves()
-
-			if tc.name == "Pinned piece" {
-				b.PrintBoard()
-				for _, mv := range moves {
-					fmt.Printf("%s ", mv)
-				}
-			}
 
 			// Check number of moves if expected count is specified
 			if tc.expectedMoves > 0 {

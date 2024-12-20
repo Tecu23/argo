@@ -254,40 +254,194 @@ func boardsAreDifferent(b *Board, copy *Board) bool {
 // 	}
 // }
 
-// Benchmark tests
-func BenchmarkSetSq(b *testing.B) {
-	board := Board{}
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		board.SetSq(WP, E4)
-		board.SetSq(Empty, E4)
+func TestPassedPawns(t *testing.T) {
+	tests := []struct {
+		name         string
+		fen          string
+		whiteSquares []int  // Squares where white should have passed pawns
+		blackSquares []int  // Squares where black should have passed pawns
+		desc         string // Description of what we're testing
+	}{
+		{
+			name:         "Empty Board",
+			fen:          "8/8/8/8/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{},
+			blackSquares: []int{},
+			desc:         "No pawns on board",
+		},
+		{
+			name:         "Starting Position",
+			fen:          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			whiteSquares: []int{},
+			blackSquares: []int{},
+			desc:         "Initial position, no passed pawns",
+		},
+		{
+			name:         "Simple Passed Pawn",
+			fen:          "8/8/8/4P3/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{E5}, // e5
+			blackSquares: []int{},
+			desc:         "Single white passed pawn with no obstacles",
+		},
+		{
+			name:         "Blocked Pawn",
+			fen:          "8/4p3/4P3/8/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{},
+			blackSquares: []int{},
+			desc:         "Pawn blocked directly in front",
+		},
+		{
+			name:         "Diagonal Threats",
+			fen:          "8/3p4/4P3/8/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{E6},
+			blackSquares: []int{D7},
+			desc:         "Pawn threatened diagonally",
+		},
+		{
+			name:         "Multiple Passed Pawns",
+			fen:          "8/8/2P2P2/8/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{C6, F6},
+			blackSquares: []int{},
+			desc:         "Two white passed pawns",
+		},
+		{
+			name:         "Rook Pawns",
+			fen:          "8/8/P6p/8/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{A6},
+			blackSquares: []int{H6},
+			desc:         "Passed pawns on the a and h files",
+		},
+		{
+			name:         "Protected Passed Pawn",
+			fen:          "8/8/8/3P4/2P5/8/8/8 w - - 0 1",
+			whiteSquares: []int{D5, C4},
+			blackSquares: []int{},
+			desc:         "Passed pawn protected by another pawn",
+		},
+		{
+			name:         "Complex Position",
+			fen:          "8/p1p3pp/P1P5/8/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{},
+			blackSquares: []int{G7, H7},
+			desc:         "Multiple passed pawns for both sides",
+		},
+		{
+			name:         "Mutual Blockade",
+			fen:          "8/8/8/2pPp3/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{D5},
+			blackSquares: []int{C5, E5},
+			desc:         "Pawns blocking each other",
+		},
+		{
+			name:         "Distant Blockers",
+			fen:          "8/3p4/8/4P3/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{},
+			blackSquares: []int{},
+			desc:         "Pawn blocked by distant enemy pawn",
+		},
+		{
+			name:         "Phalanx Formation",
+			fen:          "8/8/8/3PPP2/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{D5, E5, F5},
+			blackSquares: []int{},
+			desc:         "Connected passed pawns",
+		},
+		{
+			name:         "Lever Position",
+			fen:          "8/8/8/3P4/2p5/8/8/8 w - - 0 1",
+			whiteSquares: []int{D5},
+			blackSquares: []int{C4},
+			desc:         "Pawn that can be captured by lever",
+		},
+		{
+			name:         "Advanced Passed Pawns",
+			fen:          "8/P7/8/8/8/8/p7/8 w - - 0 1",
+			whiteSquares: []int{A7},
+			blackSquares: []int{A2},
+			desc:         "Very advanced passed pawns for both sides",
+		},
+		{
+			name:         "Chain Formation",
+			fen:          "8/8/3P4/4P3/5P2/8/8/8 w - - 0 1",
+			whiteSquares: []int{F4, E5, D6},
+			blackSquares: []int{},
+			desc:         "Pawn chain with passed pawn at front",
+		},
+		{
+			name:         "Backward Pawns",
+			fen:          "8/8/8/2P1P3/3P4/8/8/8 w - - 0 1",
+			whiteSquares: []int{C5, E5, D4},
+			blackSquares: []int{},
+			desc:         "Formation with backward pawn",
+		},
+		{
+			name:         "Edge Cases",
+			fen:          "8/P6p/8/8/8/p6P/8/8 w - - 0 1",
+			whiteSquares: []int{A7},
+			blackSquares: []int{A3},
+			desc:         "Various edge case positions",
+		},
+		{
+			name:         "Doubled Pawns",
+			fen:          "8/3P4/3P4/8/8/8/8/8 w - - 0 1",
+			whiteSquares: []int{D7},
+			blackSquares: []int{},
+			desc:         "Doubled pawns with one passed",
+		},
 	}
-}
 
-func BenchmarkCopyBoard(b *testing.B) {
-	board := Board{}
-	board.SetSq(WK, E1)
-	board.SetSq(BK, E8)
-	board.SetSq(WP, E4)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			board, _ := ParseFEN(test.fen)
 
-	b.ResetTimer()
+			// Test white passed pawns
+			for sq := 0; sq < 64; sq++ {
+				isExpectedPassed := false
+				for _, passedSq := range test.whiteSquares {
+					if sq == passedSq {
+						isExpectedPassed = true
+						break
+					}
+				}
+				isPassed := board.IsPassedPawn(sq, color.WHITE)
+				if isPassed != isExpectedPassed {
+					t.Errorf("White pawn on %s: got passed=%v, want passed=%v\nFEN: %s\nDesc: %s",
+						util.Sq2Fen[sq], isPassed, isExpectedPassed, test.fen, test.desc)
+				}
+			}
 
-	for i := 0; i < b.N; i++ {
-		_ = board.CopyBoard()
-	}
-}
+			// Test black passed pawns by mirroring
+			mirroredBoard := board.Mirror()
+			for sq := 0; sq < 64; sq++ {
+				mirroredSq := sq ^ 56 // Flip square vertically
+				isExpectedPassed := false
+				for _, passedSq := range test.blackSquares {
+					if sq == passedSq {
+						isExpectedPassed = true
+						break
+					}
+				}
 
-func BenchmarkTakeBack(b *testing.B) {
-	board := Board{}
-	board.SetSq(WK, E1)
-	board.SetSq(BK, E8)
-	copy := board.CopyBoard()
+				isPassed := mirroredBoard.IsPassedPawn(mirroredSq, color.WHITE)
+				if isPassed != isExpectedPassed {
+					t.Errorf("Black pawn on %s: got passed=%v, want passed=%v\nFEN: %s\nDesc: %s",
+						util.Sq2Fen[sq], isPassed, isExpectedPassed, test.fen, test.desc)
+				}
+			}
 
-	b.ResetTimer()
+			// Test total counts
+			whiteCount := board.CandidatePassed(color.WHITE)
+			blackCount := mirroredBoard.CandidatePassed(color.WHITE)
 
-	for i := 0; i < b.N; i++ {
-		board.SetSq(WP, E4)
-		board.TakeBack(copy)
+			if whiteCount != len(test.whiteSquares) {
+				t.Errorf("White passed pawn count: got %d, want %d\nFEN: %s\nDesc: %s",
+					whiteCount, len(test.whiteSquares), test.fen, test.desc)
+			}
+
+			if blackCount != len(test.blackSquares) {
+				t.Errorf("Black passed pawn count: got %d, want %d\nFEN: %s\nDesc: %s",
+					blackCount, len(test.blackSquares), test.fen, test.desc)
+			}
+		})
 	}
 }

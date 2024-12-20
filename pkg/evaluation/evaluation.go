@@ -1,8 +1,9 @@
 package evaluation
 
 import (
+	"fmt"
+
 	"github.com/Tecu23/argov2/pkg/board"
-	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
@@ -26,17 +27,22 @@ func (e *Evaluator) Evaluate(board *board.Board) int {
 	// Early game termination checks would go here
 	// if board.isCheckMate() etc.
 
-	score := 0
-	score += e.material.Evaluate(board)
-	score += e.position.Evaluate(board)
-	score += e.mobility.Evaluate(board)
-	score += e.pawnStructure.Evaluate(board)
+	// score := 0
+	// score += e.material.Evaluate(board)
+	// score += e.position.Evaluate(board)
+	// score += e.mobility.Evaluate(board)
+	// score += e.pawnStructure.Evaluate(board)
+	//
+	// if board.Side == color.BLACK {
+	// 	score = -score
+	// }
+	//
+	// return score
 
-	if board.Side == color.BLACK {
-		score = -score
-	}
+	a := phase(board)
+	fmt.Println(a)
 
-	return score
+	return 0
 }
 
 func GetPieceValue(piece int) int {

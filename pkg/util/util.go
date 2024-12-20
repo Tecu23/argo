@@ -197,3 +197,21 @@ func InitFen2Sq() {
 func GetTimeInMiliseconds() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
 }
+
+// OppositeColorPiece returns the opposite color piece.
+func OppositeColorPiece(piece int) int {
+	// Handle the empty case
+	if piece == Empty {
+		return Empty
+	}
+
+	// Determine if the piece is white (0-5) or black (6-11)
+	if piece >= WP && piece <= WK {
+		return piece + 6 // Convert white to black
+	} else if piece >= BP && piece <= BK {
+		return piece - 6 // Convert black to white
+	}
+
+	// Return Empty for invalid input
+	return Empty
+}

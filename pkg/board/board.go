@@ -351,12 +351,19 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 	return true
 }
 
-// Add this method to the board package (board/board.go)
 // MakeNullMove switches the side to move without making any actual move
 func (b *Board) MakeNullMove() {
 	b.Side = b.Side.Opp() // Switch side (0->1 or 1->0)
 	// Update hash for side change
 	b.hash ^= hash.HashTable.Side
+
+	// Update en passant
+	if b.EnPassant != -1 {
+		file := b.EnPassant % 8
+		b.hash ^= hash.HashTable.EnPassant[file]
+	}
+
+	b.EnPassant = -1
 }
 
 // ParseMove takes a move string (like "e7e8q") and returns the corresponding Move object if valid.

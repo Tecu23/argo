@@ -135,6 +135,24 @@ func (m Move) String() string {
 	)
 }
 
+func (m *Move) MirrorMove() Move {
+	from := m.GetSource()
+	to := m.GetTarget()
+	pc := m.GetPiece()
+	promoted := m.GetPromoted()
+
+	return EncodeMove(
+		from^56,
+		to^56,
+		util.OppositeColorPiece(pc),
+		util.OppositeColorPiece(promoted),
+		m.GetCapture(),
+		m.GetDoublePush(),
+		m.GetEnpassant(),
+		m.GetCastling(),
+	)
+}
+
 // PrintMove prints a detailed move description including promoted piece, capture, etc.
 func (m Move) PrintMove() {
 	fmt.Printf(

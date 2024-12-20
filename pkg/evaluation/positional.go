@@ -108,7 +108,7 @@ func calculateGamePhase(b *board.Board) int {
 		BishopPhase = 1
 		RookPhase   = 2
 		QueenPhase  = 4
-		TotalPhase  = 24 // 2*(1*4 + 1*4 + 2*2 + 4*1) for all pieces except pawns and kings
+		TotalPhase  = 24 // 2*(1*2 + 1*2 + 2*2 + 4*1) for all pieces except pawns and kings
 	)
 
 	phase := TotalPhase
