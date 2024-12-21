@@ -32,6 +32,7 @@ func TestPieceValueMg(t *testing.T) {
 		psqtBlack       int
 		imbalanceWhite  int
 		imbalanceBlack  int
+		imbalanceTotal  int
 		desc            string
 	}{
 		// Material Balance Tests
@@ -44,6 +45,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "Starting position - equal material",
 		},
 		{
@@ -55,6 +57,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       -7,
 			imbalanceWhite:  12794,
 			imbalanceBlack:  11844,
+			imbalanceTotal:  59,
 			desc:            "White up a pawn",
 		},
 
@@ -68,6 +71,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White has doubled a-pawns",
 		},
 		{
@@ -79,6 +83,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  14688,
 			imbalanceBlack:  13662,
+			imbalanceTotal:  64,
 			desc:            "White has tripled a-pawns",
 		},
 		{
@@ -90,6 +95,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White has isolated d-pawn",
 		},
 		{
@@ -101,6 +107,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White has two isolated pawns",
 		},
 		{
@@ -112,6 +119,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White has backward c-pawn",
 		},
 		{
@@ -123,6 +131,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       -7,
 			imbalanceWhite:  14254,
 			imbalanceBlack:  12278,
+			imbalanceTotal:  123,
 			desc:            "White has passed d-pawn",
 		},
 		{
@@ -134,6 +143,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       -7,
 			imbalanceWhite:  14254,
 			imbalanceBlack:  12278,
+			imbalanceTotal:  123,
 			desc:            "White has protected passed pawn",
 		},
 		{
@@ -145,6 +155,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       -7,
 			imbalanceWhite:  14254,
 			imbalanceBlack:  12278,
+			imbalanceTotal:  123,
 			desc:            "White has connected passed pawns",
 		},
 
@@ -158,6 +169,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White knight trapped in corner",
 		},
 		{
@@ -169,6 +181,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       15,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White bishop trapped by pawn",
 		},
 		{
@@ -180,6 +193,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White knight on strong central square",
 		},
 		{
@@ -191,6 +205,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       -4,
 			imbalanceWhite:  11410,
 			imbalanceBlack:  11410,
+			imbalanceTotal:  0,
 			desc:            "White rook on open e-file",
 		},
 
@@ -204,6 +219,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  8657,
 			imbalanceBlack:  12436,
+			imbalanceTotal:  -326,
 			desc:            "White king exposed with missing kingside pawns",
 		},
 		{
@@ -215,6 +231,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  8657,
 			imbalanceBlack:  12436,
+			imbalanceTotal:  -326,
 			desc:            "White king safely castled",
 		},
 		{
@@ -226,6 +243,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White preparing kingside fianchetto",
 		},
 
@@ -239,6 +257,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White controlling center with pawns",
 		},
 		{
@@ -250,6 +269,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White with advanced center pawns",
 		},
 		{
@@ -261,6 +281,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White with significant space advantage",
 		},
 
@@ -274,6 +295,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       20,
 			imbalanceWhite:  12526,
 			imbalanceBlack:  11239,
+			imbalanceTotal:  170,
 			desc:            "White has bishop pair vs bishop+knight",
 		},
 		{
@@ -285,6 +307,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  2572,
 			imbalanceBlack:  12257,
+			imbalanceTotal:  -695,
 			desc:            "White has doubled rooks on open file",
 		},
 		{
@@ -296,6 +319,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       13,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White knight on protected outpost",
 		},
 
@@ -309,6 +333,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       110,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White better developed in opening",
 		},
 		{
@@ -320,6 +345,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       12,
 			imbalanceWhite:  13228,
 			imbalanceBlack:  13228,
+			imbalanceTotal:  0,
 			desc:            "White with poor development",
 		},
 
@@ -333,6 +359,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       241,
 			imbalanceWhite:  12526,
 			imbalanceBlack:  11239,
+			imbalanceTotal:  170,
 			desc:            "Complex central tension",
 		},
 		{
@@ -344,6 +371,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       152,
 			imbalanceWhite:  12794,
 			imbalanceBlack:  11844,
+			imbalanceTotal:  59,
 			desc:            "White with attacking chances",
 		},
 
@@ -357,6 +385,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       122,
 			imbalanceWhite:  -184,
 			imbalanceBlack:  -240,
+			imbalanceTotal:  3,
 			desc:            "Material imbalance special case",
 		},
 		{
@@ -368,6 +397,7 @@ func TestPieceValueMg(t *testing.T) {
 			psqtBlack:       122,
 			imbalanceWhite:  47,
 			imbalanceBlack:  -240,
+			imbalanceTotal:  17,
 			desc:            "Roughly equal material imbalance",
 		},
 	}
@@ -453,6 +483,20 @@ func TestPieceValueMg(t *testing.T) {
 					imb,
 					tt.imbalanceBlack,
 					imb-tt.imbalanceBlack,
+					tt.fen,
+				)
+			}
+
+			imbTotal := ImbalanceTotal(&b, mirroredBoard)
+
+			if imbTotal != tt.imbalanceTotal {
+				t.Errorf(
+					"\nPosition: %s\nDescription: %s\nGot imbalance total: %d\nWant imbalance total: %d\nDiff: %d\nFEN: %s",
+					tt.name,
+					tt.desc,
+					imbTotal,
+					tt.imbalanceTotal,
+					imbTotal-tt.imbalanceTotal,
 					tt.fen,
 				)
 			}

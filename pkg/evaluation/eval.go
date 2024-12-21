@@ -314,7 +314,11 @@ func Imbalance(b *board.Board) int {
 }
 
 func BishopPair(b *board.Board) int {
-	return 0
+	if b.Bitboards[WB].Count() < 2 {
+		return 0
+	}
+
+	return 1438
 }
 
 func PawnsMg(b *board.Board) int {
