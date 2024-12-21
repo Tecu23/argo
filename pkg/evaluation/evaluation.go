@@ -1,8 +1,6 @@
 package evaluation
 
 import (
-	"fmt"
-
 	"github.com/Tecu23/argov2/pkg/board"
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
@@ -40,9 +38,8 @@ func (e *Evaluator) Evaluate(board *board.Board) int {
 	// return score
 
 	a := phase(board)
-	fmt.Println(a)
 
-	return 0
+	return a
 }
 
 func GetPieceValue(piece int) int {

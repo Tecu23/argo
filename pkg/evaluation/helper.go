@@ -1,8 +1,6 @@
 package evaluation
 
 import (
-	"fmt"
-
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
@@ -26,9 +24,6 @@ func phase(b *board.Board) int {
 
 	//
 	npm := nonPawnMaterial(b, color.WHITE) + nonPawnMaterial(b, color.BLACK)
-
-	fmt.Println(npm)
-
 	npm = max(endgameLimit, min(npm, midgameLimit))
 
 	return (((npm - endgameLimit) * 128) / (midgameLimit - endgameLimit)) << 0
@@ -45,13 +40,13 @@ func nonPawnMaterial(b *board.Board, clr color.Color) int {
 
 				switch pc {
 				case BN, WN:
-					score += KnightBonus[1]
+					score += KnightBonus[0]
 				case BB, WB:
-					score += BishopBonus[1]
+					score += BishopBonus[0]
 				case BR, WR:
-					score += RookBonus[1]
+					score += RookBonus[0]
 				case BQ, WQ:
-					score += QueenBonus[1]
+					score += QueenBonus[0]
 				}
 			}
 		}
@@ -63,13 +58,13 @@ func nonPawnMaterial(b *board.Board, clr color.Color) int {
 
 				switch pc {
 				case BN, WN:
-					score += KnightBonus[1]
+					score += KnightBonus[0]
 				case BB, WB:
-					score += BishopBonus[1]
+					score += BishopBonus[0]
 				case BR, WR:
-					score += RookBonus[1]
+					score += RookBonus[0]
 				case BQ, WQ:
-					score += QueenBonus[1]
+					score += QueenBonus[0]
 				}
 			}
 		}
@@ -78,11 +73,17 @@ func nonPawnMaterial(b *board.Board, clr color.Color) int {
 	return score
 }
 
+// TODO: Finish and test this
 func scaleFactor(b *board.Board, eg int) int {
 	sf := 64
 
 	attackingSide := color.WHITE
 	opponentSide := color.BLACK
+
+	if eg < 0 {
+		attackingSide = color.BLACK
+		opponentSide = color.WHITE
+	}
 
 	pawnCountWhite := b.GetPieceCountForSide(Pawn, attackingSide)
 	knightCountWhite := b.GetPieceCountForSide(Knight, attackingSide)
@@ -115,9 +116,9 @@ func scaleFactor(b *board.Board, eg int) int {
 		ob := b.OppositeBishops()
 
 		if ob && npmWhite == bishopValueMg && npmBlack == bishopValueMg {
-			sf = 22 + 4*candidatePassed(pos_w) // Get passed pawns for white pos
+			sf = 22 + 4*b.CandidatePassed(attackingSide) // Get passed pawns for white pos
 		} else if ob {
-			sf == 22+3*pieceCount(pos_W)
+			sf = 22 + 3*b.PieceCount(attackingSide)
 		} else {
 			if npmWhite == rookValueMg && npmBlack == rookValueMg && pawnCountWhite-pawnCountBlack <= 1 {
 				pawnKingBlack := 0

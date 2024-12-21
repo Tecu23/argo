@@ -384,3 +384,11 @@ func countSupportingPawns(b *Board, square int) int {
 	}
 	return count
 }
+
+func (b *Board) PieceCount(side color.Color) int {
+	if side == color.WHITE {
+		return b.Occupancies[color.WHITE].Count()
+	}
+
+	return b.Occupancies[color.BLACK].Count()
+}
