@@ -503,3 +503,103 @@ func TestPieceValueMg(t *testing.T) {
 		})
 	}
 }
+
+func TestPawnMethods(t *testing.T) {
+	tests := []struct {
+		name         string
+		fen          string
+		desc         string
+		whitePawnsMg int
+		blackPawnsMg int
+	}{
+		{
+			name:         "Double Pawns",
+			fen:          "8/1p6/p3pp1p/8/8/1PP2P1P/1P3P1P/8 w - -",
+			whitePawnsMg: 2,
+			blackPawnsMg: 72,
+			desc:         "Different Types of doubled pawns",
+		},
+		{
+			name:         "Crippled Majority",
+			fen:          "8/1pp2ppp/1p6/8/8/5P2/PPP2PPP/8 w - -",
+			whitePawnsMg: 120,
+			blackPawnsMg: 99,
+			desc:         "Pawn structures with a crippled majority by doubled pawns",
+		},
+		{
+			name:         "Backward Pawn 1",
+			fen:          "8/8/1p6/8/p1P1p3/3pP3/1P1P4/8 w - -",
+			whitePawnsMg: 11,
+			blackPawnsMg: 37,
+			desc:         "Backward pawn",
+		},
+		{
+			name:         "Backward Pawn 2",
+			fen:          "8/1pp5/8/2P5/8/8/8/1R6 w - -",
+			whitePawnsMg: -5,
+			blackPawnsMg: 35,
+			desc:         "Stops with negative SEE",
+		},
+		// Weak Pawns
+		{
+			name:         "Weak Pawns",
+			fen:          "1k6/2p5/1p6/1P6/p1P5/P7/3K4/8 w - -",
+			whitePawnsMg: 21,
+			blackPawnsMg: 9,
+			desc:         "Overly advanced pawns",
+		},
+
+		{
+			name:         "Hanging Pawns",
+			fen:          "8/pp3ppp/4p3/8/2PP4/8/P4PPP/8 w - -",
+			whitePawnsMg: 109,
+			blackPawnsMg: 114,
+			desc:         "Hanging Pawns Formation",
+		},
+
+		// Chain Detection
+		{
+			name:         "Pawn Chains",
+			fen:          "6k1/5p2/4p3/3pP3/2pP4/2P5/8/6K1 w - -",
+			whitePawnsMg: 63,
+			blackPawnsMg: 79,
+			desc:         "Pawn Chains Formation",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := board.ParseFEN(tt.fen)
+			pawnEval := PawnsMg(&b)
+
+			if pawnEval != tt.whitePawnsMg {
+				t.Errorf(
+					"\nPosition: %s\nDescription: %s\nGot eval: %d\nWant eval: %d\nDiff: %d\nFEN: %s",
+					tt.name,
+					tt.desc,
+					pawnEval,
+					tt.whitePawnsMg,
+					pawnEval-tt.whitePawnsMg,
+					tt.fen,
+				)
+			}
+
+			// Test evaluation symmetry
+			mirroredBoard := b.Mirror()
+			mirroredBoard.PrintBoard()
+			pawnEval = PawnsMg(mirroredBoard)
+
+			if pawnEval != tt.blackPawnsMg {
+				t.Errorf(
+					"\nPosition: %s\nDescription: %s\nGot eval: %d\nWant eval: %d\nDiff: %d\nFEN: %s",
+					tt.name,
+					tt.desc,
+					pawnEval,
+					tt.blackPawnsMg,
+					pawnEval-tt.blackPawnsMg,
+					tt.fen,
+				)
+			}
+		})
+	}
+}

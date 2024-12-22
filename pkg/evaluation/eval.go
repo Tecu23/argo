@@ -322,7 +322,249 @@ func BishopPair(b *board.Board) int {
 }
 
 func PawnsMg(b *board.Board) int {
+	score := 0
+
+	pawnsBB := b.Bitboards[WP]
+
+	for pawnsBB != 0 {
+		sq := pawnsBB.FirstOne()
+
+		if DoubleIsolated(b, sq) {
+			score -= 11
+		} else if Isolated(b, sq) {
+			score -= 5
+		} else if Backward(b, sq) {
+			score -= 9
+		}
+
+		if Doubled(b, sq) {
+			score -= 11
+		}
+
+		if Connected(b, sq) {
+			score += ConnectedBonus(b, sq)
+		}
+
+		score -= 13 * WeakUnopposedPawn(b, sq)
+		score += []int{0, -11, -3}[Blocked(b, sq)]
+	}
+
+	return score
+}
+
+func Blocked(b *board.Board, sq int) int {
+	if !b.Bitboards[WP].Test(sq) {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	if rank != 2 && rank != 3 {
+		return 0
+	}
+
+	if !b.Bitboards[BP].Test((rank-1)*8 + file) {
+		return 0
+	}
+
+	return 4 - rank
+}
+
+func WeakUnopposedPawn(b *board.Board, sq int) int {
+	if Opposed(b, sq) > 0 {
+		return 0
+	}
+	score := 0
+
+	if Isolated(b, sq) {
+		score++
+	} else if Backward(b, sq) {
+		score++
+	}
+
+	return score
+}
+
+func ConnectedBonus(b *board.Board, sq int) int {
+	if !Connected(b, sq) {
+		return 0
+	}
+
+	rank := 8 - sq/8
+
+	seed := []int{0, 7, 8, 12, 29, 48, 86}
+	op := Opposed(b, sq)
+	ph := Phalanx(b, sq)
+	su := Supported(b, sq)
+	if rank < 2 || rank > 7 {
+		return 0
+	}
+
+	return seed[rank-1]*(2+ph-op) + 21*su
+}
+
+func Opposed(b *board.Board, sq int) int {
+	if !b.Bitboards[WP].Test(sq) {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	for y := 0; y < rank; y++ {
+		if b.Bitboards[BP].Test(y*8 + file) {
+			return 1
+		}
+	}
+
 	return 0
+}
+
+func Connected(b *board.Board, sq int) bool {
+	if Supported(b, sq) > 0 || Phalanx(b, sq) > 0 {
+		return true
+	}
+
+	return false
+}
+
+func Phalanx(b *board.Board, sq int) int {
+	if !b.Bitboards[WP].Test(sq) {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	if (b.Bitboards[WP].Test(rank*8+file-1) && file > 0) ||
+		(b.Bitboards[WP].Test(rank*8+file+1) && file < 7) {
+		return 1
+	}
+
+	return 0
+}
+
+func Supported(b *board.Board, sq int) int {
+	if !b.Bitboards[WP].Test(sq) {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	score := 0
+
+	if b.Bitboards[WP].Test((rank+1)*8+file-1) && file > 0 {
+		score++
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*8+file+1) && file < 7 {
+		score++
+	}
+
+	return score
+}
+
+func Doubled(b *board.Board, sq int) bool {
+	if !b.Bitboards[WP].Test(sq) {
+		return false
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	if !b.Bitboards[WP].Test((rank+1)*8 + file) {
+		return false
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*8+file-1) && file > 0 {
+		return false
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*8+file+1) && file < 7 {
+		return false
+	}
+
+	return true
+}
+
+func Backward(b *board.Board, sq int) bool {
+	if !b.Bitboards[WP].Test(sq) {
+		return false
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	for y := rank; y < 8; y++ {
+		if (b.Bitboards[WP].Test(y*8+file-1) && file > 0) ||
+			(file < 7 && b.Bitboards[WP].Test(y*8+file+1)) {
+			return false
+		}
+	}
+
+	if (b.Bitboards[BP].Test((rank-2)*8+file-1) && file > 0) ||
+		(b.Bitboards[BP].Test((rank-2)*8+file+1) && file < 7) ||
+		b.Bitboards[BP].Test((rank-1)*8+file) {
+		return true
+	}
+
+	return false
+}
+
+// Doubled Isolated is a penalty if a double pawn is stopped only
+// by a single opponent pawn on the same file.
+func DoubleIsolated(b *board.Board, sq int) bool {
+	if !b.Bitboards[WP].Test(sq) {
+		return false
+	}
+
+	if Isolated(b, sq) {
+		obe, eop, ene := 0, 0, 0
+
+		rank := sq / 8
+		file := sq % 8
+
+		for y := 0; y < 8; y++ {
+			if y > rank && b.Bitboards[WP].Test(y*8+file) {
+				obe++
+			}
+
+			if y < rank && b.Bitboards[BP].Test(y*8+file) {
+				eop++
+			}
+
+			if (file > 0 && b.Bitboards[BP].Test(y*8+file-1)) ||
+				(b.Bitboards[BP].Test(y*8+file+1) && file < 7) {
+				ene++
+			}
+		}
+
+		if obe > 0 && ene == 0 && eop > 0 {
+			return true
+		}
+
+	}
+
+	return false
+}
+
+func Isolated(b *board.Board, sq int) bool {
+	file := sq % 8
+
+	if !b.Bitboards[WP].Test(sq) {
+		return false
+	}
+
+	for y := 0; y < 8; y++ {
+		if (b.Bitboards[WP].Test(y*8+file-1) && file > 0) ||
+			(b.Bitboards[WP].Test(y*8+file+1) && file < 7) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func PiecesMg(b *board.Board) int {
