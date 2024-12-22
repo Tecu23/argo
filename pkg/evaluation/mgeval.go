@@ -2,30 +2,9 @@ package evaluation
 
 import (
 	"github.com/Tecu23/argov2/pkg/board"
+	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
-
-func MiddleGameEvaluation(b *board.Board, noWinnable bool) int {
-	score := 0
-	mirror := b.Mirror()
-
-	score += PieceValueMg(b) - PieceValueMg(mirror)
-	score += PsqtMg(b) - PsqtMg(mirror)
-	score += ImbalanceTotal(b, mirror)
-	score += PawnsMg(b) - PawnsMg(mirror)
-	score += PiecesMg(b) - PiecesMg(mirror)
-	score += MobilityMg(b) - MobilityMg(mirror)
-	score += ThreatsMg(b) - ThreatsMg(mirror)
-	score += PassedMg(b) - PassedMg(mirror)
-	score += Space(b) - Space(mirror)
-	score += KingMg(b) - KingMg(mirror)
-
-	if !noWinnable {
-		score += WinnableTotalMg(b, score)
-	}
-
-	return score
-}
 
 func PieceValueMg(b *board.Board) int {
 	PawnBonus := 124
@@ -568,11 +547,311 @@ func Isolated(b *board.Board, sq int) bool {
 }
 
 func PiecesMg(b *board.Board) int {
+	score := 0
+
+	// scores for Knight, Bishop, Rook, Queen
+	knightBB := b.Bitboards[WN]
+	for knightBB != 0 {
+		sq := knightBB.FirstOne()
+
+		score += []int{0, 31, -7, 30, 56}[OutpostTotal(b, sq)]
+		score += 18 * MinorBehindPawn(b, sq)
+
+	}
+
+	bishopBB := b.Bitboards[WB]
+	for bishopBB != 0 {
+		sq := bishopBB.FirstOne()
+
+		score += []int{0, 31, -7, 30, 56}[OutpostTotal(b, sq)]
+		score += 18 * MinorBehindPawn(b, sq)
+		score -= 3 * BishopPawns(b, sq)
+		score -= 4 * BishopXrayPawns(b, sq)
+		score += 24 * BishopOnKingRing(b, sq)
+
+	}
+
+	rookBB := b.Bitboards[WR]
+	for rookBB != 0 {
+		sq := rookBB.FirstOne()
+
+		score += 6 * RookOnQueenFile(b, sq)
+		score += 16 * RookOnKingRing(b, sq)
+
+		score += []int{0, 19, 48}[RookOnFile(b, sq)]
+
+		factor := 2
+		if uint(b.Castlings)&ShortW != 0 || uint(b.Castlings)&LongW != 0 {
+			factor = 1
+		}
+
+		score -= TrappedRook(b, sq) * 55 * factor
+	}
+
+	queenBB := b.Bitboards[WQ]
+	for queenBB != 0 {
+		sq := queenBB.FirstOne()
+
+		score -= 56 * WeakQueen(b, sq)
+	}
+
+	// score -= 2 * QueenInfiltration(b, sq)
+	//
+	// score -= (is_knight ? 8 : 6) * KingProtector(b, sq)
+	// score += 45 * LongDiagonalBishop(b, sq)
+
+	return score
+}
+
+func TrappedRook(b *board.Board, sq int) int {
+	if RookOnFile(b, sq) {
+		return 0
+	}
+
+	return 1
+}
+
+func RookOnFile(b *board.Board, sq int) int {
+	open := 1
+	file := sq % 8
+
+	for y := 0; y < 8; y++ {
+		if b.Bitboards[WP].Test(y*8 + file) {
+			return 0
+		}
+		if b.Bitboards[BP].Test(y*8 + file) {
+			open = 0
+		}
+	}
+
+	return open + 1
+}
+
+// TODO: IMPLEMENT THIS
+func BishopOnKingRing(b *board.Board, sq int) int {
+	return 0
+}
+
+func RookOnKingRing(b *board.Board, sq int) int {
+	if KingAttackersCount(b, sq) > 0 {
+		return 0
+	}
+
+	file := sq % 8
+
+	for y := 0; y < 8; y++ {
+		if KingRing(b, y*8+file) {
+			return 1
+		}
+	}
+
+	return 0
+}
+
+// TODO: FINISH IMPLEMENTING THIS
+func KingAttackersCount(b *board.Board, sq int) int {
+	return 0
+}
+
+func KingRing(b *board.Board, sq int, full bool) int {
+	rank := sq / 8
+	file := sq % 8
+
+	if !full && b.Bitboards[BP].Test((rank-1)*8+file+1) && file < 7 && file > 0 &&
+		b.Bitboards[BP].Test((rank-1)*8+file-1) {
+		return 0
+	}
+
+	for ix := -2; ix <= 2; ix++ {
+		for iy := -2; iy <= 2; iy++ {
+			if ix+file < 0 || ix+file > 7 || iy+rank < 0 || iy+rank > 7 {
+				continue
+			}
+
+			if b.Bitboards[BK].Test(
+				(rank+iy)*8+file+ix,
+			) && (ix >= -1 && ix <= 1 || file+ix == 0 || file+ix == 7) &&
+				(iy >= -1 && iy <= 1 || rank+iy == 0 || rank+iy == 7) {
+				return 1
+			}
+		}
+	}
+
+	return 0
+}
+
+func RookOnQueenFile(b *board.Board, sq int) int {
+	file := sq % 8
+
+	for y := 0; y < 8; y++ {
+		if b.Bitboards[WQ].Test(y*8+file) || b.Bitboards[BQ].Test(y*8+file) {
+			return 1
+		}
+	}
+
+	return 0
+}
+
+func BishopXrayPawns(b *board.Board, sq int) int {
+	count := 0
+
+	rank := sq / 8
+	file := sq % 8
+
+	pawnsBB := b.Bitboards[BP]
+	for pawnsBB != 0 {
+		pawnSq := pawnsBB.FirstOne()
+
+		pawnRank := pawnSq / 8
+		pawnFile := pawnSq % 8
+
+		if abs(file-pawnFile) == abs(rank-pawnRank) {
+			count++
+		}
+	}
+
+	return count
+}
+
+// BishopPawns returns the number of pawns on the same color square
+// as the bishop multiplied by one of our blocked pawns in the center files C,D,E or F
+func BishopPawns(b *board.Board, sq int) int {
+	score := 0
+	c := sq % 2
+
+	blocked := 0
+
+	pawnsBB := b.Bitboards[WP]
+	for pawnsBB != 0 {
+		pawnSq := pawnsBB.FirstOne()
+		if pawnSq%2 == c {
+			score++
+		}
+
+		pawnRank := pawnSq / 8
+		pawnFile := pawnSq % 8
+
+		if pawnFile > 1 && pawnFile < 6 {
+			squareInFront := (pawnRank-1)*8 + pawnFile
+
+			if squareInFront >= 0 && b.Occupancies[color.BOTH].Test(squareInFront) {
+				blocked++
+			}
+		}
+	}
+	pawnAttack := 1
+	if PawnAttack(b, sq) > 0 {
+		pawnAttack = 0
+	}
+	return score * (blocked + pawnAttack)
+}
+
+func PawnAttack(b *board.Board, sq int) int {
+	score := 0
+
+	rank := sq / 8
+	file := sq % 8
+
+	if b.Bitboards[WP].Test((rank+1)*file-1) && file > 0 {
+		score++
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*file+1) && file < 7 {
+		score++
+	}
+
+	return score
+}
+
+func MinorBehindPawn(b *board.Board, sq int) int {
+	rank := sq / 8
+	file := sq % 8
+
+	if !b.Bitboards[WP].Test((rank-1)+file) && !b.Bitboards[BP].Test((rank-1)+file) {
+		return 0
+	}
+
+	return 1
+}
+
+// TODO: To be implemented
+func OutpostTotal(b *board.Board, sq int) int {
 	return 0
 }
 
 func MobilityMg(b *board.Board) int {
 	return 0
+}
+
+func MobilityBonus(b *board.Board, sq int) int {
+	return 0
+}
+
+func Mobility(b *board.Board, sq int) int {
+	if !b.Bitboards[WN].Test(sq) && !b.Bitboards[WB].Test(sq) && !b.Bitboards[WR].Test(sq) &&
+		!b.Bitboards[WQ].Test(sq) {
+		return 0
+	}
+
+	score := 0
+
+	for x := 0; x < 8; x++ {
+		for y := 0; y < 8; y++ {
+			if !MobilityArea(b, y*8+x) {
+				continue
+			}
+
+			if b.Bitboards[WN].Test(sq) && KnightAttack(b, y*8+x, sq) &&
+				b.Bitboards[WQ].Test(y*8+x) {
+				score++
+			}
+			if b.Bitboards[WB].Test(sq) && BishopXrayAttack(b, y*8+x, sq) &&
+				b.Bitboards[WQ].Test(y*8+x) {
+				score++
+			}
+			if b.Bitboards[WR].Test(sq) && RookXrayAttack(b, y*8+x, sq) {
+				score++
+			}
+			if b.Bitboards[WQ].Test(sq) && QueenAttack(b, y*8+x, sq) {
+				score++
+			}
+		}
+	}
+
+	return score
+}
+
+func MobilityArea(b *board.Board, sq int) bool {
+	if b.Bitboards[WK].Test(sq) {
+		return false
+	}
+
+	if b.Bitboards[WQ].Test(sq) {
+		return false
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	if b.Bitboards[BP].Test((rank-1)*8+file-1) && file > 0 {
+		return false
+	}
+
+	if b.Bitboards[BP].Test((rank-1)*8+file+1) && file < 7 {
+		return false
+	}
+
+	if b.Bitboards[WP].Test(sq) && rank < 4 || b.Occupancies[color.BOTH].Test((rank-1)*8+file) {
+		return false
+	}
+
+	mirror := b.Mirror()
+
+	if BlockersForKing(mirror, (7-rank)*8+file) {
+		return false
+	}
+
+	return true
 }
 
 func ThreatsMg(b *board.Board) int {
@@ -593,4 +872,12 @@ func KingMg(b *board.Board) int {
 
 func WinnableTotalMg(b *board.Board, score int) int {
 	return 0
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+
+	return x
 }

@@ -134,7 +134,7 @@ func TestPhase(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
-			got := phase(&b)
+			got := Phase(&b)
 
 			// Allow for small numerical differences due to rounding
 			tolerance := 2
@@ -156,10 +156,10 @@ func TestPhase(t *testing.T) {
 			// Test phase monotonicity by removing pieces
 			if strings.Contains(tt.name, "Starting Position") {
 				variations := generateMaterialVariations(&b)
-				lastPhase := phase(&b)
+				lastPhase := Phase(&b)
 
 				for _, varBoard := range variations {
-					currentPhase := phase(varBoard)
+					currentPhase := Phase(varBoard)
 					if currentPhase > lastPhase {
 						t.Errorf("Phase increased after removing material: %d -> %d\n",
 							lastPhase, currentPhase)
@@ -189,14 +189,6 @@ func generateMaterialVariations(b *board.Board) []*board.Board {
 	}
 
 	return variations
-}
-
-// Helper function for absolute value
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
 }
 
 // func TestScaleFactor(t *testing.T) {
