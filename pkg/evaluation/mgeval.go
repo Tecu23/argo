@@ -1376,15 +1376,183 @@ func RookThreat(b *board.Board, sq int) int {
 	return 0
 }
 
+// PassedMg return middlegame bonuses for passed pawn. Scale
+// down bonus for candidate passers which need more than one pawn
+// push to become passed, or have a pawn in from of them
 func PassedMg(b *board.Board) int {
 	return 0
 }
 
+// Space computes the space evaluation for a given side. The Space are
+// bonus is multiplied by a weight: number of our pieces minus two times
+// number of open files. The aim is to improve play on game opening
 func Space(b *board.Board) int {
+	if nonPawnMaterial(b, color.WHITE)+nonPawnMaterial(b.Mirror(), color.WHITE) < 12222 {
+		return 0
+	}
+
+	score := 0
+	pieceCount, blockedCount := 0, 0
+
+	pieceBB := b.Occupancies[color.BOTH]
+	for pieceBB != 0 {
+		sq := pieceBB.FirstOne()
+
+		if b.Occupancies[color.WHITE].Test(sq) {
+			pieceCount++
+		}
+
+		rank := sq / 8
+		file := sq % 8
+
+		if b.Bitboards[WP].Test(sq) &&
+			((b.Bitboards[BP].Test((rank-1)*8+file) && rank > 0) ||
+				(b.Bitboards[BP].Test((rank-2)*8+file-1) && rank > 1 && file > 0) &&
+					(b.Bitboards[BP].Test((rank-2)*8+file+1) && rank > 1 && file < 7)) {
+			blockedCount++
+		}
+
+		if b.Bitboards[BP].Test(sq) &&
+			((b.Bitboards[BP].Test((rank+1)*8+file) && rank < 7) ||
+				(b.Bitboards[BP].Test((rank+2)*8+file-1) && rank < 6 && file > 0) &&
+					(b.Bitboards[BP].Test((rank+2)*8+file+1) && rank < 6 && file < 7)) {
+			blockedCount++
+		}
+
+		weight := pieceCount - 3 + min(blockedCount, 9)
+		score += ((SpaceArea(b, sq) * weight * weight / 16) << 0)
+	}
+	return score
+}
+
+// SpaceArea returns the number of safe squares available for minor pieces
+// on the central four files on ranks 2 to 4. Safe squares one, two or three
+// squares behind a friendly pawn are counted twice
+func SpaceArea(b *board.Board, sq int) int {
+	score := 0
+
+	rank := sq / 8
+	file := sq % 8
+
+	if ((8-rank) >= 2 && (8-rank) <= 4 && (8-file) >= 3 && (8-file) <= 6) &&
+		b.Bitboards[WP].Test(sq) &&
+		(b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0) &&
+		(b.Bitboards[BP].Test((rank+1)*8+file-1) && rank < 7 && file > 0) {
+		score++
+
+		if ((b.Bitboards[WP].Test((rank-1)*8+file) && rank > 0) ||
+			(b.Bitboards[WP].Test((rank-2)*8+file) && rank > 1) ||
+			(b.Bitboards[WP].Test((rank-3)*8+file) && rank > 2)) &&
+			Attack(b.Mirror(), (7-rank)*8+file) == 0 {
+			score++
+		}
+	}
+
+	return score
+}
+
+// KingMg assigns middlegame bonuses and penalties for attacks on enemy king
+func KingMg(b *board.Board) int {
+	score := 0
+
+	kd := KingDanger(b)
+	score -= ShelterStrength(b)
+	score += ShelterStorm(b)
+	score += (kd * kd / 4096) << 0
+	score += 8 * FlankAttack(b)
+	score += 17 * PawnlessFlank(b)
+	return score
+}
+
+// KingDanger returns the danger that the king is in. The initial value
+// is based on the number and types of the enemy's attacking pieces, the
+// number of attacked and undefended squares around our king and the
+// quality of the pawn shelter
+func KingDanger(b *board.Board) int {
+	score := 0
+	kingBB := b.Bitboards[WK]
+	for kingBB != 0 {
+		sq := kingBB.FirstOne()
+
+		count := KingAttackersCount(b, sq)
+		weight := KingAttackersWeight(b, sq)
+		kingAttacks := evalhelpers.KingAttack(b, sq)
+		weak := WeakBonus(b, sq)
+		unsafeChecks := UnsafeChecks(b, sq)
+		blockersForKing := BlockersForKing(b, sq)
+		kingFlankAttack := FlankAttack(b)
+		kingFlankDefense := FlankDefense(b)
+		noQueen := 1
+		if QueenCount(b) > 0 {
+			noQueen = 0
+		}
+
+		knightBonusFactor := 0
+		if KnightDefender(b.Mirror()) {
+			knightBonusFactor = 1
+		}
+
+		score = count*weight +
+			69*kingAttacks +
+			185*weak -
+			100*knightBonusFactor +
+			148*unsafeChecks +
+			98*blockersForKing -
+			4*kingFlankDefense +
+			((3 * kingFlankAttack * kingFlankAttack / 8) << 0) -
+			873*noQueen -
+			((6 * (ShelterStrength(b) - ShelterStorm(b)) / 8) << 0) +
+			MobilityMg(b) - MobilityMg(b.Mirror()) +
+			37 +
+			((772 * int(min(SafeCheck(b, nil, 3), 1.45))) << 0) +
+			((1084 * int(min(SafeCheck(b, nil, 2), 1.75))) << 0) +
+			((645 * int(min(SafeCheck(b, nil, 1), 1.50))) << 0) +
+			((792 * int(min(SafeCheck(b, nil, 0), 1.62))) << 0)
+	}
+
+	if score > 100 {
+		return score
+	}
 	return 0
 }
 
-func KingMg(b *board.Board) int {
+func WeakBonus(b *board.Board, sq int) int {
+	return 0
+}
+
+func KingAttackersWeight(b *board.Board, sq int) int {
+	return 0
+}
+
+func UnsafeChecks(b *board.Board, sq int) int {
+	return 0
+}
+
+func FlankDefense(b *board.Board) int {
+	return 0
+}
+
+func KnightDefender(b *board.Board) bool {
+	return false
+}
+
+func SafeCheck(b *board.Board, sq *int, factor int) float32 {
+	return 0.0
+}
+
+func ShelterStrength(b *board.Board) int {
+	return 0
+}
+
+func ShelterStorm(b *board.Board) int {
+	return 0
+}
+
+func FlankAttack(b *board.Board) int {
+	return 0
+}
+
+func PawnlessFlank(b *board.Board) int {
 	return 0
 }
 
