@@ -1278,20 +1278,81 @@ func PawnPushThreat(b *board.Board) int {
 	for blackBB != 0 {
 		sq := blackBB.FirstOne()
 
+		rank := sq / 8
+		file := sq % 8
+
 		for ix := -1; ix <= 1; ix += 2 {
-			// TODO: Remains to be implemented
-			return sq
+			if b.Bitboards[WP].Test((rank+2)*8+file+ix) &&
+				file+ix >= 0 && file+ix <= 7 && rank+2 <= 7 &&
+				b.Occupancies[color.BOTH].Test((rank+1)*8+file+ix) &&
+				!(b.Bitboards[BP].Test(rank*8+file+ix-1) && file+ix-1 >= 0 && file+ix-1 <= 7) &&
+				!(b.Bitboards[BP].Test(rank*8+file+ix+1) && file+ix+1 >= 0 && file+ix+1 <= 7) &&
+				(Attack(b, (rank+1)*8+file+ix) > 0 || Attack(b.Mirror(), (6-rank)*8+file+ix) == 0) {
+				return 1
+			}
+
+			if file == 3 && b.Bitboards[WP].Test((rank+3)*8+file+ix) &&
+				file+ix >= 0 && file+ix <= 7 && rank+3 <= 7 &&
+				b.Occupancies[color.BOTH].Test((rank+1)*8+file+ix) &&
+				b.Occupancies[color.BOTH].Test((rank+2)*8+file+ix) &&
+				!(b.Bitboards[BP].Test(rank*8+file+ix-1) && file+ix-1 >= 0 && file+ix-1 <= 7) &&
+				!(b.Bitboards[BP].Test(rank*8+file+ix+1) && file+ix+1 >= 0 && file+ix+1 <= 7) &&
+				(Attack(b, (rank+1)*8+file+ix) > 0 || Attack(b.Mirror(), (6-rank)*8+file+ix) == 0) {
+				return 1
+			}
 		}
 
 	}
 	return 0
 }
 
+// ThreatSafePawn returns the non-pawn enemies attacked by a safe pawn
 func ThreatSafePawn(b *board.Board) int {
+	blackBB := b.Occupancies[color.BLACK]
+	for blackBB != 0 {
+		sq := blackBB.FirstOne()
+
+		rank := sq / 8
+		file := sq % 8
+
+		if evalhelpers.PawnAttack(b, sq) == 0 {
+			return 0
+		}
+
+		if (SafePawn(b, (rank+1)*8+file-1) && file > 0 && rank < 7) ||
+			(SafePawn(b, (rank+1)*8+file+1) && file < 7 && rank < 7) {
+			return 1
+		}
+	}
 	return 0
 }
 
+// SafePawn returns whether or not our pawn is not attacked or is defended
+func SafePawn(b *board.Board, sq int) bool {
+	rank := sq / 8
+	file := sq % 8
+
+	if b.Bitboards[WP].Test(sq) {
+		return false
+	}
+
+	if Attack(b, sq) > 0 {
+		return true
+	}
+
+	if Attack(b.Mirror(), (7-rank)*8+file) == 0 {
+		return true
+	}
+
+	return false
+}
+
+// SliderOnQueen adds a bonus for safe slider attack threats on opponent queen
 func SliderOnQueen(b *board.Board) int {
+	return 0
+}
+
+func QueenCount(b *board.Board) int {
 	return 0
 }
 
