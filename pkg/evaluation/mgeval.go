@@ -1155,7 +1155,152 @@ func BlockersForKing(b *board.Board, sq int) int {
 	return 0
 }
 
+// ThreatsMg returns the bonuses for middlegame threats
 func ThreatsMg(b *board.Board) int {
+	score := 0
+
+	score += 69 * Hanging(b)
+	if KingThreat(b) {
+		score += 24
+	}
+
+	score += 48 * PawnPushThreat(b)
+	score += 173 * ThreatSafePawn(b)
+	score += 60 * SliderOnQueen(b)
+	score += 16 * KnightOnQueen(b)
+	score += 7 * Restricted(b)
+	score += 14 * WeakQueenProtection(b)
+
+	for sq := A8; sq <= H1; sq++ {
+		score += []int{0, 5, 57, 77, 88, 79, 0}[MinorThreat(b, sq)]
+		score += []int{0, 3, 37, 42, 0, 58, 0}[RookThreat(b, sq)]
+	}
+
+	return score
+}
+
+// Hanging returns weak enemies not defended by opponent or non-pawn weak
+// enemies attacked twice
+func Hanging(b *board.Board) int {
+	weakEnemies := 0
+	// Loop Through all enemies and check if there are any
+	blackBB := b.Occupancies[color.BLACK]
+	for blackBB != 0 {
+		sq := blackBB.FirstOne()
+
+		if WeakEnemies(b, sq) == 0 {
+			continue
+		}
+
+		if !b.Bitboards[BP].Test(sq) && Attack(b, sq) > 1 {
+			weakEnemies++
+		}
+
+		mirror := b.Mirror()
+		if Attack(mirror, (7-(sq/8))*8+(sq%8)) == 0 {
+			weakEnemies++
+		}
+	}
+	return weakEnemies
+}
+
+// WeakEnemies returns enemies not defended by a pawn and under our attack
+func WeakEnemies(b *board.Board, sq int) int {
+	rank := sq / 8
+	file := sq % 8
+
+	if b.Bitboards[BP].Test((rank-1)*8+file-1) && file > 0 {
+		return 0
+	}
+
+	if b.Bitboards[BP].Test((rank-1)*8+file+1) && file < 7 {
+		return 0
+	}
+
+	if Attack(b, sq) == 0 {
+		return 0
+	}
+
+	mirror := b.Mirror()
+	if Attack(b, sq) <= 1 && Attack(mirror, (7-rank)*8+file) > 1 {
+		return 0
+	}
+
+	return 1
+}
+
+// Attack counts the number of attacks on square by all pieces. For bishop and rook
+// x-ray attacks are included. For pawns pins or en-passant are ignored.
+func Attack(b *board.Board, sq int) int {
+	score := 0
+	score += evalhelpers.PawnAttack(b, sq)
+	score += evalhelpers.KingAttack(b, sq)
+	score += evalhelpers.KnightAttack(b, sq, -1)
+	score += evalhelpers.BishopXrayAttack(b, sq, -1)
+	score += evalhelpers.RookXrayAttack(b, sq, -1)
+	score += evalhelpers.QueenAttack(b, sq, -1)
+
+	return score
+}
+
+// KingThreat returns if the king is in threat
+func KingThreat(b *board.Board) bool {
+	blackBB := b.Occupancies[color.BLACK]
+	for blackBB != 0 {
+		sq := blackBB.FirstOne()
+
+		if WeakEnemies(b, sq) == 0 {
+			return false
+		}
+
+		if evalhelpers.KingAttack(b, sq) == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// PawnPushThreat returns the number of pawns that can be safely pushed
+// and attack and enemy piece
+func PawnPushThreat(b *board.Board) int {
+	blackBB := b.Occupancies[color.BLACK]
+	for blackBB != 0 {
+		sq := blackBB.FirstOne()
+
+		for ix := -1; ix <= 1; ix += 2 {
+			// TODO: Remains to be implemented
+			return sq
+		}
+
+	}
+	return 0
+}
+
+func ThreatSafePawn(b *board.Board) int {
+	return 0
+}
+
+func SliderOnQueen(b *board.Board) int {
+	return 0
+}
+
+func KnightOnQueen(b *board.Board) int {
+	return 0
+}
+
+func Restricted(b *board.Board) int {
+	return 0
+}
+
+func WeakQueenProtection(b *board.Board) int {
+	return 0
+}
+
+func MinorThreat(b *board.Board, sq int) int {
+	return 0
+}
+
+func RookThreat(b *board.Board, sq int) int {
 	return 0
 }
 

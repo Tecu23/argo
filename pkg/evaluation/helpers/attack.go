@@ -48,7 +48,8 @@ func KnightAttack(b *board.Board, sq int, sq2 int) int {
 		ix := (factor1 + 1) * (factor2*2 - 1)
 		iy := (2 - factor1) * (factor3*2 - 1)
 
-		if b.Bitboards[WN].Test((rank+iy)*8+file+ix) && (file2 == file+ix && rank2 == rank+iy) &&
+		if b.Bitboards[WN].Test((rank+iy)*8+file+ix) &&
+			(sq2 == -1 || file2 == file+ix && rank2 == rank+iy) &&
 			Pinned(b, (rank+iy)*8+file+ix) == 0 {
 			score++
 		}
@@ -83,8 +84,7 @@ func BishopXrayAttack(b *board.Board, sq int, sq2 int) int {
 		for d := 1; d < 8; d++ {
 			if b.Bitboards[WB].Test((rank+d*iy)*8+file+d*ix) &&
 				(file+d*ix >= 0) && (file+d*ix <= 7) &&
-				file2 == file+d*ix &&
-				rank2 == rank+d*iy {
+				(sq2 == -1 || file2 == file+d*ix && rank2 == rank+d*iy) {
 				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
 
 				if dir == 0 || abs(ix+iy*3) == dir {
@@ -134,7 +134,7 @@ func RookXrayAttack(b *board.Board, sq int, sq2 int) int {
 
 		for d := 1; d < 8; d++ {
 			if b.Bitboards[WR].Test((rank+d*iy)*8+file+d*ix) &&
-				(file2 == file+d*ix && rank2 == rank+d*iy) {
+				(sq2 == -1 || file2 == file+d*ix && rank2 == rank+d*iy) {
 				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
 
 				if dir == 0 || abs(ix+iy*3) == dir {
@@ -177,7 +177,7 @@ func QueenAttack(b *board.Board, sq int, sq2 int) int {
 
 		for d := 1; d < 8; d++ {
 			if b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
-				(file2 == file+d*ix && rank2 == rank+d*iy) {
+				(sq2 == -1 || file2 == file+d*ix && rank2 == rank+d*iy) {
 				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
 
 				if dir == 0 || abs(ix+iy*3) == dir {
@@ -192,6 +192,30 @@ func QueenAttack(b *board.Board, sq int, sq2 int) int {
 	}
 
 	return score
+}
+
+// KingAttack counts the number of attacks on a square by the king
+func KingAttack(b *board.Board, sq int) int {
+	rank := sq / 8
+	file := sq % 8
+
+	factor := 0
+
+	for i := 0; i < 8; i++ {
+		factor = 0
+		if i > 3 {
+			factor = 1
+		}
+
+		ix := (i+factor)%3 - 1
+		iy := (((i + factor) / 3) << 0) - 1
+		if b.Bitboards[WK].Test((rank+iy)*8+file+ix) &&
+			file+ix >= 0 && file+ix <= 7 &&
+			rank+iy >= 0 && rank+iy <= 0 {
+			return 1
+		}
+	}
+	return 0
 }
 
 func Pinned(b *board.Board, sq int) int {
