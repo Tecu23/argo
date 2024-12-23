@@ -2,6 +2,7 @@ package evalhelpers
 
 import (
 	"github.com/Tecu23/argov2/pkg/board"
+	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
@@ -19,4 +20,232 @@ func PawnAttack(b *board.Board, sq int) int {
 		v++
 	}
 	return v
+}
+
+func KnightAttack(b *board.Board, sq int, sq2 int) int {
+	score := 0
+	factor1, factor2, factor3 := 0, 0, 0
+
+	rank := sq / 8
+	file := sq % 8
+
+	rank2 := sq2 / 8
+	file2 := sq2 % 8
+
+	for i := 0; i < 8; i++ {
+		factor1, factor2, factor3 = 0, 0, 0
+		if i > 3 {
+			factor1 = 1
+		}
+		if i%4 > 1 {
+			factor2 = 1
+		}
+
+		if i%2 == 0 {
+			factor3 = 1
+		}
+
+		ix := (factor1 + 1) * (factor2*2 - 1)
+		iy := (2 - factor1) * (factor3*2 - 1)
+
+		if b.Bitboards[WN].Test((rank+iy)*8+file+ix) && (file2 == file+ix && rank2 == rank+iy) &&
+			Pinned(b, (rank+iy)*8+file+ix) == 0 {
+			score++
+		}
+	}
+
+	return score
+}
+
+func BishopXrayAttack(b *board.Board, sq int, sq2 int) int {
+	score := 0
+	factor1, factor2 := 0, 0
+
+	rank := sq / 8
+	file := sq % 8
+
+	rank2 := sq2 / 8
+	file2 := sq2 % 8
+
+	for i := 0; i < 4; i++ {
+		factor1, factor2 = 0, 0
+		if i > 1 {
+			factor1 = 1
+		}
+
+		if i%2 == 0 {
+			factor2 = 1
+		}
+
+		ix := factor1*2 - 1
+		iy := factor2*2 - 1
+
+		for d := 1; d < 8; d++ {
+			if b.Bitboards[WB].Test((rank+d*iy)*8+file+d*ix) &&
+				(file+d*ix >= 0) && (file+d*ix <= 7) &&
+				file2 == file+d*ix &&
+				rank2 == rank+d*iy {
+				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
+
+				if dir == 0 || abs(ix+iy*3) == dir {
+					score++
+				}
+			}
+
+			if ((rank+d*iy)*8 + file + d*ix) == G6 {
+				b.Occupancies[color.BOTH].PrintBitboard()
+			}
+
+			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
+				!b.Bitboards[WB].Test((rank+d*iy)*8+file+d*ix) &&
+				!b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
+				!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) {
+				break
+			}
+		}
+	}
+
+	return score
+}
+
+func RookXrayAttack(b *board.Board, sq int, sq2 int) int {
+	score := 0
+
+	rank := sq / 8
+	file := sq % 8
+
+	rank2 := sq2 / 8
+	file2 := sq2 % 8
+
+	for i := 0; i < 4; i++ {
+		ix := 0
+		iy := 0
+		if i == 0 {
+			ix = -1
+		} else if i == 1 {
+			ix = 1
+		}
+
+		if i == 2 {
+			iy = -1
+		} else if i == 3 {
+			iy = 1
+		}
+
+		for d := 1; d < 8; d++ {
+			if b.Bitboards[WR].Test((rank+d*iy)*8+file+d*ix) &&
+				(file2 == file+d*ix && rank2 == rank+d*iy) {
+				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
+
+				if dir == 0 || abs(ix+iy*3) == dir {
+					score++
+				}
+			}
+
+			if !b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
+				!b.Bitboards[WR].Test((rank+d*iy)*8+file+d*ix) &&
+				!b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
+				!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) {
+				break
+			}
+		}
+	}
+
+	return score
+}
+
+func QueenAttack(b *board.Board, sq int, sq2 int) int {
+	score := 0
+
+	rank := sq / 8
+	file := sq % 8
+
+	rank2 := sq2 / 8
+	file2 := sq2 % 8
+
+	factor := 0
+
+	for i := 0; i < 8; i++ {
+		factor = 0
+
+		if i > 3 {
+			factor = 1
+		}
+
+		ix := (i+factor)%3 - 1
+		iy := (((i + factor) / 3) << 0) - 1
+
+		for d := 1; d < 8; d++ {
+			if b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
+				(file2 == file+d*ix && rank2 == rank+d*iy) {
+				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
+
+				if dir == 0 || abs(ix+iy*3) == dir {
+					score++
+				}
+			}
+
+			if !b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
+				break
+			}
+		}
+	}
+
+	return score
+}
+
+func Pinned(b *board.Board, sq int) int {
+	return PinnedDirection(b, sq)
+}
+
+func PinnedDirection(b *board.Board, sq int) int {
+	c := 1
+
+	rank := sq / 8
+	file := sq % 8
+
+	for i := 0; i < 8; i++ {
+		factor := 0
+		if i > 3 {
+			factor = 1
+		}
+
+		ix := (i+factor)%3 - 1
+		iy := (((i + factor) / 3) << 0) - 1
+
+		king := false
+
+		for d := 1; d < 8; d++ {
+			if b.Bitboards[BK].Test((rank+d*iy)*8 + file + d*ix) {
+				king = true
+			}
+			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
+				break
+			}
+		}
+
+		if king {
+			for d := 1; d < 8; d++ {
+				if b.Bitboards[BQ].Test((rank-d*iy)*8+file-d*ix) ||
+					(b.Bitboards[BB].Test((rank-d*iy)*8+file-d*ix) && ix*iy != 0) ||
+					(b.Bitboards[BR].Test((rank-d*iy)*8+file-d*ix) && ix*iy == 0) {
+					return abs(ix+iy*3) * c
+				}
+
+				if b.Occupancies[color.BOTH].Test((rank-d*iy)*8 + file - d*ix) {
+					break
+				}
+			}
+		}
+	}
+
+	return 0
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+
+	return x
 }

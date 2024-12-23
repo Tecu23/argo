@@ -861,10 +861,10 @@ func KingAttackersCount(b *board.Board, sq int) int {
 	for x := 0; x < 8; x++ {
 		for y := 0; y < 8; y++ {
 			if KingRing(b, y*8+x, false) > 0 {
-				if KnightAttack(b, y*8+x, sq) > 0 ||
-					BishopXrayAttack(b, y*8+x, sq) > 0 ||
-					RookXrayAttack(b, y*8+x, sq) > 0 ||
-					QueenAttack(b, y*8+x, sq) > 0 {
+				if evalhelpers.KnightAttack(b, y*8+x, sq) > 0 ||
+					evalhelpers.BishopXrayAttack(b, y*8+x, sq) > 0 ||
+					evalhelpers.RookXrayAttack(b, y*8+x, sq) > 0 ||
+					evalhelpers.QueenAttack(b, y*8+x, sq) > 0 {
 					return 1
 				}
 			}
@@ -991,14 +991,87 @@ func OutpostTotal(b *board.Board, sq int) int {
 	return 0
 }
 
+// MobilityMg returnes the mobility bonus for middlegame
 func MobilityMg(b *board.Board) int {
+	score := 0
+	sq := 0
+
+	knightBB := b.Bitboards[WN]
+	for knightBB != 0 {
+		sq = knightBB.FirstOne()
+
+		score += MobilityBonus(b, sq, true)
+	}
+
+	bishopBB := b.Bitboards[WB]
+	for bishopBB != 0 {
+		sq = bishopBB.FirstOne()
+
+		score += MobilityBonus(b, sq, true)
+	}
+
+	rookBB := b.Bitboards[WR]
+	for rookBB != 0 {
+		sq = rookBB.FirstOne()
+
+		score += MobilityBonus(b, sq, true)
+	}
+
+	queenBB := b.Bitboards[WQ]
+	for queenBB != 0 {
+		sq = queenBB.FirstOne()
+
+		score += MobilityBonus(b, sq, true)
+	}
+	return score
+}
+
+// MobilityBonus attaches bonuses for middlegame and endgame by piece type and Mobility
+func MobilityBonus(b *board.Board, sq int, isMiddleGame bool) int {
+	bonus := [][]int{
+		{-81, -56, -31, -16, 5, 11, 17, 20, 25},
+		{-59, -23, -3, 13, 24, 42, 54, 57, 65, 73, 78, 86, 88, 97},
+		{-78, -17, 23, 39, 70, 99, 103, 121, 134, 139, 158, 164, 168, 169, 172},
+		{
+			-48, -30, -7, 19, 40, 55, 59, 75, 78, 96, 96, 100, 121,
+			127, 131, 133, 136, 141, 147, 150, 151, 168, 168, 171, 182, 182, 192, 219,
+		},
+	}
+
+	if isMiddleGame {
+		bonus = [][]int{
+			{-62, -53, -12, -4, 3, 13, 22, 28, 33},
+			{-48, -20, 16, 26, 38, 51, 55, 63, 63, 68, 81, 81, 91, 98},
+			{-60, -20, 2, 3, 3, 11, 22, 31, 40, 40, 41, 48, 57, 57, 62},
+			{
+				-30, -12, -8, -9, 20, 23, 23, 35, 38, 53, 64, 65, 65, 66, 67,
+				67, 72, 72, 77, 79, 93, 108, 108, 108, 110, 114, 114, 116,
+			},
+		}
+	}
+
+	if b.Bitboards[WN].Test(sq) {
+		return bonus[0][Mobility(b, sq)]
+	}
+
+	if b.Bitboards[WB].Test(sq) {
+		return bonus[1][Mobility(b, sq)]
+	}
+
+	if b.Bitboards[WR].Test(sq) {
+		return bonus[2][Mobility(b, sq)]
+	}
+
+	if b.Bitboards[WQ].Test(sq) {
+		return bonus[3][Mobility(b, sq)]
+	}
+
 	return 0
 }
 
-func MobilityBonus(b *board.Board, sq int) int {
-	return 0
-}
-
+// Mobility is the number of attacked squares in the Mobility area. For queens squares
+// defended by opponent knight, bishop or rook are ignored. For minor pieces squares
+// occupied by our queen are ignored
 func Mobility(b *board.Board, sq int) int {
 	if !b.Bitboards[WN].Test(sq) && !b.Bitboards[WB].Test(sq) && !b.Bitboards[WR].Test(sq) &&
 		!b.Bitboards[WQ].Test(sq) {
@@ -1013,18 +1086,18 @@ func Mobility(b *board.Board, sq int) int {
 				continue
 			}
 
-			if b.Bitboards[WN].Test(sq) && KnightAttack(b, y*8+x, sq) > 0 &&
+			if b.Bitboards[WN].Test(sq) && evalhelpers.KnightAttack(b, y*8+x, sq) > 0 &&
 				b.Bitboards[WQ].Test(y*8+x) {
 				score++
 			}
-			if b.Bitboards[WB].Test(sq) && BishopXrayAttack(b, y*8+x, sq) > 0 &&
+			if b.Bitboards[WB].Test(sq) && evalhelpers.BishopXrayAttack(b, y*8+x, sq) > 0 &&
 				b.Bitboards[WQ].Test(y*8+x) {
 				score++
 			}
-			if b.Bitboards[WR].Test(sq) && RookXrayAttack(b, y*8+x, sq) > 0 {
+			if b.Bitboards[WR].Test(sq) && evalhelpers.RookXrayAttack(b, y*8+x, sq) > 0 {
 				score++
 			}
-			if b.Bitboards[WQ].Test(sq) && QueenAttack(b, y*8+x, sq) > 0 {
+			if b.Bitboards[WQ].Test(sq) && evalhelpers.QueenAttack(b, y*8+x, sq) > 0 {
 				score++
 			}
 		}
@@ -1032,182 +1105,11 @@ func Mobility(b *board.Board, sq int) int {
 	return score
 }
 
-func QueenAttack(b *board.Board, sq int, sq2 int) int {
-	score := 0
-
-	rank := sq / 8
-	file := sq % 8
-
-	rank2 := sq2 / 8
-	file2 := sq2 % 8
-
-	factor := 0
-
-	for i := 0; i < 8; i++ {
-		factor = 0
-
-		if i > 3 {
-			factor = 1
-		}
-
-		ix := (i+factor)%3 - 1
-		iy := (((i + factor) / 3) << 0) - 1
-
-		for d := 1; d < 8; d++ {
-			if b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
-				(file2 == file+ix && rank2 == rank+iy) {
-				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
-
-				if dir == 0 || abs(ix+iy*3) == dir {
-					score++
-				}
-			}
-
-			if !b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
-				break
-			}
-		}
-	}
-
-	return score
-}
-
-func RookXrayAttack(b *board.Board, sq int, sq2 int) int {
-	score := 0
-
-	rank := sq / 8
-	file := sq % 8
-
-	rank2 := sq2 / 8
-	file2 := sq2 % 8
-
-	for i := 0; i < 4; i++ {
-		ix := 0
-		iy := 0
-		if i == 0 {
-			ix = -1
-		} else if i == 1 {
-			ix = 1
-		}
-
-		if i == 2 {
-			iy = -1
-		} else if i == 3 {
-			iy = 1
-		}
-
-		for d := 1; d < 8; d++ {
-			if b.Bitboards[WR].Test((rank+d*iy)*8+file+d*ix) &&
-				(file2 == file+ix && rank2 == rank+iy) {
-				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
-
-				if dir == 0 || abs(ix+iy*3) == dir {
-					score++
-				}
-			}
-
-			if !b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
-				!b.Bitboards[WR].Test((rank+d*iy)*8+file+d*ix) &&
-				!b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
-				!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) {
-				break
-			}
-		}
-	}
-
-	return score
-}
-
-func BishopXrayAttack(b *board.Board, sq int, sq2 int) int {
-	score := 0
-	factor1, factor2 := 0, 0
-
-	rank := sq / 8
-	file := sq % 8
-
-	rank2 := sq2 / 8
-	file2 := sq2 % 8
-
-	for i := 0; i < 4; i++ {
-		factor1, factor2 = 0, 0
-		if i > 1 {
-			factor1 = 1
-		}
-
-		if i%2 == 0 {
-			factor2 = 1
-		}
-
-		ix := factor1*2 - 1
-		iy := factor2*2 - 1
-
-		for d := 1; d < 8; d++ {
-			if b.Bitboards[WB].Test((rank+d*iy)*8+file+d*ix) &&
-				(file+d*ix >= 0) && (file+d*ix <= 7) &&
-				file2 == file+d*ix &&
-				rank2 == rank+d*iy {
-				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
-
-				if dir == 0 || abs(ix+iy*3) == dir {
-					score++
-				}
-			}
-
-			if ((rank+d*iy)*8 + file + d*ix) == G6 {
-				b.Occupancies[color.BOTH].PrintBitboard()
-			}
-
-			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
-				!b.Bitboards[WB].Test((rank+d*iy)*8+file+d*ix) &&
-				!b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
-				!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) {
-				break
-			}
-		}
-	}
-
-	return score
-}
-
-func KnightAttack(b *board.Board, sq int, sq2 int) int {
-	score := 0
-	factor1, factor2, factor3 := 0, 0, 0
-
-	rank := sq / 8
-	file := sq % 8
-
-	rank2 := sq2 / 8
-	file2 := sq2 % 8
-
-	for i := 0; i < 8; i++ {
-		factor1, factor2, factor3 = 0, 0, 0
-		if i > 3 {
-			factor1 = 1
-		}
-		if i%4 > 1 {
-			factor2 = 1
-		}
-
-		if i%2 == 0 {
-			factor3 = 1
-		}
-
-		ix := (factor1 + 1) * (factor2*2 - 1)
-		iy := (2 - factor1) * (factor3*2 - 1)
-
-		if b.Bitboards[WN].Test((rank+iy)*8+file+ix) && (file2 == file+ix && rank2 == rank+iy) &&
-			Pinned(b, (rank+iy)*8+file+ix) == 0 {
-			score++
-		}
-	}
-
-	return score
-}
-
-func Pinned(b *board.Board, sq int) int {
-	return PinnedDirection(b, sq)
-}
-
+// MobilityArea  do not include in mobility area squares protected by enemy pawns,
+// or occupied by our blocked pawns or king. Pawns blocked or on ranks 2 and 3
+// will be excluded from the mobility area. Also excludes blockers for king from
+// mobility area - blockers for king can't really move until king moves (in most cases)
+// so logic behind it is the same as behind excluding king square from mobility area.
 func MobilityArea(b *board.Board, sq int) bool {
 	if b.Bitboards[WK].Test(sq) {
 		return false
@@ -1241,55 +1143,13 @@ func MobilityArea(b *board.Board, sq int) bool {
 	return true
 }
 
+// BlockersForKing returns if a particular piece on a particular square is a blocker
+// for the king for a pin
 func BlockersForKing(b *board.Board, sq int) int {
 	mirror := b.Mirror()
 	rank := sq / 8
-	if PinnedDirection(mirror, (7-rank)*8+(sq%8)) > 0 {
+	if evalhelpers.PinnedDirection(mirror, (7-rank)*8+(sq%8)) > 0 {
 		return 1
-	}
-
-	return 0
-}
-
-func PinnedDirection(b *board.Board, sq int) int {
-	c := 1
-
-	rank := sq / 8
-	file := sq % 8
-
-	for i := 0; i < 8; i++ {
-		factor := 0
-		if i > 3 {
-			factor = 1
-		}
-
-		ix := (i+factor)%3 - 1
-		iy := (((i + factor) / 3) << 0) - 1
-
-		king := false
-
-		for d := 1; d < 8; d++ {
-			if b.Bitboards[BK].Test((rank+d*iy)*8 + file + d*ix) {
-				king = true
-			}
-			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
-				break
-			}
-		}
-
-		if king {
-			for d := 1; d < 8; d++ {
-				if b.Bitboards[BQ].Test((rank-d*iy)*8+file-d*ix) ||
-					(b.Bitboards[BB].Test((rank-d*iy)*8+file-d*ix) && ix*iy != 0) ||
-					(b.Bitboards[BR].Test((rank-d*iy)*8+file-d*ix) && ix*iy == 0) {
-					return abs(ix+iy*3) * c
-				}
-
-				if b.Occupancies[color.BOTH].Test((rank-d*iy)*8 + file - d*ix) {
-					break
-				}
-			}
-		}
 	}
 
 	return 0
