@@ -1,7 +1,6 @@
 package evaluation
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/Tecu23/argov2/pkg/board"
@@ -769,23 +768,25 @@ func RookOnFile(b *board.Board, sq int) int {
 	return open + 1
 }
 
+// BishopOnKingRing gives bonus for bishops that are alligned with the
+// enemy kingring.
 func BishopOnKingRing(b *board.Board, sq int) int {
 	if KingAttackersCount(b, sq) > 0 {
 		return 0
 	}
-
 	factor1, factor2 := 0, 0
 
 	rank := sq / 8
 	file := sq % 8
 
 	for i := 0; i < 4; i++ {
+		factor1, factor2 = 0, 0
 		if i > 1 {
 			factor1 = 1
 		}
 
 		if i%2 == 0 {
-			factor2 = 2
+			factor2 = 1
 		}
 
 		ix := factor1*2 - 1
@@ -811,6 +812,8 @@ func BishopOnKingRing(b *board.Board, sq int) int {
 	return 0
 }
 
+// RookOnKingRing gives bonus for rooks that are alligned with the enemy
+// king ring
 func RookOnKingRing(b *board.Board, sq int) int {
 	if KingAttackersCount(b, sq) > 0 {
 		return 0
@@ -827,6 +830,9 @@ func RookOnKingRing(b *board.Board, sq int) int {
 	return 0
 }
 
+// KingAttackersCount returns the number of pieces of the given color which
+// attack a square in the kingring of the enemy king. For pawns we count the
+// number of attacked squares in kingring
 func KingAttackersCount(b *board.Board, sq int) int {
 	if !b.Occupancies[color.WHITE].Test(sq) {
 		return 0
@@ -867,6 +873,8 @@ func KingAttackersCount(b *board.Board, sq int) int {
 	return 0
 }
 
+// KingRing is square occupied by king and 8 squares around the king. Squares
+// defended by two pawns are removed from king ring
 func KingRing(b *board.Board, sq int, full bool) int {
 	rank := sq / 8
 	file := sq % 8
@@ -894,6 +902,7 @@ func KingRing(b *board.Board, sq int, full bool) int {
 	return 0
 }
 
+// RookOnQueenFile is a simple bonus for a rook that is on the same file as any queen
 func RookOnQueenFile(b *board.Board, sq int) int {
 	file := sq % 8
 
@@ -906,6 +915,7 @@ func RookOnQueenFile(b *board.Board, sq int) int {
 	return 0
 }
 
+// BishopXrayPawns is a penalty for all enemy pawns xrayed by our bishop
 func BishopXrayPawns(b *board.Board, sq int) int {
 	count := 0
 
@@ -959,7 +969,6 @@ func BishopPawns(b *board.Board, sq int) int {
 		pawnAttack = 0
 	}
 
-	fmt.Println(score, blocked, pawnAttack)
 	score = score * (blocked + pawnAttack)
 
 	return score
@@ -1035,6 +1044,7 @@ func QueenAttack(b *board.Board, sq int, sq2 int) int {
 	factor := 0
 
 	for i := 0; i < 8; i++ {
+		factor = 0
 
 		if i > 3 {
 			factor = 1
@@ -1119,6 +1129,7 @@ func BishopXrayAttack(b *board.Board, sq int, sq2 int) int {
 	file2 := sq2 % 8
 
 	for i := 0; i < 4; i++ {
+		factor1, factor2 = 0, 0
 		if i > 1 {
 			factor1 = 1
 		}
@@ -1132,7 +1143,9 @@ func BishopXrayAttack(b *board.Board, sq int, sq2 int) int {
 
 		for d := 1; d < 8; d++ {
 			if b.Bitboards[WB].Test((rank+d*iy)*8+file+d*ix) &&
-				(file2 == file+ix && rank2 == rank+iy) {
+				(file+d*ix >= 0) && (file+d*ix <= 7) &&
+				file2 == file+d*ix &&
+				rank2 == rank+d*iy {
 				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
 
 				if dir == 0 || abs(ix+iy*3) == dir {
@@ -1140,7 +1153,11 @@ func BishopXrayAttack(b *board.Board, sq int, sq2 int) int {
 				}
 			}
 
-			if !b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
+			if ((rank+d*iy)*8 + file + d*ix) == G6 {
+				b.Occupancies[color.BOTH].PrintBitboard()
+			}
+
+			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
 				!b.Bitboards[WB].Test((rank+d*iy)*8+file+d*ix) &&
 				!b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
 				!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) {
@@ -1163,6 +1180,7 @@ func KnightAttack(b *board.Board, sq int, sq2 int) int {
 	file2 := sq2 % 8
 
 	for i := 0; i < 8; i++ {
+		factor1, factor2, factor3 = 0, 0, 0
 		if i > 3 {
 			factor1 = 1
 		}
