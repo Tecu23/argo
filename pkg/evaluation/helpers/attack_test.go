@@ -62,7 +62,6 @@ func init() {
 // 	for _, tt := range tests {
 // 		t.Run(tt.name, func(t *testing.T) {
 // 			b, _ := board.ParseFEN(tt.fen)
-// 			b.PrintBoard()
 // 			result := PawnAttack(&b, tt.square)
 // 			if result != tt.expected {
 // 				t.Errorf("%s: got %v, want %v", tt.name, result, tt.expected)

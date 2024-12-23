@@ -586,7 +586,6 @@ func TestPawnMethods(t *testing.T) {
 
 			// Test evaluation symmetry
 			mirroredBoard := b.Mirror()
-			mirroredBoard.PrintBoard()
 			pawnEval = PawnsMg(mirroredBoard)
 
 			if pawnEval != tt.blackPawnsMg {
@@ -1064,6 +1063,411 @@ func TestBishopOnKingRing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
 			result := BishopOnKingRing(&b, tt.square)
+			if result != tt.expected {
+				t.Errorf("%s: got %v, want %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestRookOnFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		square   int // rook square
+		expected int
+	}{
+		// Complex Position
+		{
+			name:     "Complex Position 1",
+			fen:      "r1bq1rk1/ppp2ppp/1bn1p3/3pP3/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - d6 0 10",
+			square:   F1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 2",
+			fen:      "2rr2k1/pp2qppp/2n1pn2/8/3P4/2P1PNP1/PQ2PPBP/1RR3K1 w - - 0 20",
+			square:   B1,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 3",
+			fen:      "r2q1rk1/1b2bppp/p1n1pn2/1p2P3/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - - 0 10",
+			square:   F1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 4",
+			fen:      "4rrk1/1ppq2bp/p1np2p1/4n3/2B1P3/2N2N2/PPP2PPP/2QRR1K1 w - - 0 17",
+			square:   D1,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 5",
+			fen:      "r1bqkb1r/1ppn1ppp/p1n1pn2/8/2BP4/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 7",
+			square:   H1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 6",
+			fen:      "3r1rk1/1bqn1ppp/p2p1n2/1p6/3NP3/1BN1B3/PP2QPPP/R4RK1 w - - 0 17",
+			square:   A1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 7",
+			fen:      "r2q1r1k/1p1bbp1p/p1n3p1/2P1p3/P1BP4/2NB1N2/1P3PPP/R1BQR1K1 w - - 0 16",
+			square:   E1,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 8",
+			fen:      "1rb1r1k1/p1q2pbp/1pn2np1/3p4/3P4/1PN1P1P1/PBQN1PBP/R4RK1 w - - 0 14",
+			square:   F1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 9",
+			fen:      "r1bq1rk1/pp1nppbp/2n3p1/2p5/2B1P3/5N2/PP1N1PPP/R1BQ1RK1 w - - 0 9",
+			square:   F1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 10",
+			fen:      "2rq1rk1/p3bppp/1pn1pn2/3p4/3P4/2N1PN2/PPQ1BPPP/2RR1RK1 w - - 0 13",
+			square:   C1,
+			expected: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := board.ParseFEN(tt.fen)
+			result := RookOnFile(&b, tt.square)
+			if result != tt.expected {
+				t.Errorf("%s: got %v, want %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestTrappedRook(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		square   int // rook square
+		expected int
+	}{
+		// Complex Position
+		{
+			name:     "Complex Position 1",
+			fen:      "r1bq1rk1/ppp2ppp/1bn1p3/3pP3/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - d6 0 10",
+			square:   F1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 2",
+			fen:      "2rr2k1/pp2qppp/2n1pn2/8/3P4/2P1PNP1/PQ2PPBP/1RR3K1 w - - 0 20",
+			square:   B1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 3",
+			fen:      "r1bqkb1r/1ppn1ppp/p1n1pn2/8/2BP4/2N2N2/PPPBQPPP/RK5R w q - 2 8",
+			square:   A1,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 4",
+			fen:      "4rrk1/1ppq2bp/p1np2p1/4n3/2B1P3/2N2N2/PPP2PPP/2QRR1K1 w - - 0 17",
+			square:   D1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 5",
+			fen:      "r1bqkb1r/1ppn1ppp/p1n1pn2/8/2BP4/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 7",
+			square:   H1,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 6",
+			fen:      "r1bqkb1r/1ppn1ppp/p1n1pn2/8/2BP4/2N5/PPPBQPPP/RRK5 b q - 4 8",
+			square:   A1,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 7",
+			fen:      "r2q1r1k/1p1bbp1p/p1n3p1/2P1p3/P1BP4/2NB1N2/1P3PPP/R1BQR1K1 w - - 0 16",
+			square:   E1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 8",
+			fen:      "r1bqkb1r/1ppn1ppp/p1n1pn2/8/2BP4/2N2N2/PPPBQPPP/R4K1R w q - 2 8",
+			square:   H1,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 9",
+			fen:      "r1bq1rk1/pp1nppbp/2n3p1/2p5/2B1P3/5N2/PP1N1PPP/R1BQ1RK1 w - - 0 9",
+			square:   F1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 10",
+			fen:      "r1bqkb1r/1ppn1ppp/p1n1pn2/8/2BP4/2N5/PPPBQPPP/RRK5 b q - 4 8",
+			square:   B1,
+			expected: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := board.ParseFEN(tt.fen)
+			result := TrappedRook(&b, tt.square)
+			if result != tt.expected {
+				t.Errorf("%s: got %v, want %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestWeakQueen(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		square   int // bishop square
+		expected int
+	}{
+		// Complex Position
+		{
+			name:     "Complex Position 1",
+			fen:      "r1bq1rk1/ppp1bppp/2n1p3/3pP3/Q2P4/2NB1N2/PP3PPP/R1B2RK1 w - - 1 10",
+			square:   A4,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 2",
+			fen:      "2rr2k1/pp2qppp/2n1pn2/2Q5/3P4/2P1PNP1/P3PPBP/1RR3K1 w - - 1 20",
+			square:   C5,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 3",
+			fen:      "r2q1rk1/1b2bppp/p1n1pn2/1p2P3/3P3Q/2NB1N2/PP3PPP/R1B2RK1 w - - 0 10",
+			square:   H4,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 4",
+			fen:      "4rrk1/1ppq2bp/p1np2p1/4n3/2B1P3/2N2N2/PPP2PPP/2QRR1K1 w - - 0 17",
+			square:   C1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 5",
+			fen:      "r1bqkb1r/1ppn1ppp/p1n1pn2/8/2BP4/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 7",
+			square:   D1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 6",
+			fen:      "3r1rk1/1bqn1ppp/p2p1n2/1p6/3NP3/1BN1B3/PP2QPPP/R4RK1 w - - 0 17",
+			square:   E2,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 7",
+			fen:      "r2q1r1k/1p1bbp1p/p1n3p1/2P1pQ2/P1BP4/2NB1N2/1P3PPP/R1B1R1K1 w - - 1 16",
+			square:   F5,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 8",
+			fen:      "1rb1r1k1/p1q2pbp/1pn2np1/3p4/3P4/1PN1P1P1/PBQN1PBP/R4RK1 w - - 0 14",
+			square:   C2,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 9",
+			fen:      "r1bq1rk1/pp1nppbp/2n3p1/2p5/Q1B1P3/5N2/PP1N1PPP/R1B2RK1 w - - 1 9",
+			square:   A4,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 10",
+			fen:      "2rq1rk1/p3bppp/1pn1pn2/3p4/3P3Q/2N1PN2/PP2BPPP/2RR1RK1 w - - 1 13",
+			square:   H4,
+			expected: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := board.ParseFEN(tt.fen)
+			result := WeakQueen(&b, tt.square)
+			if result != tt.expected {
+				t.Errorf("%s: got %v, want %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestQueenInfiltration(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		square   int // bishop square
+		expected int
+	}{
+		// Complex Position
+		{
+			name:     "Complex Position 1",
+			fen:      "r1bq1rk1/pppQbppp/2n1p3/3pP3/3P4/2NB1N2/PP3PPP/R1B2RK1 w - - 2 10",
+			square:   D7,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 2",
+			fen:      "2rr2k1/pQ2qppp/2n1pn2/8/3P4/2P1PNP1/P3PPBP/1RR3K1 w - - 2 20",
+			square:   B7,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 3",
+			fen:      "r2q1rk1/1b2bppp/p1n1pn2/1p2P3/3P3Q/2NB1N2/PP3PPP/R1B2RK1 w - - 0 10",
+			square:   H4,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 4",
+			fen:      "4rrk1/1ppq2bp/p1np2p1/4n3/2B1P3/2N2N2/PPP2PPP/2QRR1K1 w - - 0 17",
+			square:   C1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 5",
+			fen:      "1Qbqkb1r/rppn1ppp/p1n1pn2/8/2BP4/2N2N2/PPP2PPP/R1B1K2R w KQk - 2 8",
+			square:   B8,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 6",
+			fen:      "3r1rk1/1bqn1ppp/p2p1n2/1p6/3NP3/1BN1B3/PP2QPPP/R4RK1 w - - 0 17",
+			square:   E2,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 7",
+			fen:      "r2q1r1k/1p1bbp1p/p1n3p1/2P1pQ2/P1BP4/2NB1N2/1P3PPP/R1B1R1K1 w - - 1 16",
+			square:   F5,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 8",
+			fen:      "1rb1r1k1/p1q2pbp/1pn2np1/3p4/3P4/1PN1P1P1/PBQN1PBP/R4RK1 w - - 0 14",
+			square:   C2,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 9",
+			fen:      "r1b2rk1/3nppbp/pQn1q1p1/1pp5/2B1P3/5N2/PP1N1PPP/R1B2RK1 w - - 2 9",
+			square:   B6,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 10",
+			fen:      "2rq1rk1/pQ2bppp/1pn1pn2/3p4/3P4/2N1PN2/PP2BPPP/2RR1RK1 w - - 1 13",
+			square:   B7,
+			expected: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := board.ParseFEN(tt.fen)
+			result := QueenInfiltration(&b, tt.square)
+			if result != tt.expected {
+				t.Errorf("%s: got %v, want %v", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestLongDiagonalBishop(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		square   int // bishop square
+		expected int
+	}{
+		// Complex Position
+		{
+			name:     "Complex Position 1",
+			fen:      "r1bq1rk1/ppp2ppp/1bn1p3/3pP3/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - d6 0 10",
+			square:   D3,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 2",
+			fen:      "2rr2k1/pp2qppp/2n1pn2/8/3P4/2P1PNP1/PQ2PPBP/1RR3K1 w - - 0 20",
+			square:   G2,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 3",
+			fen:      "r2q1rk1/1b2bppp/p1n1pn2/1p1P4/8/2N2N2/PB3PPP/R1BQ1RK1 w - - 0 10",
+			square:   B2,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 4",
+			fen:      "4rrk1/1ppq2bp/p1np2p1/4n3/2B1P3/2N2N2/PPP2PPP/2QRR1K1 w - - 0 17",
+			square:   C4,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 5",
+			fen:      "r1bqkb1r/1ppn1ppp/p1n1pn2/8/2BP4/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 7",
+			square:   C4,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 6",
+			fen:      "r1bq1rk1/pp1nppbp/2n3p1/2p5/4P3/5N2/PB1N1PPP/R1BQ1RK1 w - - 0 9",
+			square:   B2,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 7",
+			fen:      "r2q1r1k/1p1bbp1p/p1n3p1/2P1p3/P1BP4/2NB1N2/1P3PPP/R1BQR1K1 w - - 0 16",
+			square:   D3,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 8",
+			fen:      "1rb1r1k1/p1q2pbp/1pn2np1/3p4/3P4/1PN1P1P1/PBQN1PBP/R4RK1 w - - 0 14",
+			square:   G2,
+			expected: 1,
+		},
+		{
+			name:     "Complex Position 9",
+			fen:      "r1bq1rk1/pp1nppbp/2n3p1/2p5/2B1P3/5N2/PP1N1PPP/R1BQ1RK1 w - - 0 9",
+			square:   C1,
+			expected: 0,
+		},
+		{
+			name:     "Complex Position 10",
+			fen:      "2rq1rk1/p3bppp/1pn1pn2/3p4/3P4/2N1PN2/PPQ1BPPP/2RR1RK1 w - - 0 13",
+			square:   E2,
+			expected: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := board.ParseFEN(tt.fen)
+			result := LongDiagonalBishop(&b, tt.square)
 			if result != tt.expected {
 				t.Errorf("%s: got %v, want %v", tt.name, result, tt.expected)
 			}

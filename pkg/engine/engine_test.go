@@ -73,7 +73,6 @@ func init() {
 func TestMoveGenConsistency(t *testing.T) {
 	_ = SearchInfo{}
 	b, _ := board.ParseFEN(StartPosition)
-	b.PrintBoard()
 	for depth := 2; depth <= 5; depth++ {
 		nodes1 := board.PerftTest(&b, depth)
 		nodes2 := board.PerftTest(&b, depth)
@@ -175,11 +174,6 @@ func TestEvaluationSymmetry(t *testing.T) {
 			// Get evaluations
 			eval1 := engine.evaluator.Evaluate(&b)
 			eval2 := -engine.evaluator.Evaluate(mirrored)
-
-			if test.desc == "Testing rook positioning evaluation" {
-				b.PrintBoard()
-				mirrored.PrintBoard()
-			}
 
 			// Test exact symmetry
 			if eval1 != eval2 {

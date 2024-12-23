@@ -92,10 +92,6 @@ func BishopXrayAttack(b *board.Board, sq int, sq2 int) int {
 				}
 			}
 
-			if ((rank+d*iy)*8 + file + d*ix) == G6 {
-				b.Occupancies[color.BOTH].PrintBitboard()
-			}
-
 			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
 				!b.Bitboards[WB].Test((rank+d*iy)*8+file+d*ix) &&
 				!b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&

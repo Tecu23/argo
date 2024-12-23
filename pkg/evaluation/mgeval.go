@@ -1,6 +1,7 @@
 package evaluation
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/Tecu23/argov2/pkg/board"
@@ -697,6 +698,8 @@ func PawnAttacksSpan(b *board.Board, sq int) int {
 	return 0
 }
 
+// WeakQueen returns a penalty if any relative pin or discovered attack
+// against the queen
 func WeakQueen(b *board.Board, sq int) int {
 	rank := sq / 8
 	file := sq % 8
@@ -711,13 +714,18 @@ func WeakQueen(b *board.Board, sq int) int {
 		count := 0
 
 		for d := 1; d < 8; d++ {
+			if rank+d*iy < 0 || rank+d*iy > 7 || file+d*ix < 0 || file+d*ix > 7 {
+				continue
+			}
 			b := b.GetPieceAt((rank+d*iy)*8 + (file + d*ix))
 
 			if b == BR && (ix == 0 || iy == 0) && count == 1 {
+				fmt.Println("here 1")
 				return 1
 			}
 
 			if b == BB && (ix != 0 && iy != 0) && count == 1 {
+				fmt.Println("here 2", b, ix, iy, count)
 				return 1
 			}
 
@@ -731,6 +739,8 @@ func WeakQueen(b *board.Board, sq int) int {
 	return 0
 }
 
+// TrappedRook penalizes the took when is trapped by the king, even more
+// if the king cannot castle
 func TrappedRook(b *board.Board, sq int) int {
 	if RookOnFile(b, sq) > 0 {
 		return 0
@@ -752,6 +762,7 @@ func TrappedRook(b *board.Board, sq int) int {
 	return 1
 }
 
+// RookOnFile returns whether the took is on open / semi-open file
 func RookOnFile(b *board.Board, sq int) int {
 	open := 1
 	file := sq % 8
