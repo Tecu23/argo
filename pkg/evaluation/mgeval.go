@@ -1,7 +1,6 @@
 package evaluation
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/Tecu23/argov2/pkg/board"
@@ -720,12 +719,10 @@ func WeakQueen(b *board.Board, sq int) int {
 			b := b.GetPieceAt((rank+d*iy)*8 + (file + d*ix))
 
 			if b == BR && (ix == 0 || iy == 0) && count == 1 {
-				fmt.Println("here 1")
 				return 1
 			}
 
 			if b == BB && (ix != 0 && iy != 0) && count == 1 {
-				fmt.Println("here 2", b, ix, iy, count)
 				return 1
 			}
 
@@ -891,7 +888,7 @@ func KingRing(b *board.Board, sq int, full bool) int {
 	file := sq % 8
 
 	if !full && b.Bitboards[BP].Test((rank-1)*8+file+1) && file < 7 && file > 0 &&
-		b.Bitboards[BP].Test((rank-1)*8+file-1) {
+		b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 {
 		return 0
 	}
 
@@ -901,10 +898,9 @@ func KingRing(b *board.Board, sq int, full bool) int {
 				continue
 			}
 
-			if b.Bitboards[BK].Test(
-				(rank+iy)*8+file+ix,
-			) && (ix >= -1 && ix <= 1 || file+ix == 0 || file+ix == 7) &&
-				(iy >= -1 && iy <= 1 || rank+iy == 0 || rank+iy == 7) {
+			if b.Bitboards[BK].Test((rank+iy)*8+file+ix) &&
+				((ix >= -1 && ix <= 1) || file+ix == 0 || file+ix == 7) &&
+				((iy >= -1 && iy <= 1) || rank+iy == 0 || rank+iy == 7) {
 				return 1
 			}
 		}
