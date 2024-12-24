@@ -1,16 +1,15 @@
 pos = {
   // chessboard
   b: [
-    ["-", "p", "-", "-", "-", "P", "-", "-"],
+    ["r", "-", "p", "-", "P", "-", "-", "R"],
     ["-", "p", "-", "-", "-", "-", "P", "-"],
-    ["q", "p", "n", "b", "-", "N", "P", "-"],
-    ["r", "-", "-", "-", "-", "P", "Q", "-"],
-    ["r", "-", "-", "p", "N", "-", "-", "R"],
-    ["-", "p", "n", "-", "-", "-", "-", "R"],
-    ["k", "p", "-", "-", "-", "P", "B", "K"],
-    ["-", "p", "-", "-", "-", "-", "P", "-"],
+    ["-", "-", "n", "P", "B", "N", "-", "B"],
+    ["q", "b", "-", "-", "P", "B", "-", "Q"],
+    ["-", "b", "-", "p", "-", "-", "-", "R"],
+    ["r", "p", "-", "-", "-", "N", "P", "-"],
+    ["-", "-", "p", "-", "-", "-", "P", "K"],
+    ["k", "p", "-", "-", "-", "-", "P", "-"],
   ],
-
   // castling rights
   c: [false, false, false, false],
 
@@ -314,6 +313,7 @@ function pinned_direction(pos, square) {
   if ("PNBRQK".indexOf(board(pos, square.x, square.y).toUpperCase()) < 0)
     return 0;
   var color = 1;
+
   if ("PNBRQK".indexOf(board(pos, square.x, square.y)) < 0) color = -1;
   for (var i = 0; i < 8; i++) {
     var ix = ((i + (i > 3)) % 3) - 1;
@@ -597,4 +597,4 @@ function blockers_for_king(pos, square) {
     return 1;
   return 0;
 }
-console.log(pieces_mg(pos));
+console.log(mobility(pos, { x: 2, y: 4 }));

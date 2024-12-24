@@ -93,7 +93,6 @@ func BishopXrayAttack(b *board.Board, sq int, sq2 int) int {
 			}
 
 			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
-				!b.Bitboards[WB].Test((rank+d*iy)*8+file+d*ix) &&
 				!b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
 				!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) {
 				break
@@ -116,6 +115,7 @@ func RookXrayAttack(b *board.Board, sq int, sq2 int) int {
 	for i := 0; i < 4; i++ {
 		ix := 0
 		iy := 0
+
 		if i == 0 {
 			ix = -1
 		} else if i == 1 {
@@ -130,7 +130,9 @@ func RookXrayAttack(b *board.Board, sq int, sq2 int) int {
 
 		for d := 1; d < 8; d++ {
 			if b.Bitboards[WR].Test((rank+d*iy)*8+file+d*ix) &&
+				(file+d*ix >= 0) && (file+d*ix <= 7) &&
 				(sq2 == -1 || file2 == file+d*ix && rank2 == rank+d*iy) {
+
 				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
 
 				if dir == 0 || abs(ix+iy*3) == dir {
@@ -138,7 +140,7 @@ func RookXrayAttack(b *board.Board, sq int, sq2 int) int {
 				}
 			}
 
-			if !b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
+			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
 				!b.Bitboards[WR].Test((rank+d*iy)*8+file+d*ix) &&
 				!b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
 				!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) {
@@ -181,7 +183,7 @@ func QueenAttack(b *board.Board, sq int, sq2 int) int {
 				}
 			}
 
-			if !b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
+			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
 				break
 			}
 		}
@@ -265,10 +267,17 @@ func Pinned(b *board.Board, sq int) int {
 }
 
 func PinnedDirection(b *board.Board, sq int) int {
-	c := 1
+	if !b.Occupancies[color.BOTH].Test(sq) {
+		return 0
+	}
 
 	rank := sq / 8
 	file := sq % 8
+	c := 1
+
+	if b.Occupancies[color.BLACK].Test(sq) {
+		c = -1
+	}
 
 	for i := 0; i < 8; i++ {
 		factor := 0

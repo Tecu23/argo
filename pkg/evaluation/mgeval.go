@@ -1006,28 +1006,24 @@ func MobilityMg(b *board.Board) int {
 	knightBB := b.Bitboards[WN]
 	for knightBB != 0 {
 		sq = knightBB.FirstOne()
-
 		score += MobilityBonus(b, sq, true)
 	}
 
 	bishopBB := b.Bitboards[WB]
 	for bishopBB != 0 {
 		sq = bishopBB.FirstOne()
-
 		score += MobilityBonus(b, sq, true)
 	}
 
 	rookBB := b.Bitboards[WR]
 	for rookBB != 0 {
 		sq = rookBB.FirstOne()
-
 		score += MobilityBonus(b, sq, true)
 	}
 
 	queenBB := b.Bitboards[WQ]
 	for queenBB != 0 {
 		sq = queenBB.FirstOne()
-
 		score += MobilityBonus(b, sq, true)
 	}
 	return score
@@ -1094,11 +1090,11 @@ func Mobility(b *board.Board, sq int) int {
 			}
 
 			if b.Bitboards[WN].Test(sq) && evalhelpers.KnightAttack(b, y*8+x, sq) > 0 &&
-				b.Bitboards[WQ].Test(y*8+x) {
+				!b.Bitboards[WQ].Test(y*8+x) {
 				score++
 			}
 			if b.Bitboards[WB].Test(sq) && evalhelpers.BishopXrayAttack(b, y*8+x, sq) > 0 &&
-				b.Bitboards[WQ].Test(y*8+x) {
+				!b.Bitboards[WQ].Test(y*8+x) {
 				score++
 			}
 			if b.Bitboards[WR].Test(sq) && evalhelpers.RookXrayAttack(b, y*8+x, sq) > 0 {
@@ -1109,6 +1105,7 @@ func Mobility(b *board.Board, sq int) int {
 			}
 		}
 	}
+
 	return score
 }
 
@@ -1129,15 +1126,16 @@ func MobilityArea(b *board.Board, sq int) bool {
 	rank := sq / 8
 	file := sq % 8
 
-	if b.Bitboards[BP].Test((rank-1)*8+file-1) && file > 0 {
+	if b.Bitboards[BP].Test((rank-1)*8+file-1) && file > 0 && rank > 0 {
 		return false
 	}
 
-	if b.Bitboards[BP].Test((rank-1)*8+file+1) && file < 7 {
+	if b.Bitboards[BP].Test((rank-1)*8+file+1) && file < 7 && rank > 0 {
 		return false
 	}
 
-	if b.Bitboards[WP].Test(sq) && rank < 4 || b.Occupancies[color.BOTH].Test((rank-1)*8+file) {
+	if b.Bitboards[WP].Test(sq) &&
+		((8-rank) < 4 || b.Occupancies[color.BOTH].Test((rank-1)*8+file)) {
 		return false
 	}
 
