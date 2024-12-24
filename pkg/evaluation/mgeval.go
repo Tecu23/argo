@@ -1603,6 +1603,43 @@ func RookThreat(b *board.Board, sq int) int {
 // down bonus for candidate passers which need more than one pawn
 // push to become passed, or have a pawn in from of them
 func PassedMg(b *board.Board) int {
+	finalScore := 0
+
+	pawnBB := b.Bitboards[WP]
+	for pawnBB != 0 {
+		sq := pawnBB.FirstOne()
+
+		if PassedLeverable(b, sq) == 0 {
+			continue
+		}
+
+		score := 0
+
+		score += []int{0, 10, 17, 15, 62, 168, 276}[PassedRank(b, sq)]
+		score += PassedBlock(b, sq)
+		score -= PassedFile(b, sq)
+
+		finalScore += score
+	}
+
+	return finalScore
+}
+
+// PassedLeverable returns candidate passers without candidate passers w/o
+// feasible lever
+func PassedLeverable(b *board.Board, sq int) int {
+	return 0
+}
+
+func PassedRank(b *board.Board, sq int) int {
+	return 0
+}
+
+func PassedFile(b *board.Board, sq int) int {
+	return 0
+}
+
+func PassedBlock(b *board.Board, sq int) int {
 	return 0
 }
 
