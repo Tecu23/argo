@@ -1,13 +1,13 @@
 pos = {
   // chessboard
   b: [
-    ["r", "p", "-", "-", "-", "-", "P", "R"],
-    ["-", "p", "b", "-", "-", "-", "P", "-"],
-    ["b", "p", "n", "-", "-", "N", "-", "B"],
-    ["q", "-", "-", "p", "P", "B", "-", "Q"],
-    ["-", "-", "p", "P", "-", "-", "-", "-"],
-    ["r", "p", "-", "-", "-", "N", "P", "R"],
-    ["k", "p", "-", "-", "-", "-", "P", "K"],
+    ["-", "p", "-", "-", "-", "-", "P", "-"],
+    ["-", "p", "-", "-", "-", "-", "Q", "R"],
+    ["r", "-", "n", "-", "-", "P", "-", "R"],
+    ["r", "-", "-", "-", "P", "-", "-", "-"],
+    ["-", "q", "p", "-", "-", "P", "P", "-"],
+    ["-", "p", "n", "-", "-", "N", "P", "-"],
+    ["k", "p", "-", "-", "-", "P", "B", "K"],
     ["-", "p", "-", "-", "-", "-", "P", "-"],
   ],
   // castling rights
@@ -58,80 +58,19 @@ function pieces_mg(pos, square) {
 
   var type = "NBRQ".indexOf(board(pos, square.x, square.y));
   var v = 0;
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "minor behing pawn +",
-  //   18 * minor_behind_pawn(pos, square),
-  // );
   v += 18 * minor_behind_pawn(pos, square);
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "bishop pawns -",
-  //   3 * bishop_pawns(pos, square),
-  // );
   v -= 3 * bishop_pawns(pos, square);
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "bishop xray pawns -",
-  //   4 * bishop_xray_pawns(pos, square),
-  // );
   v -= 4 * bishop_xray_pawns(pos, square);
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "rook on queen file +",
-  //   6 * rook_on_queen_file(pos, square),
-  // );
   v += 6 * rook_on_queen_file(pos, square);
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "rook on king ring +",
-  //   16 * rook_on_king_ring(pos, square),
-  // );
   v += 16 * rook_on_king_ring(pos, square);
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "bishop on king ring +",
-  //   24 * bishop_on_king_ring(pos, square),
-  // );
   v += 24 * bishop_on_king_ring(pos, square);
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "rook on file +",
-  //   [0, 19, 48][rook_on_file(pos, square)],
-  // );
   v += [0, 19, 48][rook_on_file(pos, square)];
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "trapped rook -",
-  //   trapped_rook(pos, square) * 55 * (pos.c[0] || pos.c[1] ? 1 : 2),
-  // );
   v -= trapped_rook(pos, square) * 55 * (pos.c[0] || pos.c[1] ? 1 : 2);
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "weak queen -",
-  //   56 * weak_queen(pos, square),
-  // );
   v -= 56 * weak_queen(pos, square);
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "queen infiltration -",
-  //   2 * queen_infiltration(pos, square),
-  // );
   v -= 2 * queen_infiltration(pos, square);
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "king protector -",
-  //   (board(pos, square.x, square.y) == "N" ? 8 : 6) *
-  //     king_protector(pos, square),
-  // );
   v -=
     (board(pos, square.x, square.y) == "N" ? 8 : 6) *
     king_protector(pos, square);
-  // console.log(
-  //   "NBRQ".charAt(type),
-  //   "long diagonal bishop +",
-  //   45 * long_diagonal_bishop(pos, square),
-  // );
   v += 45 * long_diagonal_bishop(pos, square);
   return v;
 }
@@ -204,13 +143,10 @@ function rook_on_king_ring(pos, square) {
   if (board(pos, square.x, square.y) != "R") {
     return 0;
   }
-  console.log("rook on king ring", square);
   if (king_attackers_count(pos, square) > 0) {
-    // console.log("exit early");
     return 0;
   }
   for (var y = 0; y < 8; y++) {
-    console.log(square.x, y, king_ring(pos, { x: square.x, y: y }));
     if (king_ring(pos, { x: square.x, y: y })) return 1;
   }
   return 0;
@@ -252,24 +188,15 @@ function king_attackers_count(pos, square) {
 function king_ring(pos, square, full) {
   if (square == null) return sum(pos, king_ring);
 
-  if (square.x == 5 && square.y == 0) {
-    console.log("called king ring on f1", board(pos, square.x, square.y));
-  }
   if (
     !full &&
     board(pos, square.x + 1, square.y - 1) == "p" &&
     board(pos, square.x - 1, square.y - 1) == "p"
   ) {
-    if (square.x == 5 && square.y == 0) {
-      console.log("exit early king ring");
-    }
     return 0;
   }
   for (var ix = -2; ix <= 2; ix++) {
     for (var iy = -2; iy <= 2; iy++) {
-      if (square.x == 5 && square.y == 0) {
-        console.log("ix", ix, "iy", iy, square.x + ix, square.y + iy);
-      }
       if (
         board(pos, square.x + ix, square.y + iy) == "k" &&
         ((ix >= -1 && ix <= 1) || square.x + ix == 0 || square.x + ix == 7) &&
@@ -280,9 +207,6 @@ function king_ring(pos, square, full) {
     }
   }
 
-  if (square.x == 5 && square.y == 0) {
-    console.log("exit late king ring");
-  }
   return 0;
 }
 
@@ -591,6 +515,26 @@ function rank(pos, square) {
   return 8 - square.y;
 }
 
+function file(pos, square) {
+  if (square == null) return sum(pos, file);
+  return 1 + square.x;
+}
+
+function non_pawn_material(pos, square) {
+  if (square == null) return sum(pos, non_pawn_material);
+  var i = "NBRQ".indexOf(board(pos, square.x, square.y));
+  if (i >= 0) return piece_value_bonus(pos, square, true);
+  return 0;
+}
+
+function piece_value_bonus(pos, square, mg) {
+  if (square == null) return sum(pos, piece_value_bonus);
+  var a = mg ? [124, 781, 825, 1276, 2538] : [206, 854, 915, 1380, 2682];
+  var i = "PNBRQ".indexOf(board(pos, square.x, square.y));
+  if (i >= 0) return a[i];
+  return 0;
+}
+
 function blockers_for_king(pos, square) {
   if (square == null) return sum(pos, blockers_for_king);
   if (pinned_direction(colorflip(pos), { x: square.x, y: 7 - square.y }))
@@ -611,22 +555,66 @@ function attack(pos, square) {
   if (square == null) return sum(pos, attack);
   var v = 0;
   v += pawn_attack(pos, square);
-  console.log(v);
   v += king_attack(pos, square);
-  console.log(v);
   v += knight_attack(pos, square);
-  console.log("after knight", v);
   v += bishop_xray_attack(pos, square);
-  console.log(v);
   v += rook_xray_attack(pos, square);
-  console.log(v);
   v += queen_attack(pos, square);
-  console.log(v);
+  return v;
+}
+function space(pos, square) {
+  if (non_pawn_material(pos) + non_pawn_material(colorflip(pos)) < 12222)
+    return 0;
+  var pieceCount = 0,
+    blockedCount = 0;
+  for (var x = 0; x < 8; x++) {
+    for (var y = 0; y < 8; y++) {
+      if ("PNBRQK".indexOf(board(pos, x, y)) >= 0) pieceCount++;
+      if (
+        board(pos, x, y) == "P" &&
+        (board(pos, x, y - 1) == "p" ||
+          (board(pos, x - 1, y - 2) == "p" && board(pos, x + 1, y - 2) == "p"))
+      )
+        blockedCount++;
+      if (
+        board(pos, x, y) == "p" &&
+        (board(pos, x, y + 1) == "P" ||
+          (board(pos, x - 1, y + 2) == "P" && board(pos, x + 1, y + 2) == "P"))
+      )
+        blockedCount++;
+    }
+  }
+  var weight = pieceCount - 3 + Math.min(blockedCount, 9);
+  if (space_area(pos, square) > 0) {
+    console.log(square, space_area(pos, square), pieceCount, blockedCount);
+  }
+  return ((space_area(pos, square) * weight * weight) / 16) << 0;
+}
+
+function space_area(pos, square) {
+  if (square == null) return sum(pos, space_area);
+  var v = 0;
+  var r = rank(pos, square);
+  var f = file(pos, square);
+  if (
+    r >= 2 &&
+    r <= 4 &&
+    f >= 3 &&
+    f <= 6 &&
+    board(pos, square.x, square.y) != "P" &&
+    board(pos, square.x - 1, square.y - 1) != "p" &&
+    board(pos, square.x + 1, square.y - 1) != "p"
+  ) {
+    v++;
+    if (
+      (board(pos, square.x, square.y - 1) == "P" ||
+        board(pos, square.x, square.y - 2) == "P" ||
+        board(pos, square.x, square.y - 3) == "P") &&
+      !attack(colorflip(pos), { x: square.x, y: 7 - square.y })
+    )
+      v++;
+  }
   return v;
 }
 
-console.log(
-  attack(colorflip(pos), { x: 1, y: 6 }),
-  board(colorflip(pos), 1, 6),
-  colorflip(pos),
-);
+console.log(space(pos));

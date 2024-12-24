@@ -1759,39 +1759,37 @@ func Space(b *board.Board) int {
 	if nonPawnMaterial(b, color.WHITE)+nonPawnMaterial(b.Mirror(), color.WHITE) < 12222 {
 		return 0
 	}
+	score := 0.0
+	pieceCount := b.Occupancies[color.WHITE].Count()
 
-	score := 0
-	pieceCount, blockedCount := 0, 0
+	for sq := A8; sq <= H1; sq++ {
+		blockedCount := 0
+		spacearea := 0
 
-	pieceBB := b.Occupancies[color.BOTH]
-	for pieceBB != 0 {
-		sq := pieceBB.FirstOne()
+		for x := 0; x < 8; x++ {
+			for y := 0; y < 8; y++ {
 
-		if b.Occupancies[color.WHITE].Test(sq) {
-			pieceCount++
+				if b.Bitboards[WP].Test(y*8+x) &&
+					(b.Bitboards[BP].Test((y-1)*8+x) ||
+						(b.Bitboards[BP].Test((y-2)*8+x-1) &&
+							b.Bitboards[BP].Test((y-2)*8+x+1))) {
+					blockedCount++
+				}
+
+				if b.Bitboards[BP].Test(y*8+x) &&
+					(b.Bitboards[WP].Test((y+1)*8+x) ||
+						(b.Bitboards[WP].Test((y+2)*8+x-1) &&
+							b.Bitboards[WP].Test((y+2)*8+x+1))) {
+					blockedCount++
+				}
+			}
 		}
-
-		rank := sq / 8
-		file := sq % 8
-
-		if b.Bitboards[WP].Test(sq) &&
-			((b.Bitboards[BP].Test((rank-1)*8+file) && rank > 0) ||
-				(b.Bitboards[BP].Test((rank-2)*8+file-1) && rank > 1 && file > 0) &&
-					(b.Bitboards[BP].Test((rank-2)*8+file+1) && rank > 1 && file < 7)) {
-			blockedCount++
-		}
-
-		if b.Bitboards[BP].Test(sq) &&
-			((b.Bitboards[BP].Test((rank+1)*8+file) && rank < 7) ||
-				(b.Bitboards[BP].Test((rank+2)*8+file-1) && rank < 6 && file > 0) &&
-					(b.Bitboards[BP].Test((rank+2)*8+file+1) && rank < 6 && file < 7)) {
-			blockedCount++
-		}
-
+		spacearea += SpaceArea(b, sq)
 		weight := pieceCount - 3 + min(blockedCount, 9)
-		score += ((SpaceArea(b, sq) * weight * weight / 16) << 0)
+		score += float64(spacearea * weight * weight)
+
 	}
-	return score
+	return int(math.Floor(score / 16))
 }
 
 // SpaceArea returns the number of safe squares available for minor pieces
@@ -1803,10 +1801,10 @@ func SpaceArea(b *board.Board, sq int) int {
 	rank := sq / 8
 	file := sq % 8
 
-	if ((8-rank) >= 2 && (8-rank) <= 4 && (8-file) >= 3 && (8-file) <= 6) &&
-		b.Bitboards[WP].Test(sq) &&
-		(b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0) &&
-		(b.Bitboards[BP].Test((rank+1)*8+file-1) && rank < 7 && file > 0) {
+	if ((8-rank) >= 2 && (8-rank) <= 4 && file+1 >= 3 && file+1 <= 6) &&
+		!b.Bitboards[WP].Test(sq) &&
+		(!b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0) &&
+		(!b.Bitboards[BP].Test((rank-1)*8+file+1) && rank > 0 && file < 7) {
 		score++
 
 		if ((b.Bitboards[WP].Test((rank-1)*8+file) && rank > 0) ||
