@@ -190,6 +190,52 @@ func QueenAttack(b *board.Board, sq int, sq2 int) int {
 	return score
 }
 
+// QueenAttackDiagonal counts number of attacks on square by queen only with
+// diagonal direction
+func QueenAttackDiagonal(b *board.Board, sq int, sq2 int) int {
+	score := 0
+
+	rank := sq / 8
+	file := sq % 8
+
+	rank2 := sq2 / 8
+	file2 := sq2 % 8
+
+	factor := 0
+
+	for i := 0; i < 8; i++ {
+		factor = 0
+
+		if i > 3 {
+			factor = 1
+		}
+
+		ix := (i+factor)%3 - 1
+		iy := (((i + factor) / 3) << 0) - 1
+
+		if ix == 0 || iy == 0 {
+			continue
+		}
+
+		for d := 1; d < 8; d++ {
+			if b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
+				(sq2 == -1 || file2 == file+d*ix && rank2 == rank+d*iy) {
+				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
+
+				if dir == 0 || abs(ix+iy*3) == dir {
+					score++
+				}
+			}
+
+			if !b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
+				break
+			}
+		}
+	}
+
+	return score
+}
+
 // KingAttack counts the number of attacks on a square by the king
 func KingAttack(b *board.Board, sq int) int {
 	rank := sq / 8

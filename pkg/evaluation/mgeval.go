@@ -1349,31 +1349,254 @@ func SafePawn(b *board.Board, sq int) bool {
 
 // SliderOnQueen adds a bonus for safe slider attack threats on opponent queen
 func SliderOnQueen(b *board.Board) int {
+	mirror := b.Mirror()
+
+	if QueenCount(mirror) != 1 {
+		return 0
+	}
+
+	rank, file := 0, 0
+	sq := 0
+
+	bb := b.Bitboards[WB] | b.Bitboards[WR] | b.Bitboards[WQ]
+	for bb != 0 {
+		sq = bb.FirstOne()
+
+		rank = sq / 8
+		file = sq % 8
+
+		if b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
+			return 0
+		}
+
+		if b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
+			return 0
+		}
+
+		if Attack(b, sq) <= 1 {
+			return 0
+		}
+
+		if !MobilityArea(b, sq) {
+			return 0
+		}
+
+		diagonal := evalhelpers.QueenAttackDiagonal(mirror, (7-rank)*8+file, -1)
+		v := 1
+		if QueenCount(b) == 0 {
+			v = 2
+		}
+
+		if diagonal != 0 && evalhelpers.BishopXrayAttack(b, sq, -1) != 0 {
+			return v
+		}
+
+		if diagonal == 0 && evalhelpers.RookXrayAttack(b, sq, -1) != 0 &&
+			evalhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) != 0 {
+			return v
+		}
+	}
+
 	return 0
 }
 
+// QueenCount returns the number of white queens
 func QueenCount(b *board.Board) int {
-	return 0
+	return b.Bitboards[WQ].Count()
 }
 
+// KnightOnQueen returns a bonus for safe knight attack threaths on
+// opponent queen
 func KnightOnQueen(b *board.Board) int {
+	mirror := b.Mirror()
+
+	blackQueen := b.Bitboards[BQ]
+	blackQueenSq := blackQueen.FirstOne()
+
+	blackQueenRank := blackQueenSq / 8
+	blackQueenFile := blackQueenSq % 8
+
+	if QueenCount(mirror) != 1 {
+		return 0
+	}
+
+	sq, rank, file := 0, 0, 0
+
+	bb := b.Bitboards[WN]
+	for bb != 0 {
+
+		sq = bb.FirstOne()
+
+		rank = sq / 8
+		file = sq % 8
+
+		if b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
+			return 0
+		}
+
+		if b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
+			return 0
+		}
+
+		if Attack(b, sq) <= 1 && Attack(mirror, (7-rank)*8+file) > 1 {
+			return 0
+		}
+
+		if !MobilityArea(b, sq) {
+			return 0
+		}
+
+		if evalhelpers.KnightAttack(b, sq, -1) == 0 {
+			return 0
+		}
+
+		v := 1
+		if QueenCount(b) == 0 {
+			v = 2
+		}
+
+		if abs(blackQueenFile-file) == 2 && abs(blackQueenRank-rank) == 1 {
+			return v
+		}
+
+		if abs(blackQueenFile-file) == 1 && abs(blackQueenRank-rank) == 2 {
+			return v
+		}
+	}
+
 	return 0
 }
 
+// Restricted returns a bonus for restricing their pieces moves
 func Restricted(b *board.Board) int {
-	return 0
+	restricted := 0
+
+	for sq := A8; sq <= H8; sq++ {
+		if Attack(b, sq) == 0 {
+			continue
+		}
+
+		rank := sq / 8
+		file := sq % 8
+
+		mirror := b.Mirror()
+
+		if Attack(mirror, (7-rank)*8+file) == 0 {
+			continue
+		}
+
+		if evalhelpers.PawnAttack(mirror, (7-rank)*8+file) > 0 {
+			continue
+		}
+
+		if Attack(mirror, (7-rank)*8+file) > 1 && Attack(b, sq) == 1 {
+			continue
+		}
+
+		restricted++
+	}
+
+	return restricted
 }
 
+// WeakQueenProtection adds an additional bonus if weak piece is only
+// protected by a queen
 func WeakQueenProtection(b *board.Board) int {
-	return 0
+	weakPieces := 0
+
+	for sq := A8; sq <= H8; sq++ {
+		if WeakEnemies(b, sq) == 0 {
+			continue
+		}
+
+		if evalhelpers.QueenAttack(b.Mirror(), (7-(sq/8)*8+(sq%8)), -1) == 0 {
+			continue
+		}
+		weakPieces++
+	}
+	return weakPieces
 }
 
+// MinorThreat returns the threat type for knight and bishop attacking pieces
 func MinorThreat(b *board.Board, sq int) int {
-	return 0
+	if !b.Occupancies[color.BLACK].Test(sq) {
+		return 0
+	}
+
+	if evalhelpers.KnightAttack(b, sq, -1) == 0 && evalhelpers.BishopXrayAttack(b, sq, -1) == 0 {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	if (b.Bitboards[BP].Test(sq) ||
+		!((b.Bitboards[BP].Test((rank-1)*8+file-1) && file > 0 && rank > 0) ||
+			(b.Bitboards[BP].Test((rank-1)*8+file+1) && file < 7 && rank > 0) ||
+			(Attack(b, sq) <= 1 && Attack(b.Mirror(), (7-rank)*8+file) > 1))) &&
+		WeakEnemies(b, sq) == 0 {
+
+		return 0
+	}
+
+	if b.Bitboards[BP].Test(sq) {
+		return 1
+	}
+
+	if b.Bitboards[BN].Test(sq) {
+		return 2
+	}
+
+	if b.Bitboards[BB].Test(sq) {
+		return 3
+	}
+
+	if b.Bitboards[BR].Test(sq) {
+		return 4
+	}
+
+	if b.Bitboards[BQ].Test(sq) {
+		return 5
+	}
+
+	return 6
 }
 
+// RookThreat return the threat type for attacked by rook pieces
 func RookThreat(b *board.Board, sq int) int {
-	return 0
+	if !b.Occupancies[color.BLACK].Test(sq) {
+		return 0
+	}
+
+	if WeakEnemies(b, sq) == 0 {
+		return 0
+	}
+
+	if evalhelpers.RookXrayAttack(b, sq, -1) == 0 {
+		return 0
+	}
+
+	if b.Bitboards[BP].Test(sq) {
+		return 1
+	}
+
+	if b.Bitboards[BN].Test(sq) {
+		return 2
+	}
+
+	if b.Bitboards[BB].Test(sq) {
+		return 3
+	}
+
+	if b.Bitboards[BR].Test(sq) {
+		return 4
+	}
+
+	if b.Bitboards[BQ].Test(sq) {
+		return 5
+	}
+
+	return 6
 }
 
 // PassedMg return middlegame bonuses for passed pawn. Scale
