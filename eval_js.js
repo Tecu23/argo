@@ -1,14 +1,14 @@
 pos = {
   // chessboard
   b: [
-    ["r", "-", "p", "-", "P", "-", "-", "R"],
+    ["r", "p", "-", "-", "-", "-", "P", "R"],
+    ["-", "p", "b", "-", "-", "-", "P", "-"],
+    ["b", "p", "n", "-", "-", "N", "-", "B"],
+    ["q", "-", "-", "p", "P", "B", "-", "Q"],
+    ["-", "-", "p", "P", "-", "-", "-", "-"],
+    ["r", "p", "-", "-", "-", "N", "P", "R"],
+    ["k", "p", "-", "-", "-", "-", "P", "K"],
     ["-", "p", "-", "-", "-", "-", "P", "-"],
-    ["-", "-", "n", "P", "B", "N", "-", "B"],
-    ["q", "b", "-", "-", "P", "B", "-", "Q"],
-    ["-", "b", "-", "p", "-", "-", "-", "R"],
-    ["r", "p", "-", "-", "-", "N", "P", "-"],
-    ["-", "-", "p", "-", "-", "-", "P", "K"],
-    ["k", "p", "-", "-", "-", "-", "P", "-"],
   ],
   // castling rights
   c: [false, false, false, false],
@@ -597,4 +597,36 @@ function blockers_for_king(pos, square) {
     return 1;
   return 0;
 }
-console.log(mobility(pos, { x: 2, y: 4 }));
+function king_attack(pos, square) {
+  if (square == null) return sum(pos, king_attack);
+  for (var i = 0; i < 8; i++) {
+    var ix = ((i + (i > 3)) % 3) - 1;
+    var iy = (((i + (i > 3)) / 3) << 0) - 1;
+    if (board(pos, square.x + ix, square.y + iy) == "K") return 1;
+  }
+
+  return 0;
+}
+function attack(pos, square) {
+  if (square == null) return sum(pos, attack);
+  var v = 0;
+  v += pawn_attack(pos, square);
+  console.log(v);
+  v += king_attack(pos, square);
+  console.log(v);
+  v += knight_attack(pos, square);
+  console.log("after knight", v);
+  v += bishop_xray_attack(pos, square);
+  console.log(v);
+  v += rook_xray_attack(pos, square);
+  console.log(v);
+  v += queen_attack(pos, square);
+  console.log(v);
+  return v;
+}
+
+console.log(
+  attack(colorflip(pos), { x: 1, y: 6 }),
+  board(colorflip(pos), 1, 6),
+  colorflip(pos),
+);

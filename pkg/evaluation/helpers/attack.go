@@ -175,6 +175,7 @@ func QueenAttack(b *board.Board, sq int, sq2 int) int {
 
 		for d := 1; d < 8; d++ {
 			if b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
+				(file+d*ix >= 0) && (file+d*ix <= 7) &&
 				(sq2 == -1 || file2 == file+d*ix && rank2 == rank+d*iy) {
 				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
 

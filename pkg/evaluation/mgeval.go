@@ -1188,7 +1188,6 @@ func ThreatsMg(b *board.Board) int {
 // enemies attacked twice
 func Hanging(b *board.Board) int {
 	weakEnemies := 0
-	// Loop Through all enemies and check if there are any
 	blackBB := b.Occupancies[color.BLACK]
 	for blackBB != 0 {
 		sq := blackBB.FirstOne()
@@ -1202,7 +1201,9 @@ func Hanging(b *board.Board) int {
 		}
 
 		mirror := b.Mirror()
-		if Attack(mirror, (7-(sq/8))*8+(sq%8)) == 0 {
+		file := sq % 8
+		rank := sq / 8
+		if Attack(mirror, (7-rank)*8+file) == 0 {
 			weakEnemies++
 		}
 	}
@@ -1214,11 +1215,11 @@ func WeakEnemies(b *board.Board, sq int) int {
 	rank := sq / 8
 	file := sq % 8
 
-	if b.Bitboards[BP].Test((rank-1)*8+file-1) && file > 0 {
+	if b.Bitboards[BP].Test((rank-1)*8+file-1) && file > 0 && rank > 0 {
 		return 0
 	}
 
-	if b.Bitboards[BP].Test((rank-1)*8+file+1) && file < 7 {
+	if b.Bitboards[BP].Test((rank-1)*8+file+1) && file < 7 && rank > 0 {
 		return 0
 	}
 
