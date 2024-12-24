@@ -1885,16 +1885,87 @@ func KingDanger(b *board.Board) int {
 	return 0
 }
 
+// WeakBonus returns if the king has weak squares
 func WeakBonus(b *board.Board, sq int) int {
+	if WeakSquares(b, sq) == 0 {
+		return 0
+	}
+
+	if KingRing(b, sq, false) == 0 {
+		return 0
+	}
+
+	return 1
+}
+
+// WeakSquares returns attacked squares defended at most once
+// by our queen or king
+func WeakSquares(b *board.Board, sq int) int {
+	if Attack(b, sq) > 0 {
+		mirror := b.Mirror()
+
+		rank := sq / 8
+		file := sq % 8
+
+		attack := Attack(mirror, (7-rank)*8+file)
+		if attack >= 2 {
+			return 0
+		}
+
+		if attack == 0 {
+			return 1
+		}
+
+		if evalhelpers.KingAttack(mirror, (7-rank)*8+file) > 0 ||
+			evalhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) > 0 {
+			return 1
+		}
+	}
+
 	return 0
 }
 
+// KingAttackersWeight is the sum of the "weights" of the pieces of
+// the given color which attack a square in the king ring of the enemy king
 func KingAttackersWeight(b *board.Board, sq int) int {
+	if KingAttackersCount(b, sq) > 0 {
+		if b.Bitboards[WP].Test(sq) {
+			return 0
+		} else if b.Bitboards[WN].Test(sq) {
+			return 81
+		} else if b.Bitboards[WB].Test(sq) {
+			return 52
+		} else if b.Bitboards[WR].Test(sq) {
+			return 44
+		} else if b.Bitboards[WQ].Test(sq) {
+			return 10
+		}
+	}
 	return 0
 }
 
+// UnsafeChecks returns unsafe checks
 func UnsafeChecks(b *board.Board, sq int) int {
+	if Check(b, sq, 0) && SafeCheck(b, nil, 0) == 0 {
+		return 1
+	}
+
+	if Check(b, sq, 1) && SafeCheck(b, nil, 1) == 0 {
+		return 1
+	}
+
+	if Check(b, sq, 2) && SafeCheck(b, nil, 2) == 0 {
+		return 1
+	}
 	return 0
+}
+
+func Check(b *board.Board, sq int, t int) bool {
+	return false
+}
+
+func SafeCheck(b *board.Board, sq *int, factor int) float32 {
+	return 0.0
 }
 
 func FlankDefense(b *board.Board) int {
@@ -1903,10 +1974,6 @@ func FlankDefense(b *board.Board) int {
 
 func KnightDefender(b *board.Board) bool {
 	return false
-}
-
-func SafeCheck(b *board.Board, sq *int, factor int) float32 {
-	return 0.0
 }
 
 func ShelterStrength(b *board.Board) int {
@@ -1925,8 +1992,89 @@ func PawnlessFlank(b *board.Board) int {
 	return 0
 }
 
+// WinnableTotalMg returns the middle game winnable
 func WinnableTotalMg(b *board.Board, score int) int {
-	return 0
+	if score == -1 {
+		score = MiddleGameEvaluation(b, true)
+	}
+
+	factor := 0
+	if score > 0 {
+		factor = 1
+	} else if score < 0 {
+		factor = -1
+	}
+
+	return factor * max(min(Winnable(b)+50, 0), -abs(score))
+}
+
+// Winnable computes the winnable correction value for this position, i.e. second
+// order bonus/malus based on the known attacking/defending status of the players
+func Winnable(b *board.Board) int {
+	pawns := 0
+	kx := []int{0, 0}
+	ky := []int{0, 0}
+	flanks := []int{0, 0}
+
+	for x := 0; x < 8; x++ {
+		open := []int{0, 0}
+		for y := 0; y < 8; y++ {
+			if b.Bitboards[WP].Test(y*8 + x) {
+				open[0] = 1
+				pawns++
+
+			} else if b.Bitboards[BP].Test(y*8 + x) {
+				open[1] = 1
+				pawns++
+			}
+
+			if b.Bitboards[WK].Test(y*8 + x) {
+				kx[0] = x
+				ky[0] = y
+
+			} else if b.Bitboards[BP].Test(y*8 + x) {
+				kx[1] = x
+				ky[1] = y
+			}
+		}
+
+		if open[0]+open[1] > 0 {
+			if x < 4 {
+				flanks[0] = 1
+			} else {
+				flanks[1] = 1
+			}
+		}
+	}
+
+	mirror := b.Mirror()
+
+	passedCount := b.CandidatePassed(color.WHITE) + mirror.CandidatePassed(color.WHITE)
+	bothFlanks := flanks[0] != 0 && flanks[1] != 0
+
+	outflanking := abs(kx[0]-kx[1]) - abs(ky[0]-ky[1])
+	purePawn := nonPawnMaterial(b, color.WHITE)+nonPawnMaterial(mirror, color.WHITE) == 0
+	almostWinnable := outflanking < 0 && !bothFlanks
+	infiltration := ky[0] < 4 || ky[1] > 3
+
+	score := -110
+
+	score += 9 * passedCount
+	score += 12 * pawns
+	score += 9 * outflanking
+	if infiltration {
+		score += 24
+	}
+
+	if purePawn {
+		score += 51
+	}
+
+	if almostWinnable {
+		score -= 43
+	}
+
+	return score
 }
 
 func abs(x int) int {
