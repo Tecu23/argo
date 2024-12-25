@@ -495,7 +495,7 @@ func Backward(b *board.Board, sq int) bool {
 	return false
 }
 
-// Doubled Isolated is a penalty if a double pawn is stopped only
+// DoubleIsolated is a penalty if a double pawn is stopped only
 // by a single opponent pawn on the same file.
 func DoubleIsolated(b *board.Board, sq int) bool {
 	if !b.Bitboards[WP].Test(sq) {
@@ -1822,11 +1822,13 @@ func KingMg(b *board.Board) int {
 	score := 0
 
 	kd := KingDanger(b)
-	score -= ShelterStrength(b)
-	score += ShelterStorm(b)
+	score -= ShelterStrength(b, -1)
+	score += ShelterStorm(b, -1)
 	score += (kd * kd / 4096) << 0
 	score += 8 * FlankAttack(b)
-	score += 17 * PawnlessFlank(b)
+	if PawnlessFlank(b) {
+		score += 17
+	}
 	return score
 }
 
@@ -1854,7 +1856,7 @@ func KingDanger(b *board.Board) int {
 		}
 
 		knightBonusFactor := 0
-		if KnightDefender(b.Mirror()) {
+		if KnightDefender(b.Mirror()) > 0 {
 			knightBonusFactor = 1
 		}
 
@@ -1867,13 +1869,13 @@ func KingDanger(b *board.Board) int {
 			4*kingFlankDefense +
 			((3 * kingFlankAttack * kingFlankAttack / 8) << 0) -
 			873*noQueen -
-			((6 * (ShelterStrength(b) - ShelterStorm(b)) / 8) << 0) +
+			((6 * (ShelterStrength(b, -1) - ShelterStorm(b, -1)) / 8) << 0) +
 			MobilityMg(b) - MobilityMg(b.Mirror()) +
 			37 +
-			((772 * int(min(SafeCheck(b, nil, 3), 1.45))) << 0) +
-			((1084 * int(min(SafeCheck(b, nil, 2), 1.75))) << 0) +
-			((645 * int(min(SafeCheck(b, nil, 1), 1.50))) << 0) +
-			((792 * int(min(SafeCheck(b, nil, 0), 1.62))) << 0)
+			((772 * int(min(SafeCheck(b, -1, 3), 1.45))) << 0) +
+			((1084 * int(min(SafeCheck(b, -1, 2), 1.75))) << 0) +
+			((645 * int(min(SafeCheck(b, -1, 1), 1.50))) << 0) +
+			((792 * int(min(SafeCheck(b, -1, 0), 1.62))) << 0)
 	}
 
 	if score > 100 {
@@ -1943,50 +1945,497 @@ func KingAttackersWeight(b *board.Board, sq int) int {
 
 // UnsafeChecks returns unsafe checks
 func UnsafeChecks(b *board.Board, sq int) int {
-	if Check(b, sq, 0) && SafeCheck(b, nil, 0) == 0 {
+	if Check(b, sq, 0) && SafeCheck(b, -1, 0) == 0 {
 		return 1
 	}
 
-	if Check(b, sq, 1) && SafeCheck(b, nil, 1) == 0 {
+	if Check(b, sq, 1) && SafeCheck(b, -1, 1) == 0 {
 		return 1
 	}
 
-	if Check(b, sq, 2) && SafeCheck(b, nil, 2) == 0 {
+	if Check(b, sq, 2) && SafeCheck(b, -1, 2) == 0 {
 		return 1
 	}
 	return 0
 }
 
+// Check returns possible checks by knight, bishop, rook or queen. Defending
+// queen is not considered as check blocker
 func Check(b *board.Board, sq int, t int) bool {
+	rank := sq / 8
+	file := sq % 8
+
+	if evalhelpers.RookXrayAttack(b, sq, -1) > 0 &&
+		(t == -1 || t == 2 || t == 4) ||
+		evalhelpers.QueenAttack(b, sq, -1) > 0 &&
+			(t == -1 || t == 3) {
+
+		for i := 0; i < 4; i++ {
+			ix := 0
+			iy := 0
+
+			if i == 0 {
+				ix = -1
+			} else if i == 1 {
+				ix = 1
+			}
+
+			if i == 2 {
+				iy = -1
+			} else if i == 3 {
+				iy = 1
+			}
+
+			for d := 1; d < 8; d++ {
+				if b.Bitboards[BK].Test((rank+d*iy)*8+file+d*ix) &&
+					file+d*ix >= 0 && file+d*ix <= 7 && rank+d*iy >= 0 && rank+d*iy <= 7 {
+					return true
+				}
+
+				if (!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) ||
+					b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix)) &&
+					file+d*ix >= 0 && file+d*ix <= 7 && rank+d*iy >= 0 && rank+d*iy <= 7 {
+					break
+				}
+			}
+		}
+	}
+
+	if evalhelpers.BishopXrayAttack(b, sq, -1) > 0 &&
+		(t == -1 || t == 1 || t == 4) ||
+		evalhelpers.QueenAttack(b, sq, -1) > 0 &&
+			(t == -1 || t == 3) {
+
+		factor1, factor2 := 0, 0
+
+		for i := 0; i < 4; i++ {
+			factor1, factor2 = 0, 0
+			if i > 1 {
+				factor1 = 1
+			}
+
+			if i%2 == 0 {
+				factor2 = 1
+			}
+
+			ix := factor1*2 - 1
+			iy := factor2*2 - 1
+
+			for d := 1; d < 8; d++ {
+				if b.Bitboards[BK].Test((rank+d*iy)*8+file+d*ix) &&
+					file+d*ix >= 0 && file+d*ix <= 7 && rank+d*iy >= 0 && rank+d*iy <= 7 {
+					return true
+				}
+
+				if (!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) ||
+					b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix)) &&
+					file+d*ix >= 0 && file+d*ix <= 7 && rank+d*iy >= 0 && rank+d*iy <= 7 {
+					break
+				}
+			}
+		}
+	}
+
+	if evalhelpers.KnightAttack(b, sq, -1) > 0 &&
+		(t == -1 || t == 0 || t == 4) {
+		if (b.Bitboards[BK].Test((rank+1)*8+file+2) && rank < 7 && file < 6) ||
+			(b.Bitboards[BK].Test((rank-1)*8+file+2) && rank > 0 && file < 6) ||
+			(b.Bitboards[BK].Test((rank+2)*8+file+1) && rank < 6 && file < 7) ||
+			(b.Bitboards[BK].Test((rank-2)*8+file+1) && rank > 1 && file < 7) ||
+			(b.Bitboards[BK].Test((rank+1)*8+file-2) && rank < 7 && file > 1) ||
+			(b.Bitboards[BK].Test((rank-1)*8+file-2) && rank > 0 && file > 1) ||
+			(b.Bitboards[BK].Test((rank+2)*8+file-1) && rank < 6 && file > 0) ||
+			(b.Bitboards[BK].Test((rank-2)*8+file-1) && rank > 1 && file > 0) {
+			return true
+		}
+	}
+
 	return false
 }
 
-func SafeCheck(b *board.Board, sq *int, factor int) float32 {
+// SafeCheck analyses the sage enemy's checks which are possible on the next move.
+// Enemy queen safe checks: we count them only if they are from squares from which
+// we can't give a rook check: we count them only if they are from squares from
+// which we can't give a queen check, because queen checks are more valuable
+func SafeCheck(b *board.Board, sq int, t int) float32 {
+	if sq == -1 {
+		blackPieces := b.Occupancies[color.BLACK]
+		for blackPieces != 0 {
+			sq := blackPieces.FirstOne()
+
+			rank := sq / 8
+			file := sq % 8
+
+			if !Check(b, sq, t) {
+				return 0.0
+			}
+
+			mirror := b.Mirror()
+
+			if t == 3 && SafeCheck(b, sq, 2) > 0 {
+				return 0.0
+			}
+
+			if t == 1 && SafeCheck(b, sq, 3) > 0 {
+				return 0.0
+			}
+
+			if Attack(mirror, (rank-7)*8+file) == 0 ||
+				(WeakSquares(b, sq) > 0 && Attack(b, sq) > 1) &&
+					(t != 3 || evalhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) == 0) {
+				return 1.0
+			}
+		}
+	} else {
+		rank := sq / 8
+		file := sq % 8
+
+		if !Check(b, sq, t) {
+			return 0.0
+		}
+
+		mirror := b.Mirror()
+
+		if t == 3 && SafeCheck(b, sq, 2) > 0 {
+			return 0.0
+		}
+
+		if t == 1 && SafeCheck(b, sq, 3) > 0 {
+			return 0.0
+		}
+
+		if Attack(mirror, (rank-7)*8+file) == 0 ||
+			(WeakSquares(b, sq) > 0 && Attack(b, sq) > 1) &&
+				(t != 3 || evalhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) == 0) {
+			return 1.0
+		}
+	}
+
 	return 0.0
 }
 
-func FlankDefense(b *board.Board) int {
-	return 0
-}
-
-func KnightDefender(b *board.Board) bool {
-	return false
-}
-
-func ShelterStrength(b *board.Board) int {
-	return 0
-}
-
-func ShelterStorm(b *board.Board) int {
-	return 0
-}
-
+// FlankAttack finds the squares that opponent attacks in our king flank
+// and the squares which they attack twice in that flank
 func FlankAttack(b *board.Board) int {
+	score := 0
+	for sq := A8; sq <= H1; sq++ {
+		rank := sq / 8
+		file := sq % 8
+		if rank > 4 {
+			continue
+		}
+
+		kingBB := b.Bitboards[BK]
+		kingSq := kingBB.FirstOne()
+
+		kingFile := kingSq & 8
+
+		if kingFile == 0 && file > 2 {
+			break
+		}
+
+		if kingFile < 3 && file > 3 {
+			break
+		}
+
+		if kingFile >= 3 && kingFile < 5 && (file < 2 || file > 5) {
+			break
+		}
+
+		if kingFile >= 5 && file < 4 {
+			break
+		}
+
+		if kingFile == 7 && file < 5 {
+			break
+		}
+
+		a := Attack(b, sq)
+		if a == 0 {
+			continue
+		}
+
+		if a > 1 {
+			score += 2
+		} else {
+			score++
+		}
+	}
+
+	return score
+}
+
+// FlankDefense finds the squares that we defend in our king flank
+func FlankDefense(b *board.Board) int {
+	score := 0
+	for sq := A8; sq <= H1; sq++ {
+		rank := sq / 8
+		file := sq % 8
+		if rank > 4 {
+			continue
+		}
+
+		kingBB := b.Bitboards[BK]
+		kingSq := kingBB.FirstOne()
+
+		kingFile := kingSq & 8
+
+		if kingFile == 0 && file > 2 {
+			break
+		}
+
+		if kingFile < 3 && file > 3 {
+			break
+		}
+
+		if kingFile >= 3 && kingFile < 5 && (file < 2 || file > 5) {
+			break
+		}
+
+		if kingFile >= 5 && file < 4 {
+			break
+		}
+
+		if kingFile == 7 && file < 5 {
+			break
+		}
+
+		a := Attack(b.Mirror(), (7-rank)*8+file)
+		if a > 0 {
+			score++
+		}
+	}
+
+	return score
+}
+
+// KnightDefender returns the squares defended by knight near our king
+func KnightDefender(b *board.Board) int {
+	score := 0
+	for sq := A8; sq <= H1; sq++ {
+		if evalhelpers.KnightAttack(b, sq, -1) > 0 && evalhelpers.KingAttack(b, sq) > 0 {
+			score++
+		}
+	}
+	return score
+}
+
+// ShelterStrength it's the shelter bonus for king position. If we can castle use
+// the penalty after castling if (ShelterStrength + SheleterStorm) is smaller
+func ShelterStrength(b *board.Board, square int) int {
+	w, s, tx := 0, 1024, -1
+
+	rank, file := 0, 0
+
+	for sq := A8; sq <= H1; sq++ {
+		rank = sq / 8
+		file = sq % 8
+		if b.Bitboards[BK].Test(sq) ||
+			uint(b.Castlings)&ShortB != 0 && file == 6 && rank == 0 ||
+			uint(b.Castlings)&LongB != 0 && file == 2 && rank == 0 {
+			w1 := StrengthSquare(b, rank*8+file)
+			s1 := StormSquare(b, rank*8+file, false)
+
+			if s1-w1 < s-w {
+				w = w1
+				s = s1
+				tx = max(1, min(6, file))
+			}
+		}
+	}
+
+	if square == -1 {
+		return w
+	}
+
+	rank = square / 8
+	file = square % 8
+
+	if tx != -1 && b.Bitboards[BP].Test(square) &&
+		file >= tx-1 && file <= tx+1 {
+
+		for y := rank - 1; y >= 0; y-- {
+			if b.Bitboards[BP].Test(y*8 + file) {
+				return 0
+			}
+		}
+
+		return 1
+	}
+
 	return 0
 }
 
-func PawnlessFlank(b *board.Board) int {
+// StrengthSquare returns king shelter square for each square on the board
+func StrengthSquare(b *board.Board, sq int) int {
+	score := 5
+
+	rank := sq / 8
+	file := sq % 8
+
+	kx := min(6, max(1, file))
+	weakness := [][]int{
+		{-6, 81, 93, 58, 39, 18, 25},
+		{-43, 61, 35, -49, -29, -11, -63},
+		{-10, 75, 23, -2, 32, 3, -45},
+		{-39, -13, -29, -52, -48, -67, -166},
+	}
+
+	for x := kx - 1; x <= kx+1; x++ {
+		us := 0
+
+		for y := 7; y >= rank; y-- {
+			if b.Bitboards[BP].Test(y*8+x) &&
+				(b.Bitboards[WP].Test((y+1)*8+x-1) && x > 0 && y < 7) &&
+				(b.Bitboards[WP].Test((y+1)*8+x+1) && x < 7 && y < 7) {
+				us = y
+			}
+		}
+
+		f := min(x, 7-x)
+		if weakness[f][us] != 0 && f >= 0 && f <= 3 && us >= 0 && us <= 6 {
+			score += weakness[f][us]
+		}
+	}
+
+	return score
+}
+
+// ShelterStorm is a penalty for king position. If we can castle use the
+// penalty after the castling if (ShelterWeakness + ShelterStorm) is smaller
+func ShelterStorm(b *board.Board, square int) int {
+	w, s, tx := 0, 1024, -1
+
+	rank, file := 0, 0
+
+	for sq := A8; sq <= H1; sq++ {
+		rank = sq / 8
+		file = sq % 8
+		if b.Bitboards[BK].Test(sq) ||
+			uint(b.Castlings)&ShortB != 0 && file == 6 && rank == 0 ||
+			uint(b.Castlings)&LongB != 0 && file == 2 && rank == 0 {
+			w1 := StrengthSquare(b, rank*8+file)
+			s1 := StormSquare(b, rank*8+file, false)
+
+			if s1-w1 < s-w {
+				w = w1
+				s = s1
+				tx = max(1, min(6, file))
+			}
+		}
+	}
+
+	if square == -1 {
+		return s
+	}
+
+	rank = square / 8
+	file = square % 8
+
+	if tx != -1 && (b.Bitboards[BP].Test(square) || b.Bitboards[WP].Test(square)) &&
+		file >= tx-1 && file <= tx+1 {
+
+		for y := rank - 1; y >= 0; y-- {
+			if b.Occupancies[color.BOTH].Test(
+				y*8+file,
+			) == b.Occupancies[color.BOTH].Test(
+				rank*8+file,
+			) {
+				return 0
+			}
+		}
+
+		return 1
+	}
+
 	return 0
+}
+
+// StormSquare returns the enemy pawns for each square on board
+func StormSquare(b *board.Board, sq int, isEndgame bool) int {
+	score, eval := 0, 5
+
+	rank := sq / 8
+	file := sq % 8
+
+	kx := min(6, max(1, file))
+	unblockedstorm := [][]int{
+		{85, -289, -166, 97, 50, 45, 50},
+		{46, -25, 122, 45, 37, -10, 20},
+		{-6, 51, 168, 34, -2, -22, -14},
+		{-15, -11, 101, 4, 11, -15, -29},
+	}
+	blockedstorm := [][]int{
+		{0, 0, 76, -10, -7, -4, -1},
+		{0, 0, 78, 15, 10, 6, 2},
+	}
+
+	for x := kx - 1; x <= kx+1; x++ {
+		us, them := 0, 0
+
+		for y := 7; y >= rank; y-- {
+			if b.Bitboards[BP].Test(y*8+x) &&
+				(b.Bitboards[WP].Test((y+1)*8+x-1) && x > 0 && y < 7) &&
+				(b.Bitboards[WP].Test((y+1)*8+x+1) && x < 7 && y < 7) {
+				us = y
+			}
+
+			if b.Bitboards[WP].Test(y*8 + x) {
+				them = y
+			}
+		}
+
+		f := min(x, 7-x)
+		if us > 0 && them == us+1 {
+			score += blockedstorm[0][them]
+			eval += blockedstorm[1][them]
+		} else {
+			score += unblockedstorm[f][them]
+		}
+	}
+
+	if isEndgame {
+		return eval
+	}
+
+	return score
+}
+
+// PawnlessFlank is a penalty when our king is on a pawnless flank
+func PawnlessFlank(b *board.Board) bool {
+	pawns := []int{0, 0, 0, 0, 0, 0, 0, 0}
+	kx := 0
+
+	for x := 0; x < 8; x++ {
+		for y := 0; y < 8; y++ {
+			if b.Bitboards[WP].Test(y*8+x) || b.Bitboards[BP].Test(y*8+x) {
+				pawns[x]++
+			}
+
+			if b.Bitboards[BK].Test(y*8 + x) {
+				kx = x
+			}
+		}
+	}
+
+	sum := 0
+	if kx == 0 {
+		sum = pawns[0] + pawns[1] + pawns[2]
+	} else if kx < 3 {
+		sum = pawns[0] + pawns[1] + pawns[2] + pawns[3]
+	} else if kx < 5 {
+		sum = pawns[2] + pawns[3] + pawns[4] + pawns[5]
+	} else if kx < 7 {
+		sum = pawns[4] + pawns[5] + pawns[6] + pawns[7]
+	} else {
+		sum = pawns[5] + pawns[6] + pawns[7]
+	}
+
+	if sum == 0 {
+		return true
+	}
+
+	return false
 }
 
 // WinnableTotalMg returns the middle game winnable
