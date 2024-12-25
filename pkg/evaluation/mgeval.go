@@ -303,6 +303,7 @@ func BishopPair(b *board.Board) int {
 	return 1438
 }
 
+// PawnsMg returns the middlegame evaluation for pawns
 func PawnsMg(b *board.Board) int {
 	score := 0
 
@@ -549,6 +550,8 @@ func Isolated(b *board.Board, sq int) bool {
 	return true
 }
 
+// PiecesMg returns middlegame bonuses and penalties to the pieces
+// of a given color and type. Mobility not included here
 func PiecesMg(b *board.Board) int {
 	score := 0
 
