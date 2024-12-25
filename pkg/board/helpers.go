@@ -250,7 +250,7 @@ func (b *Board) CandidatePassed(side color.Color) int {
 			tmpSq = tmpSq ^ 56
 		}
 
-		if b.IsPassedPawn(sq, side) {
+		if b.IsPassedPawn(sq) {
 			count++
 		}
 	}
@@ -259,7 +259,7 @@ func (b *Board) CandidatePassed(side color.Color) int {
 }
 
 // IsPassedPawn checks if a white pawn on a given square is passed
-func (b *Board) IsPassedPawn(square int, clr color.Color) bool {
+func (b *Board) IsPassedPawn(square int) bool {
 	file := square % 8
 	rank := square / 8
 
@@ -286,7 +286,6 @@ func (b *Board) IsPassedPawn(square int, clr color.Color) bool {
 			sq := y*8 + (file - 1)
 			if b.Bitboards[BP].Test(sq) {
 				ty2 = y
-				break
 			}
 		}
 		// Check right file if it exists
@@ -294,7 +293,6 @@ func (b *Board) IsPassedPawn(square int, clr color.Color) bool {
 			sq := y*8 + (file + 1)
 			if b.Bitboards[BP].Test(sq) {
 				ty2 = y
-				break
 			}
 		}
 	}

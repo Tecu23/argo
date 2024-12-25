@@ -403,7 +403,7 @@ func TestPassedPawns(t *testing.T) {
 						break
 					}
 				}
-				isPassed := board.IsPassedPawn(sq, color.WHITE)
+				isPassed := board.IsPassedPawn(sq)
 				if isPassed != isExpectedPassed {
 					t.Errorf("White pawn on %s: got passed=%v, want passed=%v\nFEN: %s\nDesc: %s",
 						util.Sq2Fen[sq], isPassed, isExpectedPassed, test.fen, test.desc)
@@ -422,7 +422,7 @@ func TestPassedPawns(t *testing.T) {
 					}
 				}
 
-				isPassed := mirroredBoard.IsPassedPawn(mirroredSq, color.WHITE)
+				isPassed := mirroredBoard.IsPassedPawn(mirroredSq)
 				if isPassed != isExpectedPassed {
 					t.Errorf("Black pawn on %s: got passed=%v, want passed=%v\nFEN: %s\nDesc: %s",
 						util.Sq2Fen[sq], isPassed, isExpectedPassed, test.fen, test.desc)

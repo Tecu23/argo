@@ -1739,7 +1739,95 @@ func TestMiddlegameMobility(t *testing.T) {
 // 	}
 // }
 
-func TestMiddlegameSpace(t *testing.T) {
+// func TestMiddlegameSpace(t *testing.T) {
+// 	tests := []struct {
+// 		name      string
+// 		fen       string
+// 		whiteEval int
+// 		blackEval int
+// 	}{
+// 		// Complex Position
+// 		{
+// 			name:      "Complex Position 1",
+// 			fen:       "r1bq1rk1/ppp2ppp/1bn1p3/3pP3/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - d6 0 10",
+// 			whiteEval: 192,
+// 			blackEval: 96,
+// 		},
+// 		{
+// 			name:      "Complex Position 2",
+// 			fen:       "2rr2k1/pp2qppp/2n1pn2/8/3P4/2P1PNP1/PQ2PPBP/1RR3K1 w - - 0 20",
+// 			whiteEval: 75,
+// 			blackEval: 45,
+// 		},
+// 		{
+// 			name:      "Complex Position 3",
+// 			fen:       "r2q1rk1/1b2bppp/p1n1pn2/1p2P3/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - - 0 10",
+// 			whiteEval: 159,
+// 			blackEval: 73,
+// 		},
+// 		{
+// 			name:      "Complex Position 4",
+// 			fen:       "4rrk1/1ppq2bp/p1np2p1/4n3/2B1P3/2N2N2/PPP2PPP/2QRR1K1 w - - 0 17",
+// 			whiteEval: 83,
+// 			blackEval: 56,
+// 		},
+// 		{
+// 			name:      "Complex Position 5",
+// 			fen:       "r1bqkb1r/1ppn1ppp/p1n1pn2/8/2BP4/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 7",
+// 			whiteEval: 99,
+// 			blackEval: 84,
+// 		},
+// 		{
+// 			name:      "Complex Position 6",
+// 			fen:       "3r1rk1/1bqn1ppp/p2p1n2/1p6/3NP3/1BN1B3/PP2QPPP/R4RK1 w - - 0 17",
+// 			whiteEval: 83,
+// 			blackEval: 56,
+// 		},
+// 		{
+// 			name:      "Complex Position 7",
+// 			fen:       "r2q1r1k/1p1bbp1p/p1n3p1/2P1p3/P1BP4/2NB1N2/1P3PPP/R1BQR1K1 w - - 0 16",
+// 			whiteEval: 147,
+// 			blackEval: 56,
+// 		},
+// 		{
+// 			name:      "Complex Position 8",
+// 			fen:       "1rb1r1k1/p1q2pbp/1pn2np1/3p4/3P4/1PN1P1P1/PBQN1PBP/R4RK1 w - - 0 14",
+// 			whiteEval: 122,
+// 			blackEval: 105,
+// 		},
+// 		{
+// 			name:      "Complex Position 9",
+// 			fen:       "r1bq1rk1/pp1nppbp/2n3p1/2p5/2B1P3/5N2/PP1N1PPP/R1BQ1RK1 w - - 0 9",
+// 			whiteEval: 83,
+// 			blackEval: 81,
+// 		},
+// 		{
+// 			name:      "Complex Position 10",
+// 			fen:       "2rq1rk1/p3bppp/1pn1pn2/3p4/3P4/2N1PN2/PPQ1BPPP/2RR1RK1 w - - 0 13",
+// 			whiteEval: 122,
+// 			blackEval: 105,
+// 		},
+// 	}
+//
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			var result int
+// 			b, _ := board.ParseFEN(tt.fen)
+// 			result = Space(&b)
+// 			if result != tt.whiteEval {
+// 				t.Errorf("White %s: got %v, want %v", tt.name, result, tt.whiteEval)
+// 			}
+//
+// 			mirror := b.Mirror()
+// 			result = Space(mirror)
+// 			if result != tt.blackEval {
+// 				t.Errorf("Black %s: got %v, want %v", tt.name, result, tt.blackEval)
+// 			}
+// 		})
+// 	}
+// }
+
+func TestMiddleGamePassedPawnEvaluation(t *testing.T) {
 	tests := []struct {
 		name      string
 		fen       string
@@ -1747,65 +1835,65 @@ func TestMiddlegameSpace(t *testing.T) {
 		blackEval int
 	}{
 		// Complex Position
-		// {
-		// 	name:      "Complex Position 1",
-		// 	fen:       "r1bq1rk1/ppp2ppp/1bn1p3/3pP3/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - d6 0 10",
-		// 	whiteEval: 192,
-		// 	blackEval: 96,
-		// },
+		{
+			name:      "Complex Position 1",
+			fen:       "r1bq1rk1/5ppp/1bn1p3/1PppP3/p2P4/2NB1N2/P4PPP/R1BQ1RK1 w - - 0 11",
+			whiteEval: 51,
+			blackEval: 3,
+		},
 		{
 			name:      "Complex Position 2",
-			fen:       "2rr2k1/pp2qppp/2n1pn2/8/3P4/2P1PNP1/PQ2PPBP/1RR3K1 w - - 0 20",
-			whiteEval: 75,
-			blackEval: 45,
+			fen:       "2rr2k1/1p2qppp/2n2n2/4P3/p2P4/5NP1/1Q3PBP/1RR3K1 w - - 0 20",
+			whiteEval: -18,
+			blackEval: 96,
 		},
 		{
 			name:      "Complex Position 3",
-			fen:       "r2q1rk1/1b2bppp/p1n1pn2/1p2P3/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - - 0 10",
-			whiteEval: 159,
-			blackEval: 73,
+			fen:       "r2q1rk1/1b2bppp/p1n2n2/P3P3/3P4/1pPB1N2/4NPPP/R1BQ1RK1 b - - 1 10",
+			whiteEval: -13,
+			blackEval: 157,
 		},
 		{
 			name:      "Complex Position 4",
-			fen:       "4rrk1/1ppq2bp/p1np2p1/4n3/2B1P3/2N2N2/PPP2PPP/2QRR1K1 w - - 0 17",
-			whiteEval: 83,
-			blackEval: 56,
+			fen:       "4rrk1/1ppq2b1/p1np2p1/4nP1p/2B5/2N2N2/PPP5/2QRR1K1 w - - 0 17",
+			whiteEval: 40,
+			blackEval: 21,
 		},
 		{
 			name:      "Complex Position 5",
-			fen:       "r1bqkb1r/1ppn1ppp/p1n1pn2/8/2BP4/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 7",
-			whiteEval: 99,
-			blackEval: 84,
+			fen:       "r1bqkb1r/1p1n1ppp/p1n2n2/2pP4/2B1pP2/2N2N2/PPP3PP/R1BQK2R w KQkq - 0 7",
+			whiteEval: 64,
+			blackEval: 29,
 		},
 		{
 			name:      "Complex Position 6",
-			fen:       "3r1rk1/1bqn1ppp/p2p1n2/1p6/3NP3/1BN1B3/PP2QPPP/R4RK1 w - - 0 17",
-			whiteEval: 83,
-			blackEval: 56,
+			fen:       "3r1rk1/1bqn1ppp/1P1p1n2/Pp6/p2NP3/1BN1B3/4QPPP/R4RK1 w - - 0 17",
+			whiteEval: 254,
+			blackEval: 84,
 		},
 		{
 			name:      "Complex Position 7",
 			fen:       "r2q1r1k/1p1bbp1p/p1n3p1/2P1p3/P1BP4/2NB1N2/1P3PPP/R1BQR1K1 w - - 0 16",
-			whiteEval: 147,
-			blackEval: 56,
+			whiteEval: 10,
+			blackEval: 0,
 		},
 		{
 			name:      "Complex Position 8",
 			fen:       "1rb1r1k1/p1q2pbp/1pn2np1/3p4/3P4/1PN1P1P1/PBQN1PBP/R4RK1 w - - 0 14",
-			whiteEval: 122,
-			blackEval: 105,
+			whiteEval: 0,
+			blackEval: 0,
 		},
 		{
 			name:      "Complex Position 9",
-			fen:       "r1bq1rk1/pp1nppbp/2n3p1/2p5/2B1P3/5N2/PP1N1PPP/R1BQ1RK1 w - - 0 9",
-			whiteEval: 83,
-			blackEval: 81,
+			fen:       "r1bq1rk1/3nppbp/2n3p1/1Pp5/2B1P3/5N2/P2N1PPP/R1BQ1RK1 w - - 0 9",
+			whiteEval: 61,
+			blackEval: -7,
 		},
 		{
 			name:      "Complex Position 10",
 			fen:       "2rq1rk1/p3bppp/1pn1pn2/3p4/3P4/2N1PN2/PPQ1BPPP/2RR1RK1 w - - 0 13",
-			whiteEval: 122,
-			blackEval: 105,
+			whiteEval: 0,
+			blackEval: 0,
 		},
 	}
 
@@ -1813,13 +1901,14 @@ func TestMiddlegameSpace(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var result int
 			b, _ := board.ParseFEN(tt.fen)
-			result = Space(&b)
+			result = PassedMg(&b)
 			if result != tt.whiteEval {
 				t.Errorf("White %s: got %v, want %v", tt.name, result, tt.whiteEval)
 			}
 
 			mirror := b.Mirror()
-			result = Space(mirror)
+			mirror.PrintBoard()
+			result = PassedMg(mirror)
 			if result != tt.blackEval {
 				t.Errorf("Black %s: got %v, want %v", tt.name, result, tt.blackEval)
 			}

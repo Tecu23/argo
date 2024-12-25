@@ -1609,10 +1609,9 @@ func PassedMg(b *board.Board) int {
 		}
 
 		score := 0
-
 		score += []int{0, 10, 17, 15, 62, 168, 276}[PassedRank(b, sq)]
 		score += PassedBlock(b, sq)
-		score -= PassedFile(b, sq)
+		score -= 11 * PassedFile(b, sq)
 
 		finalScore += score
 	}
@@ -1623,14 +1622,14 @@ func PassedMg(b *board.Board) int {
 // PassedLeverable returns candidate passers without candidate passers w/o
 // feasible lever
 func PassedLeverable(b *board.Board, sq int) int {
-	if b.CandidatePassed(color.WHITE) == 0 {
+	if !b.IsPassedPawn(sq) {
 		return 0
 	}
 
 	rank := sq / 8
 	file := sq % 8
 
-	if !b.Bitboards[BP].Test((rank-1)*8 + file) {
+	if !b.Bitboards[BP].Test((rank-1)*8+file) && rank > 0 {
 		return 1
 	}
 
@@ -1686,7 +1685,7 @@ func PassedBlock(b *board.Board, sq int) int {
 		return 0
 	}
 
-	if b.Occupancies[color.BOTH].Test((rank-1)*8 + file) {
+	if b.Occupancies[color.BOTH].Test((rank-1)*8+file) && rank > 0 {
 		return 0
 	}
 
@@ -1700,7 +1699,7 @@ func PassedBlock(b *board.Board, sq int) int {
 
 	defended, unsafe, wunsafe, defended1, unsafe1 := 0, 0, 0, 0, 0
 
-	for y := rank - 1; y >= 0; y++ {
+	for y := rank - 1; y >= 0; y-- {
 		if Attack(b, y*8+file) > 0 {
 			defended++
 		}
