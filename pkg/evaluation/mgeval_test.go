@@ -1819,7 +1819,6 @@ func TestMiddleGamePassedPawnEvaluation(t *testing.T) {
 			}
 
 			mirror := b.Mirror()
-			mirror.PrintBoard()
 			result = PassedMg(mirror)
 			if result != tt.blackEval {
 				t.Errorf("Black %s: got %v, want %v", tt.name, result, tt.blackEval)

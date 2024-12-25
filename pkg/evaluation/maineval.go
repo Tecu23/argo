@@ -6,6 +6,7 @@ import (
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
+// MainEvaluation implements the Stockfish Evaluation Guide
 func MainEvaluation(b *board.Board) int {
 	mg := MiddleGameEvaluation(b, false)
 	eg := EndGameEvaluation(b, false)
@@ -23,6 +24,7 @@ func MainEvaluation(b *board.Board) int {
 	return v
 }
 
+// MiddleGameEvaluation evaluates position for middlegame and the opening phases
 func MiddleGameEvaluation(b *board.Board, noWinnable bool) int {
 	score := 0
 	mirror := b.Mirror()
@@ -45,6 +47,7 @@ func MiddleGameEvaluation(b *board.Board, noWinnable bool) int {
 	return score
 }
 
+// EndGameEvaluation evaluates position for endgame phase
 func EndGameEvaluation(b *board.Board, noWinnable bool) int {
 	score := 0
 	mirror := b.Mirror()

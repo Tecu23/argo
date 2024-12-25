@@ -2517,7 +2517,6 @@ func Winnable(b *board.Board) int {
 			if b.Bitboards[WP].Test(y*8 + x) {
 				open[0] = 1
 				pawns++
-
 			} else if b.Bitboards[BP].Test(y*8 + x) {
 				open[1] = 1
 				pawns++
@@ -2527,7 +2526,7 @@ func Winnable(b *board.Board) int {
 				kx[0] = x
 				ky[0] = y
 
-			} else if b.Bitboards[BP].Test(y*8 + x) {
+			} else if b.Bitboards[BK].Test(y*8 + x) {
 				kx[1] = x
 				ky[1] = y
 			}
@@ -2559,6 +2558,10 @@ func Winnable(b *board.Board) int {
 	score += 9 * outflanking
 	if infiltration {
 		score += 24
+	}
+
+	if bothFlanks {
+		score += 21
 	}
 
 	if purePawn {
