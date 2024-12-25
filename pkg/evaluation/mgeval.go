@@ -1,12 +1,14 @@
 package evaluation
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
 	evalhelpers "github.com/Tecu23/argov2/pkg/evaluation/helpers"
+	"github.com/Tecu23/argov2/pkg/util"
 )
 
 func PieceValueMg(b *board.Board) int {
@@ -1165,18 +1167,33 @@ func ThreatsMg(b *board.Board) int {
 	score := 0
 
 	score += 69 * Hanging(b)
+	fmt.Println("hanging", Hanging(b))
+
 	if KingThreat(b) {
 		score += 24
 	}
 
+	fmt.Println("pawnpushrhreat", PawnPushThreat(b))
 	score += 48 * PawnPushThreat(b)
+	fmt.Println("threatsafepawn", ThreatSafePawn(b))
 	score += 173 * ThreatSafePawn(b)
+	fmt.Println("slideronqueen", SliderOnQueen(b))
 	score += 60 * SliderOnQueen(b)
+	fmt.Println("knightonqueen", KnightOnQueen(b))
 	score += 16 * KnightOnQueen(b)
+	fmt.Println("restricted", Restricted(b))
 	score += 7 * Restricted(b)
+	fmt.Println("weakqueenprotection", WeakQueenProtection(b))
 	score += 14 * WeakQueenProtection(b)
 
 	for sq := A8; sq <= H1; sq++ {
+		fmt.Println(
+			util.Sq2Fen[sq],
+			"minortreath",
+			MinorThreat(b, sq),
+			"rookthreat",
+			RookThreat(b, sq),
+		)
 		score += []int{0, 5, 57, 77, 88, 79, 0}[MinorThreat(b, sq)]
 		score += []int{0, 3, 37, 42, 0, 58, 0}[RookThreat(b, sq)]
 	}
@@ -1269,41 +1286,44 @@ func KingThreat(b *board.Board) bool {
 // PawnPushThreat returns the number of pawns that can be safely pushed
 // and attack and enemy piece
 func PawnPushThreat(b *board.Board) int {
-	blackBB := b.Occupancies[color.BLACK]
-	for blackBB != 0 {
-		sq := blackBB.FirstOne()
-
+	score := 0
+	for sq := A8; sq <= H1; sq++ {
 		rank := sq / 8
 		file := sq % 8
+
+		if !b.Occupancies[color.BLACK].Test(sq) {
+			continue
+		}
 
 		for ix := -1; ix <= 1; ix += 2 {
 			if b.Bitboards[WP].Test((rank+2)*8+file+ix) &&
 				file+ix >= 0 && file+ix <= 7 && rank+2 <= 7 &&
-				b.Occupancies[color.BOTH].Test((rank+1)*8+file+ix) &&
-				!(b.Bitboards[BP].Test(rank*8+file+ix-1) && file+ix-1 >= 0 && file+ix-1 <= 7) &&
-				!(b.Bitboards[BP].Test(rank*8+file+ix+1) && file+ix+1 >= 0 && file+ix+1 <= 7) &&
+				!b.Occupancies[color.BOTH].Test((rank+1)*8+file+ix) &&
+				(!b.Bitboards[BP].Test(rank*8+file+ix-1) && file+ix-1 >= 0 && file+ix-1 <= 7) &&
+				(!b.Bitboards[BP].Test(rank*8+file+ix+1) && file+ix+1 >= 0 && file+ix+1 <= 7) &&
 				(Attack(b, (rank+1)*8+file+ix) > 0 || Attack(b.Mirror(), (6-rank)*8+file+ix) == 0) {
-				return 1
+				score++
 			}
 
-			if file == 3 && b.Bitboards[WP].Test((rank+3)*8+file+ix) &&
-				file+ix >= 0 && file+ix <= 7 && rank+3 <= 7 &&
-				b.Occupancies[color.BOTH].Test((rank+1)*8+file+ix) &&
-				b.Occupancies[color.BOTH].Test((rank+2)*8+file+ix) &&
-				!(b.Bitboards[BP].Test(rank*8+file+ix-1) && file+ix-1 >= 0 && file+ix-1 <= 7) &&
-				!(b.Bitboards[BP].Test(rank*8+file+ix+1) && file+ix+1 >= 0 && file+ix+1 <= 7) &&
+			if rank == 3 &&
+				(b.Bitboards[WP].Test((rank+3)*8+file+ix) && file+ix >= 0 && file+ix <= 7 && rank+3 <= 7) &&
+				(!b.Occupancies[color.BOTH].Test((rank+2)*8+file+ix) && rank+2 <= 7) &&
+				(!b.Occupancies[color.BOTH].Test((rank+1)*8+file+ix) && rank+1 <= 7) &&
+				(!b.Bitboards[BP].Test(rank*8+file+ix-1) && file+ix-1 >= 0 && file+ix-1 <= 7) &&
+				(!b.Bitboards[BP].Test(rank*8+file+ix+1) && file+ix+1 >= 0 && file+ix+1 <= 7) &&
 				(Attack(b, (rank+1)*8+file+ix) > 0 || Attack(b.Mirror(), (6-rank)*8+file+ix) == 0) {
-				return 1
+				score++
 			}
 		}
 
 	}
-	return 0
+	return score
 }
 
 // ThreatSafePawn returns the non-pawn enemies attacked by a safe pawn
 func ThreatSafePawn(b *board.Board) int {
-	blackBB := b.Occupancies[color.BLACK]
+	score := 0
+	blackBB := b.Bitboards[BP] ^ b.Occupancies[color.BLACK]
 	for blackBB != 0 {
 		sq := blackBB.FirstOne()
 
@@ -1311,15 +1331,16 @@ func ThreatSafePawn(b *board.Board) int {
 		file := sq % 8
 
 		if evalhelpers.PawnAttack(b, sq) == 0 {
-			return 0
+			continue
 		}
 
 		if (SafePawn(b, (rank+1)*8+file-1) && file > 0 && rank < 7) ||
 			(SafePawn(b, (rank+1)*8+file+1) && file < 7 && rank < 7) {
-			return 1
+			fmt.Println("square that is wrong", util.Sq2Fen[sq])
+			score++
 		}
 	}
-	return 0
+	return score
 }
 
 // SafePawn returns whether or not our pawn is not attacked or is defended
@@ -1345,35 +1366,32 @@ func SafePawn(b *board.Board, sq int) bool {
 // SliderOnQueen adds a bonus for safe slider attack threats on opponent queen
 func SliderOnQueen(b *board.Board) int {
 	mirror := b.Mirror()
+	score := 0
 
 	if QueenCount(mirror) != 1 {
 		return 0
 	}
 
 	rank, file := 0, 0
-	sq := 0
 
-	bb := b.Bitboards[WB] | b.Bitboards[WR] | b.Bitboards[WQ]
-	for bb != 0 {
-		sq = bb.FirstOne()
-
+	for sq := A8; sq <= H1; sq++ {
 		rank = sq / 8
 		file = sq % 8
 
 		if b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
-			return 0
+			continue
 		}
 
-		if b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
-			return 0
+		if b.Bitboards[BP].Test((rank-1)*8+file+1) && rank > 0 && file < 7 {
+			continue
 		}
 
 		if Attack(b, sq) <= 1 {
-			return 0
+			continue
 		}
 
 		if !MobilityArea(b, sq) {
-			return 0
+			continue
 		}
 
 		diagonal := evalhelpers.QueenAttackDiagonal(mirror, (7-rank)*8+file, -1)
@@ -1383,16 +1401,17 @@ func SliderOnQueen(b *board.Board) int {
 		}
 
 		if diagonal != 0 && evalhelpers.BishopXrayAttack(b, sq, -1) != 0 {
-			return v
+			score += v
 		}
 
-		if diagonal == 0 && evalhelpers.RookXrayAttack(b, sq, -1) != 0 &&
+		if diagonal == 0 &&
+			evalhelpers.RookXrayAttack(b, sq, -1) != 0 &&
 			evalhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) != 0 {
-			return v
+			score += v
 		}
 	}
 
-	return 0
+	return score
 }
 
 // QueenCount returns the number of white queens
@@ -1415,34 +1434,33 @@ func KnightOnQueen(b *board.Board) int {
 		return 0
 	}
 
-	sq, rank, file := 0, 0, 0
+	rank, file := 0, 0
 
-	bb := b.Bitboards[WN]
-	for bb != 0 {
+	score := 0
 
-		sq = bb.FirstOne()
+	for sq := A8; sq <= H1; sq++ {
 
 		rank = sq / 8
 		file = sq % 8
 
 		if b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
-			return 0
+			continue
 		}
 
 		if b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
-			return 0
+			continue
 		}
 
 		if Attack(b, sq) <= 1 && Attack(mirror, (7-rank)*8+file) > 1 {
-			return 0
+			continue
 		}
 
 		if !MobilityArea(b, sq) {
-			return 0
+			continue
 		}
 
 		if evalhelpers.KnightAttack(b, sq, -1) == 0 {
-			return 0
+			continue
 		}
 
 		v := 1
@@ -1451,22 +1469,22 @@ func KnightOnQueen(b *board.Board) int {
 		}
 
 		if abs(blackQueenFile-file) == 2 && abs(blackQueenRank-rank) == 1 {
-			return v
+			score += v
 		}
 
 		if abs(blackQueenFile-file) == 1 && abs(blackQueenRank-rank) == 2 {
-			return v
+			score += v
 		}
 	}
 
-	return 0
+	return score
 }
 
 // Restricted returns a bonus for restricing their pieces moves
 func Restricted(b *board.Board) int {
 	restricted := 0
 
-	for sq := A8; sq <= H8; sq++ {
+	for sq := A8; sq <= H1; sq++ {
 		if Attack(b, sq) == 0 {
 			continue
 		}
@@ -1499,7 +1517,7 @@ func Restricted(b *board.Board) int {
 func WeakQueenProtection(b *board.Board) int {
 	weakPieces := 0
 
-	for sq := A8; sq <= H8; sq++ {
+	for sq := A8; sq <= H1; sq++ {
 		if WeakEnemies(b, sq) == 0 {
 			continue
 		}

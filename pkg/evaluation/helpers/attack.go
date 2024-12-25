@@ -222,6 +222,7 @@ func QueenAttackDiagonal(b *board.Board, sq int, sq2 int) int {
 
 		for d := 1; d < 8; d++ {
 			if b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
+				(file+d*ix >= 0 && file+d*ix <= 7 && rank+d*iy >= 0 && rank+d*iy <= 7) &&
 				(sq2 == -1 || file2 == file+d*ix && rank2 == rank+d*iy) {
 				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
 
@@ -230,7 +231,7 @@ func QueenAttackDiagonal(b *board.Board, sq int, sq2 int) int {
 				}
 			}
 
-			if !b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
+			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
 				break
 			}
 		}
@@ -256,7 +257,7 @@ func KingAttack(b *board.Board, sq int) int {
 		iy := (((i + factor) / 3) << 0) - 1
 		if b.Bitboards[WK].Test((rank+iy)*8+file+ix) &&
 			file+ix >= 0 && file+ix <= 7 &&
-			rank+iy >= 0 && rank+iy <= 0 {
+			rank+iy >= 0 && rank+iy <= 7 {
 			return 1
 		}
 	}
