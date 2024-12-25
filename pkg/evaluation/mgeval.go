@@ -1,14 +1,12 @@
 package evaluation
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
 	evalhelpers "github.com/Tecu23/argov2/pkg/evaluation/helpers"
-	"github.com/Tecu23/argov2/pkg/util"
 )
 
 func PieceValueMg(b *board.Board) int {
@@ -1155,6 +1153,7 @@ func MobilityArea(b *board.Board, sq int) bool {
 func BlockersForKing(b *board.Board, sq int) int {
 	mirror := b.Mirror()
 	rank := sq / 8
+
 	if evalhelpers.PinnedDirection(mirror, (7-rank)*8+(sq%8)) > 0 {
 		return 1
 	}
@@ -1167,33 +1166,19 @@ func ThreatsMg(b *board.Board) int {
 	score := 0
 
 	score += 69 * Hanging(b)
-	fmt.Println("hanging", Hanging(b))
 
 	if KingThreat(b) {
 		score += 24
 	}
 
-	fmt.Println("pawnpushrhreat", PawnPushThreat(b))
 	score += 48 * PawnPushThreat(b)
-	fmt.Println("threatsafepawn", ThreatSafePawn(b))
 	score += 173 * ThreatSafePawn(b)
-	fmt.Println("slideronqueen", SliderOnQueen(b))
 	score += 60 * SliderOnQueen(b)
-	fmt.Println("knightonqueen", KnightOnQueen(b))
 	score += 16 * KnightOnQueen(b)
-	fmt.Println("restricted", Restricted(b))
 	score += 7 * Restricted(b)
-	fmt.Println("weakqueenprotection", WeakQueenProtection(b))
 	score += 14 * WeakQueenProtection(b)
 
 	for sq := A8; sq <= H1; sq++ {
-		fmt.Println(
-			util.Sq2Fen[sq],
-			"minortreath",
-			MinorThreat(b, sq),
-			"rookthreat",
-			RookThreat(b, sq),
-		)
 		score += []int{0, 5, 57, 77, 88, 79, 0}[MinorThreat(b, sq)]
 		score += []int{0, 3, 37, 42, 0, 58, 0}[RookThreat(b, sq)]
 	}
@@ -1336,7 +1321,6 @@ func ThreatSafePawn(b *board.Board) int {
 
 		if (SafePawn(b, (rank+1)*8+file-1) && file > 0 && rank < 7) ||
 			(SafePawn(b, (rank+1)*8+file+1) && file < 7 && rank < 7) {
-			fmt.Println("square that is wrong", util.Sq2Fen[sq])
 			score++
 		}
 	}
@@ -1856,49 +1840,67 @@ func KingMg(b *board.Board) int {
 // quality of the pawn shelter
 func KingDanger(b *board.Board) int {
 	score := 0
-	kingBB := b.Bitboards[WK]
-	for kingBB != 0 {
-		sq := kingBB.FirstOne()
 
-		count := KingAttackersCount(b, sq)
-		weight := KingAttackersWeight(b, sq)
-		kingAttacks := evalhelpers.KingAttack(b, sq)
-		weak := WeakBonus(b, sq)
-		unsafeChecks := UnsafeChecks(b, sq)
-		blockersForKing := BlockersForKing(b, sq)
-		kingFlankAttack := FlankAttack(b)
-		kingFlankDefense := FlankDefense(b)
-		noQueen := 1
-		if QueenCount(b) > 0 {
-			noQueen = 0
-		}
+	count := 0
+	weight := 0
+	kingAttacks := 0
+	weak := 0
+	unsafeChecks := 0
+	blockersForKing := 0
 
-		knightBonusFactor := 0
-		if KnightDefender(b.Mirror()) > 0 {
-			knightBonusFactor = 1
-		}
-
-		score = count*weight +
-			69*kingAttacks +
-			185*weak -
-			100*knightBonusFactor +
-			148*unsafeChecks +
-			98*blockersForKing -
-			4*kingFlankDefense +
-			((3 * kingFlankAttack * kingFlankAttack / 8) << 0) -
-			873*noQueen -
-			((6 * (ShelterStrength(b, -1) - ShelterStorm(b, -1)) / 8) << 0) +
-			MobilityMg(b) - MobilityMg(b.Mirror()) +
-			37 +
-			((772 * int(min(SafeCheck(b, -1, 3), 1.45))) << 0) +
-			((1084 * int(min(SafeCheck(b, -1, 2), 1.75))) << 0) +
-			((645 * int(min(SafeCheck(b, -1, 1), 1.50))) << 0) +
-			((792 * int(min(SafeCheck(b, -1, 0), 1.62))) << 0)
+	whiteBB := b.Occupancies[color.WHITE]
+	for whiteBB != 0 {
+		sq := whiteBB.FirstOne()
+		count += KingAttackersCount(b, sq)
+		weight += KingAttackersWeight(b, sq)
+		kingAttacks += KingAttacks(b, sq)
 	}
+
+	for sq := A8; sq <= H1; sq++ {
+		unsafeChecks += UnsafeChecks(b, sq)
+		weak += WeakBonus(b, sq)
+	}
+
+	blackBB := b.Occupancies[color.BLACK]
+	for blackBB != 0 {
+		sq := blackBB.FirstOne()
+		blockersForKing += BlockersForKing(b, sq)
+	}
+
+	kingFlankAttack := FlankAttack(b)
+	kingFlankDefense := FlankDefense(b)
+
+	noQueen := 1
+	if QueenCount(b) > 0 {
+		noQueen = 0
+	}
+
+	knightBonusFactor := 0
+	if KnightDefender(b.Mirror()) > 0 {
+		knightBonusFactor = 1
+	}
+
+	score = count*weight +
+		69*kingAttacks +
+		185*weak -
+		100*knightBonusFactor +
+		148*unsafeChecks +
+		98*blockersForKing -
+		4*kingFlankDefense +
+		((3 * kingFlankAttack * kingFlankAttack / 8) << 0) -
+		873*noQueen -
+		((6 * (ShelterStrength(b, -1) - ShelterStorm(b, -1)) / 8) << 0) +
+		MobilityMg(b) - MobilityMg(b.Mirror()) +
+		37 +
+		((772 * int(min(SafeCheck(b, -1, 3), 1.45))) << 0) +
+		((1084 * int(min(SafeCheck(b, -1, 2), 1.75))) << 0) +
+		((645 * int(min(SafeCheck(b, -1, 1), 1.50))) << 0) +
+		((792 * int(min(SafeCheck(b, -1, 0), 1.62))) << 0)
 
 	if score > 100 {
 		return score
 	}
+
 	return 0
 }
 
@@ -1961,6 +1963,40 @@ func KingAttackersWeight(b *board.Board, sq int) int {
 	return 0
 }
 
+// KingAttacks is the number of attacks by the given color to squares directly
+// adjancent to the enemy king. Pieces which attack more than one square are
+// counted multuple times. For instance, If there is a white knight on g5 and
+// black's king is on g8, this white knight adds 2.
+func KingAttacks(b *board.Board, sq int) int {
+	if b.Bitboards[WP].Test(sq) || b.Bitboards[WK].Test(sq) {
+		return 0
+	}
+
+	if KingAttackersCount(b, sq) == 0 {
+		return 0
+	}
+
+	score := 0
+
+	kingBB := b.Bitboards[BK]
+	kingSq := kingBB.FirstOne()
+
+	kingRank := kingSq / 8
+	kingFile := kingSq % 8
+
+	for x := kingFile - 1; x <= kingFile+1; x++ {
+		for y := kingRank - 1; y <= kingRank+1; y++ {
+			if x >= 0 && y >= 0 && x <= 7 && y <= 7 && (x != kingFile || y != kingRank) {
+				score += evalhelpers.KnightAttack(b, y*8+x, sq)
+				score += evalhelpers.BishopXrayAttack(b, y*8+x, sq)
+				score += evalhelpers.RookXrayAttack(b, y*8+x, sq)
+				score += evalhelpers.QueenAttack(b, y*8+x, sq)
+			}
+		}
+	}
+	return score
+}
+
 // UnsafeChecks returns unsafe checks
 func UnsafeChecks(b *board.Board, sq int) int {
 	if Check(b, sq, 0) && SafeCheck(b, -1, 0) == 0 {
@@ -1983,10 +2019,8 @@ func Check(b *board.Board, sq int, t int) bool {
 	rank := sq / 8
 	file := sq % 8
 
-	if evalhelpers.RookXrayAttack(b, sq, -1) > 0 &&
-		(t == -1 || t == 2 || t == 4) ||
-		evalhelpers.QueenAttack(b, sq, -1) > 0 &&
-			(t == -1 || t == 3) {
+	if (evalhelpers.RookXrayAttack(b, sq, -1) > 0 && (t == -1 || t == 2 || t == 4)) ||
+		(evalhelpers.QueenAttack(b, sq, -1) > 0 && (t == -1 || t == 3)) {
 
 		for i := 0; i < 4; i++ {
 			ix := 0
@@ -2010,7 +2044,7 @@ func Check(b *board.Board, sq int, t int) bool {
 					return true
 				}
 
-				if (!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) ||
+				if (!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) &&
 					b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix)) &&
 					file+d*ix >= 0 && file+d*ix <= 7 && rank+d*iy >= 0 && rank+d*iy <= 7 {
 					break
@@ -2019,10 +2053,8 @@ func Check(b *board.Board, sq int, t int) bool {
 		}
 	}
 
-	if evalhelpers.BishopXrayAttack(b, sq, -1) > 0 &&
-		(t == -1 || t == 1 || t == 4) ||
-		evalhelpers.QueenAttack(b, sq, -1) > 0 &&
-			(t == -1 || t == 3) {
+	if (evalhelpers.BishopXrayAttack(b, sq, -1) > 0 && (t == -1 || t == 1 || t == 4)) ||
+		(evalhelpers.QueenAttack(b, sq, -1) > 0 && (t == -1 || t == 3)) {
 
 		factor1, factor2 := 0, 0
 
@@ -2045,7 +2077,7 @@ func Check(b *board.Board, sq int, t int) bool {
 					return true
 				}
 
-				if (!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) ||
+				if (!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) &&
 					b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix)) &&
 					file+d*ix >= 0 && file+d*ix <= 7 && rank+d*iy >= 0 && rank+d*iy <= 7 {
 					break
@@ -2054,8 +2086,7 @@ func Check(b *board.Board, sq int, t int) bool {
 		}
 	}
 
-	if evalhelpers.KnightAttack(b, sq, -1) > 0 &&
-		(t == -1 || t == 0 || t == 4) {
+	if evalhelpers.KnightAttack(b, sq, -1) > 0 && (t == -1 || t == 0 || t == 4) {
 		if (b.Bitboards[BK].Test((rank+1)*8+file+2) && rank < 7 && file < 6) ||
 			(b.Bitboards[BK].Test((rank-1)*8+file+2) && rank > 0 && file < 6) ||
 			(b.Bitboards[BK].Test((rank+2)*8+file+1) && rank < 6 && file < 7) ||
@@ -2071,37 +2102,37 @@ func Check(b *board.Board, sq int, t int) bool {
 	return false
 }
 
-// SafeCheck analyses the sage enemy's checks which are possible on the next move.
-// Enemy queen safe checks: we count them only if they are from squares from which
-// we can't give a rook check: we count them only if they are from squares from
+// SafeCheck analyses the sage enemy”t give a rook check: we count them only if they are from squares from
 // which we can't give a queen check, because queen checks are more valuable
 func SafeCheck(b *board.Board, sq int, t int) float32 {
+	score := float32(0.0)
 	if sq == -1 {
-		blackPieces := b.Occupancies[color.BLACK]
-		for blackPieces != 0 {
-			sq := blackPieces.FirstOne()
+		for sq := A8; sq <= H1; sq++ {
+			if b.Occupancies[color.WHITE].Test(sq) {
+				continue
+			}
 
 			rank := sq / 8
 			file := sq % 8
 
 			if !Check(b, sq, t) {
-				return 0.0
+				continue
 			}
 
 			mirror := b.Mirror()
 
 			if t == 3 && SafeCheck(b, sq, 2) > 0 {
-				return 0.0
+				continue
 			}
 
 			if t == 1 && SafeCheck(b, sq, 3) > 0 {
-				return 0.0
+				continue
 			}
 
-			if Attack(mirror, (rank-7)*8+file) == 0 ||
-				(WeakSquares(b, sq) > 0 && Attack(b, sq) > 1) &&
-					(t != 3 || evalhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) == 0) {
-				return 1.0
+			if (Attack(mirror, (7-rank)*8+file) == 0 ||
+				(WeakSquares(b, sq) > 0 && Attack(b, sq) > 1)) &&
+				(t != 3 || evalhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) == 0) {
+				score += 1.0
 			}
 		}
 	} else {
@@ -2122,14 +2153,14 @@ func SafeCheck(b *board.Board, sq int, t int) float32 {
 			return 0.0
 		}
 
-		if Attack(mirror, (rank-7)*8+file) == 0 ||
-			(WeakSquares(b, sq) > 0 && Attack(b, sq) > 1) &&
-				(t != 3 || evalhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) == 0) {
-			return 1.0
+		if (Attack(mirror, (7-rank)*8+file) == 0 ||
+			(WeakSquares(b, sq) > 0 && Attack(b, sq) > 1)) &&
+			(t != 3 || evalhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) == 0) {
+			score += 1.0
 		}
 	}
 
-	return 0.0
+	return score
 }
 
 // FlankAttack finds the squares that opponent attacks in our king flank
@@ -2146,26 +2177,26 @@ func FlankAttack(b *board.Board) int {
 		kingBB := b.Bitboards[BK]
 		kingSq := kingBB.FirstOne()
 
-		kingFile := kingSq & 8
+		kingFile := kingSq % 8
 
 		if kingFile == 0 && file > 2 {
-			break
+			continue
 		}
 
 		if kingFile < 3 && file > 3 {
-			break
+			continue
 		}
 
 		if kingFile >= 3 && kingFile < 5 && (file < 2 || file > 5) {
-			break
+			continue
 		}
 
 		if kingFile >= 5 && file < 4 {
-			break
+			continue
 		}
 
 		if kingFile == 7 && file < 5 {
-			break
+			continue
 		}
 
 		a := Attack(b, sq)
@@ -2196,26 +2227,26 @@ func FlankDefense(b *board.Board) int {
 		kingBB := b.Bitboards[BK]
 		kingSq := kingBB.FirstOne()
 
-		kingFile := kingSq & 8
+		kingFile := kingSq % 8
 
 		if kingFile == 0 && file > 2 {
-			break
+			continue
 		}
 
 		if kingFile < 3 && file > 3 {
-			break
+			continue
 		}
 
 		if kingFile >= 3 && kingFile < 5 && (file < 2 || file > 5) {
-			break
+			continue
 		}
 
 		if kingFile >= 5 && file < 4 {
-			break
+			continue
 		}
 
 		if kingFile == 7 && file < 5 {
-			break
+			continue
 		}
 
 		a := Attack(b.Mirror(), (7-rank)*8+file)
@@ -2251,8 +2282,9 @@ func ShelterStrength(b *board.Board, square int) int {
 		if b.Bitboards[BK].Test(sq) ||
 			uint(b.Castlings)&ShortB != 0 && file == 6 && rank == 0 ||
 			uint(b.Castlings)&LongB != 0 && file == 2 && rank == 0 {
-			w1 := StrengthSquare(b, rank*8+file)
-			s1 := StormSquare(b, rank*8+file, false)
+
+			w1 := StrengthSquare(b, sq)
+			s1 := StormSquare(b, sq, false)
 
 			if s1-w1 < s-w {
 				w = w1
@@ -2301,11 +2333,10 @@ func StrengthSquare(b *board.Board, sq int) int {
 
 	for x := kx - 1; x <= kx+1; x++ {
 		us := 0
-
 		for y := 7; y >= rank; y-- {
 			if b.Bitboards[BP].Test(y*8+x) &&
-				(b.Bitboards[WP].Test((y+1)*8+x-1) && x > 0 && y < 7) &&
-				(b.Bitboards[WP].Test((y+1)*8+x+1) && x < 7 && y < 7) {
+				(!b.Bitboards[WP].Test((y+1)*8+x-1) || x <= 0 || y >= 7) &&
+				(!b.Bitboards[WP].Test((y+1)*8+x+1) || x >= 7 || y >= 7) {
 				us = y
 			}
 		}

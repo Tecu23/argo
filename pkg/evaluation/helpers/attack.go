@@ -293,7 +293,7 @@ func PinnedDirection(b *board.Board, sq int) int {
 		king := false
 
 		for d := 1; d < 8; d++ {
-			if b.Bitboards[BK].Test((rank+d*iy)*8 + file + d*ix) {
+			if b.Bitboards[WK].Test((rank+d*iy)*8 + file + d*ix) {
 				king = true
 			}
 			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
