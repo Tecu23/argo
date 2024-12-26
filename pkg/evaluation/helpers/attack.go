@@ -49,6 +49,7 @@ func KnightAttack(b *board.Board, sq int, sq2 int) int {
 		iy := (2 - factor1) * (factor3*2 - 1)
 
 		if b.Bitboards[WN].Test((rank+iy)*8+file+ix) &&
+			(rank+iy >= 0 && rank+iy <= 7 && file+ix >= 0 && file+ix <= 7) &&
 			(sq2 == -1 || file2 == file+ix && rank2 == rank+iy) &&
 			Pinned(b, (rank+iy)*8+file+ix) == 0 {
 			score++
@@ -246,7 +247,6 @@ func KingAttack(b *board.Board, sq int) int {
 	file := sq % 8
 
 	factor := 0
-
 	for i := 0; i < 8; i++ {
 		factor = 0
 		if i > 3 {

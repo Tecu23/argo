@@ -1203,6 +1203,7 @@ func Hanging(b *board.Board) int {
 
 		if !b.Bitboards[BP].Test(sq) && Attack(b, sq) > 1 {
 			weakEnemies++
+			continue
 		}
 
 		mirror := b.Mirror()
@@ -1210,6 +1211,7 @@ func Hanging(b *board.Board) int {
 		rank := sq / 8
 		if Attack(mirror, (7-rank)*8+file) == 0 {
 			weakEnemies++
+			continue
 		}
 	}
 	return weakEnemies
@@ -1256,19 +1258,28 @@ func Attack(b *board.Board, sq int) int {
 
 // KingThreat returns if the king is in threat
 func KingThreat(b *board.Board) bool {
+	threats := 0
 	blackBB := b.Occupancies[color.BLACK]
 	for blackBB != 0 {
 		sq := blackBB.FirstOne()
 
 		if WeakEnemies(b, sq) == 0 {
-			return false
+			continue
 		}
 
 		if evalhelpers.KingAttack(b, sq) == 0 {
-			return false
+			continue
 		}
+
+		threats++
+
 	}
-	return true
+
+	if threats > 0 {
+		return true
+	}
+
+	return false
 }
 
 // PawnPushThreat returns the number of pawns that can be safely pushed
@@ -1472,14 +1483,14 @@ func Restricted(b *board.Board) int {
 	restricted := 0
 
 	for sq := A8; sq <= H1; sq++ {
-		if Attack(b, sq) == 0 {
-			continue
-		}
-
 		rank := sq / 8
 		file := sq % 8
 
 		mirror := b.Mirror()
+
+		if Attack(b, sq) == 0 {
+			continue
+		}
 
 		if Attack(mirror, (7-rank)*8+file) == 0 {
 			continue
@@ -1895,10 +1906,10 @@ func KingDanger(b *board.Board) int {
 		((6 * (ShelterStrength(b, -1) - ShelterStorm(b, -1)) / 8) << 0) +
 		MobilityMg(b) - MobilityMg(b.Mirror()) +
 		37 +
-		((772 * int(min(SafeCheck(b, -1, 3), 1.45))) << 0) +
-		((1084 * int(min(SafeCheck(b, -1, 2), 1.75))) << 0) +
-		((645 * int(min(SafeCheck(b, -1, 1), 1.50))) << 0) +
-		((792 * int(min(SafeCheck(b, -1, 0), 1.62))) << 0)
+		int((772 * min(SafeCheck(b, -1, 3), 1.45))) +
+		int((1084 * min(SafeCheck(b, -1, 2), 1.75))) +
+		int((645 * min(SafeCheck(b, -1, 1), 1.50))) +
+		int((792 * min(SafeCheck(b, -1, 0), 1.62)))
 
 	if score > 100 {
 		return score
@@ -2427,8 +2438,8 @@ func StormSquare(b *board.Board, sq int, isEndgame bool) int {
 
 		for y := 7; y >= rank; y-- {
 			if b.Bitboards[BP].Test(y*8+x) &&
-				(b.Bitboards[WP].Test((y+1)*8+x-1) && x > 0 && y < 7) &&
-				(b.Bitboards[WP].Test((y+1)*8+x+1) && x < 7 && y < 7) {
+				(!b.Bitboards[WP].Test((y+1)*8+x-1) && x > 0 && y < 7) &&
+				(!b.Bitboards[WP].Test((y+1)*8+x+1) && x < 7 && y < 7) {
 				us = y
 			}
 

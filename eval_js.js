@@ -2,14 +2,14 @@ pos = {
   // chessboard
 
   b: [
-    ["-", "-", "p", "-", "-", "-", "P", "R"],
-    ["-", "b", "-", "p", "-", "B", "P", "-"],
-    ["-", "q", "-", "-", "-", "N", "-", "-"],
-    ["r", "n", "p", "-", "N", "-", "-", "-"],
-    ["-", "-", "-", "-", "P", "B", "Q", "-"],
-    ["r", "p", "n", "-", "-", "-", "P", "R"],
-    ["k", "p", "-", "-", "-", "-", "P", "K"],
+    ["-", "p", "-", "n", "-", "P", "-", "-"],
+    ["-", "-", "p", "-", "-", "-", "P", "B"],
+    ["-", "r", "-", "p", "-", "P", "-", "R"],
+    ["-", "-", "-", "-", "P", "-", "-", "N"],
+    ["-", "-", "p", "-", "-", "P", "-", "-"],
     ["-", "p", "-", "-", "-", "-", "P", "-"],
+    ["-", "-", "p", "-", "-", "P", "-", "-"],
+    ["-", "k", "-", "-", "-", "-", "K", "-"],
   ],
   // castling rights
   c: [false, false, false, false],
@@ -352,11 +352,29 @@ function attack(pos, square) {
   if (square == null) return sum(pos, attack);
   var v = 0;
   v += pawn_attack(pos, square);
+  if (square.x == 1 && square.y == 1) {
+    console.log(v);
+  }
   v += king_attack(pos, square);
+  if (square.x == 1 && square.y == 1) {
+    console.log(v);
+  }
   v += knight_attack(pos, square);
+  if (square.x == 1 && square.y == 1) {
+    console.log(v);
+  }
   v += bishop_xray_attack(pos, square);
+  if (square.x == 1 && square.y == 1) {
+    console.log(v);
+  }
   v += rook_xray_attack(pos, square);
+  if (square.x == 1 && square.y == 1) {
+    console.log(v);
+  }
   v += queen_attack(pos, square);
+  if (square.x == 1 && square.y == 1) {
+    console.log(v);
+  }
   return v;
 }
 
@@ -732,4 +750,33 @@ function pawnless_flank(pos) {
   return sum == 0 ? 1 : 0;
 }
 
-console.log(blockers_for_king(pos));
+function restricted(pos, square) {
+  if (square == null) return sum(pos, restricted);
+
+  if (attack(pos, square) == 0) {
+    console.log("1");
+    return 0;
+  }
+
+  var pos2 = colorflip(pos);
+
+  if (!attack(pos2, { x: square.x, y: 7 - square.y })) {
+    console.log("2");
+    return 0;
+  }
+
+  if (pawn_attack(pos2, { x: square.x, y: 7 - square.y }) > 0) {
+    console.log("3");
+    return 0;
+  }
+  if (
+    attack(pos2, { x: square.x, y: 7 - square.y }) > 1 &&
+    attack(pos, square) == 1
+  ) {
+    console.log("4");
+    return 0;
+  }
+  return 1;
+}
+
+console.log(restricted(pos, { x: 1, y: 6 }));

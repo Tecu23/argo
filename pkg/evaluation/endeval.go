@@ -168,13 +168,42 @@ func PawnsEg(b *board.Board) int {
 		}
 
 		if Connected(b, sq) {
-			score += ConnectedBonus(b, sq) * ((8 - (sq / 8) - 3) / 4)
+			score += ConnectedBonus(b, sq) * (8 - (sq / 8) - 3) / 4
 		}
 
 		score -= 27 * WeakUnopposedPawn(b, sq)
+		score -= 56 * WeakLever(b, sq)
 		score += []int{0, -4, 4}[Blocked(b, sq)]
 	}
 	return score
+}
+
+// WeakLever adds a penalty for unsupported pawns attacked twice by enemy pawns
+func WeakLever(b *board.Board, sq int) int {
+	if !b.Bitboards[WP].Test(sq) {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	if !b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
+		return 0
+	}
+
+	if !b.Bitboards[BP].Test((rank-1)*8+file+1) && rank > 0 && file < 7 {
+		return 0
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*8+file-1) && rank < 7 && file > 0 {
+		return 0
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*8+file+1) && rank < 7 && file < 7 {
+		return 0
+	}
+
+	return 1
 }
 
 // PiecesEg returns endgame bonuses and penalties to the pieces
@@ -361,7 +390,7 @@ func KingEg(b *board.Board) int {
 		score += 95
 	}
 	kd := KingDanger(b)
-	score += kd / 16
+	score += (kd / 16) << 0
 	return score
 }
 

@@ -53,7 +53,7 @@ func EndGameEvaluation(b *board.Board, noWinnable bool) int {
 	mirror := b.Mirror()
 
 	score += PieceValueEg(b) - PieceValueEg(mirror)
-	score += PsqtEg(b) - PieceValueEg(mirror)
+	score += PsqtEg(b) - PsqtEg(mirror)
 	score += ImbalanceTotal(b, mirror)
 	score += PawnsEg(b) - PawnsEg(mirror)
 	score += PiecesEg(b) - PiecesEg(mirror)
