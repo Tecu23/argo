@@ -12,11 +12,11 @@ func PawnAttack(b *board.Board, sq int) int {
 	v := 0
 	file := sq % 8
 	rank := sq / 8
-	if b.Bitboards[WP].Test((rank+1)*8+file-1) && file > 0 {
+	if b.Bitboards[WP].Test((rank+1)*8+file-1) && file > 0 && rank < 7 {
 		v++
 	}
 
-	if b.Bitboards[WP].Test((rank+1)*8+file+1) && file < 7 {
+	if b.Bitboards[WP].Test((rank+1)*8+file+1) && file < 7 && rank < 7 {
 		v++
 	}
 	return v
