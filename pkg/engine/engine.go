@@ -5,12 +5,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/Tecu23/argov2/internal/counter"
 	"github.com/Tecu23/argov2/internal/history"
 	"github.com/Tecu23/argov2/internal/killer"
 	"github.com/Tecu23/argov2/internal/reduction"
-	logger "github.com/Tecu23/argov2/internal/searchlogger"
+	"github.com/Tecu23/argov2/internal/transposition"
 	. "github.com/Tecu23/argov2/internal/types"
-	"github.com/Tecu23/argov2/pkg/evaluation"
+	"github.com/Tecu23/argov2/pkg/eval"
 	"github.com/Tecu23/argov2/pkg/move"
 )
 
@@ -22,35 +23,31 @@ type mainLine struct {
 }
 
 type Engine struct {
-	nodes          int64
-	Options        Options
-	mainLine       mainLine
-	start          time.Time
-	progress       func(SearchInfo)
-	timeManager    *timeManager
-	cancel         context.CancelFunc
-	evaluator      evaluation.Evaluator
-	tt             *TranspositionTable
-	reductionTable *reduction.Table
-	historyTable   *history.HistoryTable
-	killerTable    *killer.Table
-	logger         *logger.SearchLogger
+	nodes       int64
+	Options     Options
+	mainLine    mainLine
+	start       time.Time
+	progress    func(SearchInfo)
+	timeManager *timeManager
+	cancel      context.CancelFunc
+	evaluator   eval.Evaluator
+
+	tt               *transposition.Table
+	reductionTable   *reduction.Table
+	historyTable     *history.Table
+	killerTable      *killer.Table
+	counterMoveTable *counter.MoveTable
 }
 
 func NewEngine(options Options) *Engine {
-	log, err := logger.NewSearchLogger("debug.txt")
-	if err != nil {
-		return nil
-	}
 	return &Engine{
-		Options:        options,
-		evaluator:      *evaluation.NewEvaluator(),
-		tt:             NewTranspositionTable(32),
-		reductionTable: reduction.New(),
-		historyTable:   history.New(),
-		killerTable:    killer.New(),
-		logger:         log,
-		// stats:          &SearchStats{},
+		Options:          options,
+		evaluator:        *eval.NewEvaluator(),
+		tt:               transposition.New(64),
+		reductionTable:   reduction.New(),
+		historyTable:     history.New(),
+		killerTable:      killer.New(),
+		counterMoveTable: counter.New(),
 	}
 }
 

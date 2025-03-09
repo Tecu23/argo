@@ -6,38 +6,36 @@ const (
 	historyMax = 10000
 )
 
-type HistoryTable struct {
+// Table stores success statistics for quiet moves
+type Table struct {
 	// [color][from][to]
 	scores [2][64][64]int
 }
 
-func New() *HistoryTable {
-	return &HistoryTable{}
+// New creates a new history table
+func New() *Table {
+	return &Table{}
 }
 
-func (h *HistoryTable) Clear() {
+// New creates a new history table
+func (h *Table) Clear() {
 	h.scores = [2][64][64]int{}
 }
 
-func (h *HistoryTable) Update(color color.Color, from, to int, depth int) {
-	score := h.scores[color][from][to] + depth*depth
+func (h *Table) Update(color color.Color, from, to int, bonus int) {
+	// Apply bonus
+	h.scores[color][from][to] += bonus
 
-	if score > historyMax {
-		for f := 0; f < 64; f++ {
-			for t := 0; t < 64; t++ {
-				h.scores[color][f][t] /= 2
-			}
-		}
-		score /= 2
+	// If this score exceeds maximum, scale only this entry
+	if h.scores[color][from][to] > historyMax {
+		h.scores[color][from][to] = historyMax / 2
 	}
-
-	h.scores[color][from][to] = score
 }
 
-func (h *HistoryTable) Get(color color.Color, from, to int) int {
+func (h *Table) Get(color color.Color, from, to int) int {
 	return h.scores[color][from][to]
 }
 
-func (h *HistoryTable) GetButterfly(from, to int) int {
+func (h *Table) GetButterfly(from, to int) int {
 	return h.scores[0][from][to] + h.scores[1][from][to]
 }

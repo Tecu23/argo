@@ -2,11 +2,13 @@ package killer
 
 import "github.com/Tecu23/argov2/pkg/move"
 
+// Table max sizes
 const (
 	MaxKillers = 2
 	MaxPly     = 64
 )
 
+// Table represent the implementation of the killer table
 type Table struct {
 	// [ply][slot]
 	moves [MaxPly][MaxKillers]move.Move
@@ -39,6 +41,27 @@ func (t *Table) Update(mv move.Move, ply int) {
 		t.moves[ply][i] = t.moves[ply][i-1]
 	}
 	t.moves[ply][0] = mv
+
+	// Also update killer moves at sibling plies for better move ordering
+	t.UpdateSiblingKillers(mv, ply)
+}
+
+// UpdateSiblingKillers adds killer move to sibling moves at similar plies
+func (t *Table) UpdateSiblingKillers(mv move.Move, ply int) {
+	// Update killer moves for nearby plies (siblings)
+	if ply > 0 && ply < MaxPly-1 {
+		// Add with lower priority to adjacent plies
+		// First check if it's already a killer at those plies
+		if !t.IsKiller(mv, ply-1) {
+			// Shift existing killers, keeping the first one
+			t.moves[ply-1][MaxKillers-1] = mv
+		}
+
+		if !t.IsKiller(mv, ply+1) {
+			// Shift existing killers, keeping the first one
+			t.moves[ply+1][MaxKillers-1] = mv
+		}
+	}
 }
 
 // IsKiller checks if a move is a killer move at the given ply
@@ -58,6 +81,24 @@ func (t *Table) GetScore(mv move.Move, ply int) int {
 			return 9000 - i*100 // First killer gets higher score
 		}
 	}
+
+	// Check for killers in sibling plies with lower priority
+	if ply > 0 {
+		for i := 0; i < MaxKillers; i++ {
+			if t.moves[ply-1][i] == mv {
+				return 8000 - i*100 // Sibling killer gets lower score
+			}
+		}
+	}
+
+	if ply < MaxPly-1 {
+		for i := 0; i < MaxKillers; i++ {
+			if t.moves[ply+1][i] == mv {
+				return 8000 - i*100 // Sibling killer gets lower score
+			}
+		}
+	}
+
 	return 0
 }
 

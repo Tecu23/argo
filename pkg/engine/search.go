@@ -4,9 +4,10 @@ import (
 	"context"
 	"sort"
 
+	"github.com/Tecu23/argov2/internal/transposition"
 	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/board"
-	"github.com/Tecu23/argov2/pkg/evaluation"
+	"github.com/Tecu23/argov2/pkg/eval"
 	"github.com/Tecu23/argov2/pkg/move"
 )
 
@@ -51,7 +52,7 @@ func (e *Engine) orderMoves(
 			// Capture scoring: prioritize captures with a high "victim minus aggressor" value
 			victim := b.GetPieceAt(mv.GetTarget())
 			aggressor := b.GetPieceAt(mv.GetSource())
-			score = 10000 + (evaluation.GetPieceValue(victim) - evaluation.GetPieceValue(aggressor)/10)
+			score = 10000 + (eval.GetPieceValue(victim) - eval.GetPieceValue(aggressor)/10)
 		} else {
 			// For non-captures, check if it's a killer move, otherwise use history scores
 			killerScore := e.killerTable.GetScore(mv, ply)
@@ -217,11 +218,11 @@ func (e *Engine) searchRoot(
 	}
 
 	// Store the result in TT
-	flag := TTExact
+	flag := transposition.TTExact
 	if alpha <= originalAlpha {
-		flag = TTAlpha
+		flag = transposition.TTAlpha
 	} else if alpha >= beta {
-		flag = TTBeta
+		flag = transposition.TTBeta
 	}
 	e.tt.Store(b.Hash(), alpha, depth, flag, bestMove)
 
@@ -263,13 +264,13 @@ func (e *Engine) alphaBeta(
 			score := adjustScore(entry.Score, ply)
 			// Depending on the entry's flag, we can return early or narrow our bound
 			switch entry.Flag {
-			case TTExact:
+			case transposition.TTExact:
 				return entry.Score
-			case TTAlpha:
+			case transposition.TTAlpha:
 				if score <= alpha {
 					return alpha
 				}
-			case TTBeta:
+			case transposition.TTBeta:
 				if score >= beta {
 					return beta
 				}
@@ -372,7 +373,7 @@ func (e *Engine) alphaBeta(
 						e.historyTable.Update(copyB.Side, mv.GetSource(), mv.GetTarget(), depth)
 					}
 					// Store this node as a fail-high node in TT
-					e.tt.Store(hash, beta, depth, TTBeta, mv)
+					e.tt.Store(hash, beta, depth, transposition.TTBeta, mv)
 					return beta
 				}
 			}
@@ -388,9 +389,9 @@ func (e *Engine) alphaBeta(
 	}
 
 	// Store TT Entry
-	flag := TTExact
+	flag := transposition.TTExact
 	if bestScore <= originalAlpha {
-		flag = TTAlpha
+		flag = transposition.TTAlpha
 	}
 	e.tt.Store(hash, bestScore, depth, flag, bestMove)
 
