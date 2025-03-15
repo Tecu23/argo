@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 
+	"github.com/Tecu23/argov2/internal/transposition"
 	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/evaluation"
@@ -164,17 +165,14 @@ func (e *Engine) searchRoot(
 	alpha := -Infinity
 	beta := Infinity
 	var bestMove move.Move
-	originalAlpha := alpha
 
 	// Generate moves at root
 	moves := b.GenerateMoves()
 
-	var ttMove move.Move
-	if entry, ok := e.tt.Probe(b.Hash()); ok {
-		ttMove = entry.BestMove
-	}
+	hashKey := b.Hash()
+	_, _, hashMove, _ := e.tt.Probe(hashKey, 0, 0, 0)
 
-	moves = e.orderMoves(moves, b, ttMove, 0)
+	moves = e.orderMoves(moves, b, hashMove, 0)
 
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
@@ -200,14 +198,8 @@ func (e *Engine) searchRoot(
 		}
 
 	}
-	// Store in TT
-	flag := TTExact
-	if alpha <= originalAlpha {
-		flag = TTAlpha
-	} else if alpha >= beta {
-		flag = TTBeta
-	}
-	e.tt.Store(b.Hash(), alpha, depth, flag, bestMove)
+	// Store the result in the transposition table
+	e.tt.Store(hashKey, depth, transposition.EXACT, alpha, bestMove)
 
 	return alpha, bestMove
 }
@@ -219,6 +211,7 @@ func (e *Engine) alphaBeta(
 	depth, alpha, beta, ply int,
 	tm *timeManager,
 ) int {
+	// Check timeout periodically
 	if (e.nodes & 1023) == 0 {
 		if ctx.Err() != nil || tm.IsDone() {
 			// This ensures the move won't be selected
@@ -232,28 +225,6 @@ func (e *Engine) alphaBeta(
 
 	// Increment node counter
 	e.nodes++
-
-	originalAlpha := alpha
-
-	// TT Lookup
-	hash := b.Hash()
-	if entry, ok := e.tt.Probe(hash); ok {
-		if entry.Depth >= depth {
-			score := adjustScore(entry.Score, ply)
-			switch entry.Flag {
-			case TTExact:
-				return entry.Score
-			case TTAlpha:
-				if score <= alpha {
-					return alpha
-				}
-			case TTBeta:
-				if score >= beta {
-					return beta
-				}
-			}
-		}
-	}
 
 	// Check extension
 	if b.InCheck() {
@@ -269,6 +240,19 @@ func (e *Engine) alphaBeta(
 		return 0
 	}
 
+	// Get position key
+	hashKey := b.Hash()
+
+	// If this is not a PV node (zero window search), check the transposition table
+	isPVNode := beta > alpha+1
+
+	if !isPVNode {
+		found, score, _, _ := e.tt.Probe(hashKey, depth, alpha, beta)
+		if found {
+			return score
+		}
+	}
+
 	// Base case: evaluate leaf nodes
 	if depth <= 0 {
 		return e.quiescence(ctx, b, alpha, beta, ply, tm)
@@ -276,17 +260,18 @@ func (e *Engine) alphaBeta(
 
 	// Generate moves
 	moves := b.GenerateMoves()
-	var ttMove move.Move
 
-	if entry, ok := e.tt.Probe(hash); ok {
-		ttMove = entry.BestMove
-	}
+	// Try hash move first if available
+	_, _, hashMove, _ := e.tt.Probe(hashKey, 0, 0, 0)
 
-	moves = e.orderMoves(moves, b, ttMove, ply)
+	moves = e.orderMoves(moves, b, hashMove, ply)
 
 	hasLegalMoves := false
-	var bestMove move.Move
+
 	bestScore := -Infinity
+	bestMove := move.NoMove
+	originalAlpha := alpha
+
 	moveCount := 0
 	inCheck := b.InCheck()
 
@@ -333,7 +318,7 @@ func (e *Engine) alphaBeta(
 						e.updateKillers(mv, ply)
 						e.historyTable.Update(copyB.Side, mv.GetSource(), mv.GetTarget(), depth)
 					}
-					e.tt.Store(hash, beta, depth, TTBeta, mv)
+					e.tt.Store(hashKey, depth, transposition.BETA, beta, mv)
 					return beta
 				}
 			}
@@ -348,12 +333,16 @@ func (e *Engine) alphaBeta(
 		return 0
 	}
 
-	// Store position in TT
-	flag := TTExact
+	var flag int
 	if bestScore <= originalAlpha {
-		flag = TTAlpha
+		flag = transposition.ALPHA
+	} else if bestScore >= transposition.BETA {
+		flag = transposition.BETA
+	} else {
+		flag = transposition.EXACT
 	}
-	e.tt.Store(hash, bestScore, depth, flag, bestMove)
+
+	e.tt.Store(hashKey, depth, flag, bestScore, bestMove)
 
 	return bestScore
 }
@@ -386,8 +375,14 @@ func (e *Engine) quiescence(
 		return 0
 	}
 
+	hashKey := b.Hash()
+	found, score, _, _ := e.tt.Probe(hashKey, 0, alpha, beta)
+	if found {
+		return score
+	}
+
 	// Stand-pat score
-	score := e.evaluator.Evaluate(b)
+	score = e.evaluator.Evaluate(b)
 	if score >= beta {
 		return beta
 	}
@@ -397,6 +392,10 @@ func (e *Engine) quiescence(
 	// Generate captures
 	moves := b.GenerateCaptures()
 	moves = e.orderMoves(moves, b, move.NoMove, ply) // Order captures
+
+	bestScore := score
+	bestMove := move.NoMove
+	originalAlpha := alpha
 
 	for _, mv := range moves {
 		copyB := b.CopyBoard()
@@ -413,22 +412,29 @@ func (e *Engine) quiescence(
 			return Infinity
 		}
 
-		if score >= beta {
-			return beta
+		if score > bestScore {
+			bestScore = score
+			bestMove = mv
+
+			alpha = max(alpha, score)
+
+			if alpha >= beta {
+				e.tt.Store(hashKey, 0, transposition.BETA, beta, mv)
+				return beta
+			}
 		}
-		alpha = max(alpha, score)
-
 	}
 
-	return alpha
-}
+	var flag int
+	if bestScore <= originalAlpha {
+		flag = transposition.ALPHA
+	} else if bestScore >= beta {
+		flag = transposition.BETA
+	} else {
+		flag = transposition.EXACT
+	}
 
-func adjustScore(score, ply int) int {
-	if score >= MateScore-MaxDepth {
-		return score - ply
-	}
-	if score <= -MateScore+MaxDepth {
-		return score + ply
-	}
-	return score
+	e.tt.Store(hashKey, 0, flag, bestScore, bestMove)
+
+	return bestScore
 }
