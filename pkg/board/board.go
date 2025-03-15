@@ -36,11 +36,14 @@ type Board struct {
 
 // Reset restores the board to an initial empty state and sets defaults.
 func (b *Board) Reset() {
-	b.Side = color.WHITE
+	b.SideToMove = color.WHITE
+
 	b.EnPassant = -1
+
 	b.Castlings = 0
-	b.Rule50 = 0
-	b.MoveNumber = 0
+
+	b.HalfMoveClock = 0
+	b.FullMoveCounter = 0
 
 	for i := 0; i < 12; i++ {
 		b.Bitboards[i] = 0
@@ -169,6 +172,42 @@ func (b *Board) IsSquareAttacked(sq int, side color.Color) bool {
 		}
 	}
 	return false
+}
+
+// MakeMoveV2 applies a move to the board and updates all relevant state.
+// Returns ture is the move was legal (doesn't leave the king in check).
+func (b *Board) MakeMoveV2(m move.Move) bool {
+	from, to := m.GetSource(), m.GetTarget()
+	piece := m.GetPiece()
+
+	// move flags
+	isCaptureMove := m.GetCapture()
+	isEnPassantMove := m.GetEnpassant()
+	isDoublePushMove := m.GetDoublePush()
+	isPromotionMove := m.GetPromoted()
+
+	// Store the current board state for potential undo
+	oldBoard := b.CopyBoard()
+
+	// Update half-move clock
+	if piece == WP || piece == BP || isCaptureMove != 0 {
+		b.HalfMoveClock = 0 // Reset on pawn move or capture
+	} else {
+		b.HalfMoveClock++
+	}
+
+	// Clear en passant square by default (may be set later for double pawn pushes)
+	oldEnPassant := b.EnPassant
+	b.EnPassant = -1
+
+	// Handle the piece movement on bitboards
+	// Clear the piece from the source target
+	b.SetSq(Empty, from)
+
+	// Handle captures - remove captured piece from destination square if any
+	if isCaptureMove != 0 && isEnPassantMove != 0 {
+		b.SetSq(Empty, to)
+	}
 }
 
 // TODO: REDO THIS for better performance

@@ -10,6 +10,7 @@ import (
 	"github.com/Tecu23/argov2/pkg/move"
 )
 
+// Search Constants
 const (
 	MaxDepth   = 64
 	Infinity   = 50_000
@@ -198,7 +199,6 @@ func (e *Engine) searchRoot(
 				break
 			}
 		}
-
 	}
 	// Store in TT
 	flag := TTExact
@@ -263,10 +263,6 @@ func (e *Engine) alphaBeta(
 	// Check for terminal positions
 	if b.IsCheckmate() {
 		return -MateScore + int(e.nodes) // Prefer shorter mates
-	}
-
-	if b.IsStalemate() || b.IsInsufficientMaterial() {
-		return 0
 	}
 
 	// Base case: evaluate leaf nodes
