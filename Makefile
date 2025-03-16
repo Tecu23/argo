@@ -1,5 +1,5 @@
 # Build variables
-VERSION ?= 0.4.4
+VERSION ?= 0.7.0
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 CGO_ENABLED ?= 0

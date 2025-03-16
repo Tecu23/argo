@@ -5,7 +5,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Tecu23/argov2/internal/history"
 	"github.com/Tecu23/argov2/internal/reduction"
 	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/evaluation"
@@ -30,8 +29,6 @@ type Engine struct {
 	evaluator      evaluation.Evaluator
 	tt             *TranspositionTable
 	reductionTable *reduction.Table
-	historyTable   *history.HistoryTable
-	killerMoves    [MaxDepth][MaxKillers]move.Move
 }
 
 func NewEngine(options Options) *Engine {
@@ -40,7 +37,6 @@ func NewEngine(options Options) *Engine {
 		evaluator:      *evaluation.NewEvaluator(),
 		tt:             NewTranspositionTable(32),
 		reductionTable: reduction.New(),
-		historyTable:   history.New(),
 	}
 }
 
@@ -64,7 +60,6 @@ func (e *Engine) Search(ctx context.Context, params SearchParams) SearchInfo {
 
 func (e *Engine) Clear() {
 	e.tt.Clear()
-	e.historyTable.Clear()
 }
 
 // createSearchInfo creates a SearchInfo struct from current engine state
