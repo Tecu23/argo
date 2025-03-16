@@ -13,7 +13,7 @@ func (e *Evaluator) PawnsEvaluation(b *board.Board) (mg, eg int) {
 	for pawnsBB != 0 {
 		sq := pawnsBB.FirstOne()
 
-		if optimizedDoubleIsolated(b, sq) {
+		if doubleIsolated(b, sq) {
 			mg -= 11
 			eg -= 56
 		} else if isolated(b, sq) {
@@ -48,46 +48,16 @@ func (e *Evaluator) PawnsEvaluation(b *board.Board) (mg, eg int) {
 // doubleIsolated is a penalty if a double pawn is stopped only
 // by a single opponent pawn on the same file.
 func doubleIsolated(b *board.Board, sq int) bool {
-	if !b.Bitboards[WP].Test(sq) {
-		return false
-	}
-
-	if isolated(b, sq) {
-		obe, eop, ene := 0, 0, 0
-
-		rank := sq / 8
-		file := sq % 8
-
-		for y := 0; y < 8; y++ {
-			if y > rank && b.Bitboards[WP].Test(y*8+file) {
-				obe++
-			}
-
-			if y < rank && b.Bitboards[BP].Test(y*8+file) {
-				eop++
-			}
-
-			if (file > 0 && b.Bitboards[BP].Test(y*8+file-1)) ||
-				(b.Bitboards[BP].Test(y*8+file+1) && file < 7) {
-				ene++
-			}
-		}
-
-		if obe > 0 && ene == 0 && eop > 0 {
-			return true
-		}
-
-	}
-
-	return false
-}
-
-func optimizedDoubleIsolated(b *board.Board, sq int) bool {
 	// Should return if square doesn't contain a white pawn
 	// But because we only call double isolated on white pawns this is not needed
 
 	file := sq % 8
 	rank := sq / 8
+
+	// Return early is the pawn is not isolated
+	if !isolated(b, sq) {
+		return false
+	}
 
 	leftFile := file > 0
 	rightFile := file < 7
@@ -102,14 +72,6 @@ func optimizedDoubleIsolated(b *board.Board, sq int) bool {
 		rightFileMask = FileMasks[file+1]
 	}
 
-	// Check if pawn is isolated
-	adjancentFilePawns := (leftFile && (b.Bitboards[WP]&leftFileMask) != 0) ||
-		(rightFile && (b.Bitboards[WP]&rightFileMask) != 0)
-
-	if adjancentFilePawns {
-		return false
-	}
-
 	// Get file mask for current file
 	fileMask := FileMasks[file]
 
@@ -118,6 +80,8 @@ func optimizedDoubleIsolated(b *board.Board, sq int) bool {
 	for r := rank + 1; r < 8; r++ {
 		behindRanksMask |= RankMasks[r]
 	}
+
+	// If no pawn behind, then the pawn is not doubled
 	whitePawnsBehind := b.Bitboards[WP] & fileMask & behindRanksMask
 	if whitePawnsBehind == 0 {
 		return false
@@ -145,19 +109,29 @@ func optimizedDoubleIsolated(b *board.Board, sq int) bool {
 }
 
 // Isolated checks if pawn is isolated. In chess, an isolated pawn is pawn
-// which has no friendly pawn on an adjancet file
+// which has no friendly pawn on an adjacent files
 func isolated(b *board.Board, sq int) bool {
 	file := sq % 8
 
-	if !b.Bitboards[WP].Test(sq) {
-		return false
+	leftFile := file > 0
+	rightFile := file < 7
+
+	// Create maks for adjancent files
+	var leftFileMask, rightFileMask bitboard.Bitboard
+	if leftFile {
+		leftFileMask = FileMasks[file-1]
 	}
 
-	for y := 0; y < 8; y++ {
-		if (b.Bitboards[WP].Test(y*8+file-1) && file > 0) ||
-			(b.Bitboards[WP].Test(y*8+file+1) && file < 7) {
-			return false
-		}
+	if rightFile {
+		rightFileMask = FileMasks[file+1]
+	}
+
+	// Check if pawn is isolated
+	adjancentFilePawns := (leftFile && (b.Bitboards[WP]&leftFileMask) != 0) ||
+		(rightFile && (b.Bitboards[WP]&rightFileMask) != 0)
+
+	if adjancentFilePawns {
+		return false
 	}
 
 	return true

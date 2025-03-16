@@ -125,3 +125,123 @@ func TestDoubleIsolated(t *testing.T) {
 		})
 	}
 }
+
+func TestIsolated(t *testing.T) {
+	tests := []struct {
+		name   string
+		fen    string
+		result bool
+		sq     int
+	}{
+		// Basic test cases
+		{
+			name:   "Isolated white pawn on D4",
+			fen:    "rnbqkbnr/pp3ppp/3p4/8/3P4/3P4/PP3PPP/RNBQKBNR w KQkq - 0 2",
+			result: true,
+			sq:     D4,
+		},
+		{
+			name:   "Isolated white pawn on D3",
+			fen:    "rnbqkbnr/pp3ppp/3p4/8/3P4/3P4/PP3PPP/RNBQKBNR w KQkq - 0 2",
+			result: true,
+			sq:     D3,
+		},
+		{
+			name:   "Non-isolated white pawn on A2 (adjacent to B2)",
+			fen:    "rnbqkbnr/pp3ppp/3p4/8/3P4/3P4/PP3PPP/RNBQKBNR w KQkq - 0 2",
+			result: false,
+			sq:     A2,
+		},
+		{
+			name:   "Non-isolated white pawn on D4 with pawn on C2",
+			fen:    "rnbqkbnr/pp3ppp/3p4/8/3P4/3P4/PPP3PP/RNBQKBNR w KQkq - 0 2",
+			result: false,
+			sq:     D4,
+		},
+		// Edge cases
+		{
+			name:   "Edge file pawn on A4 is isolated",
+			fen:    "rnbqkbnr/1ppppppp/8/8/P7/8/2PPPPPP/RNBQKBNR w KQkq - 0 1",
+			result: true,
+			sq:     A4,
+		},
+		{
+			name:   "Edge file pawn on A4 is not isolated with pawn on B-file",
+			fen:    "rnbqkbnr/pppppppp/8/8/PB6/8/1PPPPPPP/RNBQKBNR w KQkq - 0 1",
+			result: false,
+			sq:     A4,
+		},
+		{
+			name:   "Edge file pawn on H4 is isolated",
+			fen:    "rnbqkbnr/ppppppp1/8/8/7P/8/PPPPPP2/RNBQKBNR w KQkq - 0 1",
+			result: true,
+			sq:     H4,
+		},
+		{
+			name:   "Edge file pawn on H4 is not isolated with pawn on G-file",
+			fen:    "rnbqkbnr/pppppppp/8/8/6PP/8/PPPPPP11/RNBQKBNR w KQkq - 0 1",
+			result: false,
+			sq:     H4,
+		},
+		// Special cases
+		{
+			name:   "Square with no pawn shouldn't be considered isolated",
+			fen:    "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1",
+			result: false,
+			sq:     D4,
+		},
+		{
+			name:   "Isolated pawn with friendly pawn on same file",
+			fen:    "rnbqkbnr/pppppppp/8/8/3P4/3P4/PPP1PPPP/RNBQKBNR w KQkq - 0 1",
+			result: false,
+			sq:     D4,
+		},
+		// Complex positions
+		{
+			name:   "Multiple pawns that seem isolated",
+			fen:    "rnbqkbnr/pppppppp/8/8/1P1P1P2/8/P1P1P1PP/RNBQKBNR w KQkq - 0 1",
+			result: false,
+			sq:     D4,
+		},
+		{
+			name:   "Pawn chain (not isolated)",
+			fen:    "rnbqkbnr/pppppppp/8/8/3P4/2P5/PP2PPPP/RNBQKBNR w KQkq - 0 1",
+			result: false,
+			sq:     D4,
+		},
+		{
+			name:   "Pawn with diagonal neighbor only (non-isolated)",
+			fen:    "rnbqkbnr/pppppppp/8/8/3P4/4P3/PPP2PPP/RNBQKBNR w KQkq - 0 1",
+			result: false,
+			sq:     D4,
+		},
+		{
+			name:   "Empty square should not be isolated",
+			fen:    "rnbqkbnr/pppppppp/8/8/4P3/8/PPP3PP/RNB1KBNR b KQkq e3 0 1",
+			result: true,
+			sq:     E4,
+		},
+		{
+			name:   "Queen on square is not an isolated pawn",
+			fen:    "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNB1KBNR w KQkq - 0 1",
+			result: false,
+			sq:     D4,
+		},
+		{
+			name:   "Starting position for white pawns",
+			fen:    "rnbqkbnr/ppp1pppp/8/3p4/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			result: false,
+			sq:     D2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := board.ParseFEN(tt.fen)
+			res := isolated(&b, tt.sq)
+			if res != tt.result {
+				t.Errorf("Pawn Evaluation failed, %s: got %v, want %v", tt.name, res, tt.result)
+			}
+		})
+	}
+}
