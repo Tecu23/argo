@@ -1,3 +1,4 @@
+// Package evaluation is responsible with evaluating the current board position
 package evaluation
 
 import (
@@ -5,28 +6,19 @@ import (
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
-type materialEvaluator struct{}
+// MaterialEvaluation returns the sum of all the pieces multiplied by each piece bonus
+func (e *Evaluator) MaterialEvaluation(b *board.Board) (mg int, eg int) {
+	mg = 0
+	eg = 0
 
-func newMaterialEvaluator() *materialEvaluator {
-	return &materialEvaluator{}
-}
+	pawnCount := b.Bitboards[WP].Count()
+	knightCount := b.Bitboards[WN].Count()
+	bishopCount := b.Bitboards[WB].Count()
+	rookCount := b.Bitboards[WR].Count()
+	queenCount := b.Bitboards[WQ].Count()
 
-func (m *materialEvaluator) Evaluate(board *board.Board) int {
-	var score int
+	mg = pawnCount*pawnBonusMG + knightCount*knightBonusMG + bishopCount*bishopBonusMG + rookCount*rookBonusMG + queenCount*queenBonusMG
+	eg = pawnCount*pawnBonusEG + knightCount*knightBonusEG + bishopCount*bishopBonusEG + rookCount*rookBonusEG + queenCount*queenBonusEG
 
-	// White pieces evaluation
-	score += board.Bitboards[WP].Count() * PawnValue
-	score += board.Bitboards[WN].Count() * KnightValue
-	score += board.Bitboards[WB].Count() * BishopValue
-	score += board.Bitboards[WR].Count() * RookValue
-	score += board.Bitboards[WQ].Count() * QueenValue
-
-	// Black pieces evaluation
-	score -= board.Bitboards[BP].Count() * PawnValue
-	score -= board.Bitboards[BN].Count() * KnightValue
-	score -= board.Bitboards[BB].Count() * BishopValue
-	score -= board.Bitboards[BR].Count() * RookValue
-	score -= board.Bitboards[BQ].Count() * QueenValue
-
-	return score
+	return mg, eg
 }

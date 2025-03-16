@@ -1,0 +1,304 @@
+// Package evaluation is responsible with evaluating the current board position
+package evaluation
+
+import (
+	"github.com/Tecu23/argov2/pkg/board"
+	. "github.com/Tecu23/argov2/pkg/constants"
+)
+
+// PawnsEvaluation returns the evaluation for pawns and pawn structure
+func (e *Evaluator) PawnsEvaluation(b *board.Board) (mg, eg int) {
+	pawnsBB := b.Bitboards[WP]
+	for pawnsBB != 0 {
+		sq := pawnsBB.FirstOne()
+
+		if doubleIsolated(b, sq) {
+			mg -= 11
+			eg -= 56
+		} else if isolated(b, sq) {
+			mg -= 5
+			eg -= 15
+		} else if backward(b, sq) {
+			mg -= 9
+			eg -= 24
+		}
+
+		if doubled(b, sq) {
+			mg -= 11
+			eg -= 56
+		}
+
+		if connected(b, sq) {
+			mg += connectedBonus(b, sq)
+			eg += connectedBonus(b, sq) * (8 - (sq / 8) - 3) / 4
+		}
+
+		mg -= 13 * weakUnopposedPawn(b, sq)
+		eg -= 27 * weakUnopposedPawn(b, sq)
+		eg -= 56 * weakLever(b, sq)
+		mg += []int{0, -11, -3}[blocked(b, sq)]
+		eg += []int{0, -4, 4}[blocked(b, sq)]
+
+	}
+
+	return mg, eg
+}
+
+// doubleIsolated is a penalty if a double pawn is stopped only
+// by a single opponent pawn on the same file.
+func doubleIsolated(b *board.Board, sq int) bool {
+	if !b.Bitboards[WP].Test(sq) {
+		return false
+	}
+
+	if isolated(b, sq) {
+		obe, eop, ene := 0, 0, 0
+
+		rank := sq / 8
+		file := sq % 8
+
+		for y := 0; y < 8; y++ {
+			if y > rank && b.Bitboards[WP].Test(y*8+file) {
+				obe++
+			}
+
+			if y < rank && b.Bitboards[BP].Test(y*8+file) {
+				eop++
+			}
+
+			if (file > 0 && b.Bitboards[BP].Test(y*8+file-1)) ||
+				(b.Bitboards[BP].Test(y*8+file+1) && file < 7) {
+				ene++
+			}
+		}
+
+		if obe > 0 && ene == 0 && eop > 0 {
+			return true
+		}
+
+	}
+
+	return false
+}
+
+// Isolated checks if pawn is isolated. In chess, an isolated pawn is pawn
+// which has no friendly pawn on an adjancet file
+func isolated(b *board.Board, sq int) bool {
+	file := sq % 8
+
+	if !b.Bitboards[WP].Test(sq) {
+		return false
+	}
+
+	for y := 0; y < 8; y++ {
+		if (b.Bitboards[WP].Test(y*8+file-1) && file > 0) ||
+			(b.Bitboards[WP].Test(y*8+file+1) && file < 7) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// backward returns is a pawn is backward. It happens when the pawn is behind
+// all the pawns of the same color on the adjancent files and cannot be safely advanced
+func backward(b *board.Board, sq int) bool {
+	if !b.Bitboards[WP].Test(sq) {
+		return false
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	for y := rank; y < 8; y++ {
+		if (b.Bitboards[WP].Test(y*8+file-1) && file > 0) ||
+			(file < 7 && b.Bitboards[WP].Test(y*8+file+1)) {
+			return false
+		}
+	}
+
+	if (b.Bitboards[BP].Test((rank-2)*8+file-1) && file > 0) ||
+		(b.Bitboards[BP].Test((rank-2)*8+file+1) && file < 7) ||
+		b.Bitboards[BP].Test((rank-1)*8+file) {
+		return true
+	}
+
+	return false
+}
+
+// doubled checks if pawn is doubled. A doubled pawn is a pawn which has another friendly
+// pawn on the same file but here we attach doubled pawn penalty only if pawn which has
+// another friendly pawn on square directly behind that pawn and is not supported
+func doubled(b *board.Board, sq int) bool {
+	if !b.Bitboards[WP].Test(sq) {
+		return false
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	if !b.Bitboards[WP].Test((rank+1)*8 + file) {
+		return false
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*8+file-1) && file > 0 {
+		return false
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*8+file+1) && file < 7 {
+		return false
+	}
+
+	return true
+}
+
+// connected checks is pawn is supported or phalanx
+func connected(b *board.Board, sq int) bool {
+	if supported(b, sq) > 0 || phalanx(b, sq) > 0 {
+		return true
+	}
+
+	return false
+}
+
+// supported counts the number of pawns supporting this pawn. The pawn is supported
+// if a friendly pawn is exacly in the adjancent file of the pawn and directly behind it
+func supported(b *board.Board, sq int) int {
+	if !b.Bitboards[WP].Test(sq) {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	score := 0
+
+	if b.Bitboards[WP].Test((rank+1)*8+file-1) && file > 0 {
+		score++
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*8+file+1) && file < 7 {
+		score++
+	}
+
+	return score
+}
+
+// phalanx flag is set if there is friendly pawn on adjancent file and same rank
+func phalanx(b *board.Board, sq int) int {
+	if !b.Bitboards[WP].Test(sq) {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	if (b.Bitboards[WP].Test(rank*8+file-1) && file > 0) ||
+		(b.Bitboards[WP].Test(rank*8+file+1) && file < 7) {
+		return 1
+	}
+
+	return 0
+}
+
+// connectedBonus is the bonus for connected pawns
+func connectedBonus(b *board.Board, sq int) int {
+	if !connected(b, sq) {
+		return 0
+	}
+
+	rank := 8 - sq/8
+
+	seed := []int{0, 7, 8, 12, 29, 48, 86}
+	op := opposed(b, sq)
+	ph := phalanx(b, sq)
+	su := supported(b, sq)
+	if rank < 2 || rank > 7 {
+		return 0
+	}
+
+	return seed[rank-1]*(2+ph-op) + 21*su
+}
+
+// opposed flag is set if there is opponent opposing pawn on the same file
+// to prevent it from advancing
+func opposed(b *board.Board, sq int) int {
+	if !b.Bitboards[WP].Test(sq) {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	for y := 0; y < rank; y++ {
+		if b.Bitboards[BP].Test(y*8 + file) {
+			return 1
+		}
+	}
+
+	return 0
+}
+
+// weakUnopposedPawn checks if out pawn is weak and unopposed
+func weakUnopposedPawn(b *board.Board, sq int) int {
+	if opposed(b, sq) > 0 {
+		return 0
+	}
+	score := 0
+
+	if isolated(b, sq) {
+		score++
+	} else if backward(b, sq) {
+		score++
+	}
+
+	return score
+}
+
+// blocked bonus for blocked pawns on the 5th or 6th rank
+func blocked(b *board.Board, sq int) int {
+	if !b.Bitboards[WP].Test(sq) {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	if rank != 2 && rank != 3 {
+		return 0
+	}
+
+	if !b.Bitboards[BP].Test((rank-1)*8 + file) {
+		return 0
+	}
+
+	return 4 - rank
+}
+
+// weakLever adds a penalty for unsupported pawns attacked twice by enemy pawns
+func weakLever(b *board.Board, sq int) int {
+	if !b.Bitboards[WP].Test(sq) {
+		return 0
+	}
+
+	rank := sq / 8
+	file := sq % 8
+
+	if !b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
+		return 0
+	}
+
+	if !b.Bitboards[BP].Test((rank-1)*8+file+1) && rank > 0 && file < 7 {
+		return 0
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*8+file-1) && rank < 7 && file > 0 {
+		return 0
+	}
+
+	if b.Bitboards[WP].Test((rank+1)*8+file+1) && rank < 7 && file < 7 {
+		return 0
+	}
+
+	return 1
+}
