@@ -16,12 +16,13 @@ func NewEvaluator() *Evaluator {
 }
 
 func (e *Evaluator) Evaluate(board *board.Board) int {
-	mg, eg := e.EvaluateOneSide(board, false)
+	mirror := board.Mirror()
+	mg, eg := e.EvaluateOneSide(board, mirror, false)
 
 	p := e.Phase(board)
 	r50 := e.Rule50(board)
 
-	eg = eg * e.ScaleFactor(board, eg) / 64
+	eg = eg * e.ScaleFactor(board, mirror, eg) / 64
 
 	v := (((mg*p + ((eg * (128 - p)) << 0)) / 128) << 0)
 
@@ -33,9 +34,12 @@ func (e *Evaluator) Evaluate(board *board.Board) int {
 }
 
 // Evaluate returns the current position evaluation
-func (e *Evaluator) EvaluateOneSide(board *board.Board, noWinnable bool) (int, int) {
+func (e *Evaluator) EvaluateOneSide(
+	board *board.Board,
+	mirror *board.Board,
+	noWinnable bool,
+) (int, int) {
 	mg, eg := 0, 0
-	mirror := board.Mirror()
 
 	wMatMg, wMatEg := e.MaterialEvaluation(board)
 	bMatMg, bMatEg := e.MaterialEvaluation(mirror)
@@ -58,45 +62,45 @@ func (e *Evaluator) EvaluateOneSide(board *board.Board, noWinnable bool) (int, i
 	mg = mg + wPawnMg - bPawnMg
 	eg = eg + wPawnEg - bPawnEg
 
-	wPiecesMg, wPiecesEg := e.PiecesEvaluation(board)
-	bPiecesMg, bPiecesEg := e.PiecesEvaluation(mirror)
-
-	mg = mg + wPiecesMg - bPiecesMg
-	eg = eg + wPiecesEg - bPiecesEg
-
-	wMobMg, wMobEg := e.MobilityEvaluation(board)
-	bMobMg, bMobEg := e.MobilityEvaluation(mirror)
-
-	mg = mg + wMobMg - bMobMg
-	eg = eg + wMobEg - bMobEg
-
-	wThMg, wThEg := e.ThreatsEvaluation(board)
-	bThMg, bThEg := e.ThreatsEvaluation(mirror)
-
-	mg = mg + wThMg - bThMg
-	eg = eg + wThEg - bThEg
-
-	wPassMg, wPassEg := e.PassedPawnEvaluation(board)
-	bPassMg, bPassEg := e.PassedPawnEvaluation(mirror)
-
-	mg = mg + wPassMg - bPassMg
-	eg = eg + wPassEg - bPassEg
-
-	space := Space(board) - Space(mirror)
-	mg = mg + space
-
-	wKingMg, wKingEg := e.KingEvaluation(board)
-	bKingMg, bKingEg := e.KingEvaluation(mirror)
-
-	mg = mg + wKingMg - bKingMg
-	eg = eg + wKingEg - bKingEg
-
-	if !noWinnable {
-		wWinMg, wWinEg := e.WinnableEvaluation(board, mg, eg)
-
-		mg = mg + wWinMg
-		eg = eg + wWinEg
-	}
+	// wPiecesMg, wPiecesEg := e.PiecesEvaluation(board)
+	// bPiecesMg, bPiecesEg := e.PiecesEvaluation(mirror)
+	//
+	// mg = mg + wPiecesMg - bPiecesMg
+	// eg = eg + wPiecesEg - bPiecesEg
+	//
+	// wMobMg, wMobEg := e.MobilityEvaluation(board)
+	// bMobMg, bMobEg := e.MobilityEvaluation(mirror)
+	//
+	// mg = mg + wMobMg - bMobMg
+	// eg = eg + wMobEg - bMobEg
+	//
+	// wThMg, wThEg := e.ThreatsEvaluation(board)
+	// bThMg, bThEg := e.ThreatsEvaluation(mirror)
+	//
+	// mg = mg + wThMg - bThMg
+	// eg = eg + wThEg - bThEg
+	//
+	// wPassMg, wPassEg := e.PassedPawnEvaluation(board)
+	// bPassMg, bPassEg := e.PassedPawnEvaluation(mirror)
+	//
+	// mg = mg + wPassMg - bPassMg
+	// eg = eg + wPassEg - bPassEg
+	//
+	// space := Space(board) - Space(mirror)
+	// mg = mg + space
+	//
+	// wKingMg, wKingEg := e.KingEvaluation(board)
+	// bKingMg, bKingEg := e.KingEvaluation(mirror)
+	//
+	// mg = mg + wKingMg - bKingMg
+	// eg = eg + wKingEg - bKingEg
+	//
+	// if !noWinnable {
+	// 	wWinMg, wWinEg := e.WinnableEvaluation(board, mirror, mg, eg)
+	//
+	// 	mg = mg + wWinMg
+	// 	eg = eg + wWinEg
+	// }
 	return mg, eg
 }
 
@@ -161,13 +165,12 @@ func (e *Evaluator) Phase(b *board.Board) int {
 	return (((npm - endgameLimit) * 128) / (midgameLimit - endgameLimit)) << 0
 }
 
-func (e *Evaluator) ScaleFactor(b *board.Board, eg int) int {
+func (e *Evaluator) ScaleFactor(b *board.Board, mirror *board.Board, eg int) int {
 	if eg == -1 {
-		_, egT := e.EvaluateOneSide(b, false)
+		_, egT := e.EvaluateOneSide(b, mirror, false)
 		return egT
 	}
 
-	mirror := b.Mirror()
 	var pos_w *board.Board
 	var pos_b *board.Board
 	if eg > 0 {

@@ -2,6 +2,7 @@
 package evaluation
 
 import (
+	"github.com/Tecu23/argov2/pkg/bitboard"
 	"github.com/Tecu23/argov2/pkg/board"
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
@@ -12,7 +13,7 @@ func (e *Evaluator) PawnsEvaluation(b *board.Board) (mg, eg int) {
 	for pawnsBB != 0 {
 		sq := pawnsBB.FirstOne()
 
-		if doubleIsolated(b, sq) {
+		if optimizedDoubleIsolated(b, sq) {
 			mg -= 11
 			eg -= 56
 		} else if isolated(b, sq) {
@@ -79,6 +80,68 @@ func doubleIsolated(b *board.Board, sq int) bool {
 	}
 
 	return false
+}
+
+func optimizedDoubleIsolated(b *board.Board, sq int) bool {
+	// Should return if square doesn't contain a white pawn
+	// But because we only call double isolated on white pawns this is not needed
+
+	file := sq % 8
+	rank := sq / 8
+
+	leftFile := file > 0
+	rightFile := file < 7
+
+	// Create maks for adjancent files
+	var leftFileMask, rightFileMask bitboard.Bitboard
+	if leftFile {
+		leftFileMask = FileMasks[file-1]
+	}
+
+	if rightFile {
+		rightFileMask = FileMasks[file+1]
+	}
+
+	// Check if pawn is isolated
+	adjancentFilePawns := (leftFile && (b.Bitboards[WP]&leftFileMask) != 0) ||
+		(rightFile && (b.Bitboards[WP]&rightFileMask) != 0)
+
+	if adjancentFilePawns {
+		return false
+	}
+
+	// Get file mask for current file
+	fileMask := FileMasks[file]
+
+	// Check for another white pawn behind this one (greater rank values on same file)
+	var behindRanksMask bitboard.Bitboard
+	for r := rank + 1; r < 8; r++ {
+		behindRanksMask |= RankMasks[r]
+	}
+	whitePawnsBehind := b.Bitboards[WP] & fileMask & behindRanksMask
+	if whitePawnsBehind == 0 {
+		return false
+	}
+
+	// Create a mask for ranks in front of our pawn
+	var frontRankMask bitboard.Bitboard
+	for r := 0; r < rank; r++ {
+		frontRankMask |= RankMasks[r]
+	}
+
+	// Check for black pawns in front on the same file
+	blackPawnsOnFileInFront := b.Bitboards[BP] & fileMask & frontRankMask
+	if blackPawnsOnFileInFront == 0 {
+		return false
+	}
+
+	// Check for enemy pawns on adjacent files (any rank)
+	blackPawnsOnAdjacentFiles := (leftFile && (b.Bitboards[BP]&leftFileMask != 0)) ||
+		(rightFile && (b.Bitboards[BP]&rightFileMask != 0))
+
+	// If there's a doubled white pawn, black pawns in front on the same file,
+	// and no black pawns on adjacent files, return true
+	return !blackPawnsOnAdjacentFiles
 }
 
 // Isolated checks if pawn is isolated. In chess, an isolated pawn is pawn

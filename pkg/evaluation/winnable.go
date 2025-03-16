@@ -7,13 +7,13 @@ import (
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
-func (e *Evaluator) WinnableEvaluation(b *board.Board, mg, eg int) (int, int) {
-	return e.winnableMg(b, mg), e.winnableEg(b, eg)
+func (e *Evaluator) WinnableEvaluation(b *board.Board, mirror *board.Board, mg, eg int) (int, int) {
+	return e.winnableMg(b, mirror, mg), e.winnableEg(b, mirror, eg)
 }
 
-func (e *Evaluator) winnableMg(b *board.Board, mg int) int {
+func (e *Evaluator) winnableMg(b *board.Board, mirror *board.Board, mg int) int {
 	if mg == -1 {
-		tmg, _ := e.EvaluateOneSide(b, true)
+		tmg, _ := e.EvaluateOneSide(b, mirror, true)
 		return tmg
 	}
 
@@ -27,9 +27,9 @@ func (e *Evaluator) winnableMg(b *board.Board, mg int) int {
 	return factor * max(min(winnable(b)+50, 0), -abs(mg))
 }
 
-func (e *Evaluator) winnableEg(b *board.Board, eg int) int {
+func (e *Evaluator) winnableEg(b *board.Board, mirror *board.Board, eg int) int {
 	if eg == -1 {
-		_, teg := e.EvaluateOneSide(b, true)
+		_, teg := e.EvaluateOneSide(b, mirror, true)
 		return teg
 	}
 
