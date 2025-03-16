@@ -40,8 +40,14 @@ func (e *Evaluator) EvaluateOneSide(board *board.Board, noWinnable bool) (int, i
 	wMatMg, wMatEg := e.MaterialEvaluation(board)
 	bMatMg, bMatEg := e.MaterialEvaluation(mirror)
 
+	mg = mg + wMatMg - bMatMg
+	eg = eg + wMatEg - bMatEg
+
 	wPosMg, wPosEg := e.PositionalEvaluation(board)
 	bPosMg, bPosEg := e.PositionalEvaluation(mirror)
+
+	mg = mg + wPosMg - bPosMg
+	eg = eg + wPosEg - bPosEg
 
 	imb := e.ImbalanceEvaluation(board, mirror)
 	mg, eg = mg+imb, eg+imb
@@ -49,17 +55,32 @@ func (e *Evaluator) EvaluateOneSide(board *board.Board, noWinnable bool) (int, i
 	wPawnMg, wPawnEg := e.PawnsEvaluation(board)
 	bPawnMg, bPawnEg := e.PawnsEvaluation(mirror)
 
+	mg = mg + wPawnMg - bPawnMg
+	eg = eg + wPawnEg - bPawnEg
+
 	wPiecesMg, wPiecesEg := e.PiecesEvaluation(board)
 	bPiecesMg, bPiecesEg := e.PiecesEvaluation(mirror)
+
+	mg = mg + wPiecesMg - bPiecesMg
+	eg = eg + wPiecesEg - bPiecesEg
 
 	wMobMg, wMobEg := e.MobilityEvaluation(board)
 	bMobMg, bMobEg := e.MobilityEvaluation(mirror)
 
+	mg = mg + wMobMg - bMobMg
+	eg = eg + wMobEg - bMobEg
+
 	wThMg, wThEg := e.ThreatsEvaluation(board)
 	bThMg, bThEg := e.ThreatsEvaluation(mirror)
 
+	mg = mg + wThMg - bThMg
+	eg = eg + wThEg - bThEg
+
 	wPassMg, wPassEg := e.PassedPawnEvaluation(board)
 	bPassMg, bPassEg := e.PassedPawnEvaluation(mirror)
+
+	mg = mg + wPassMg - bPassMg
+	eg = eg + wPassEg - bPassEg
 
 	space := Space(board) - Space(mirror)
 	mg = mg + space
@@ -67,8 +88,8 @@ func (e *Evaluator) EvaluateOneSide(board *board.Board, noWinnable bool) (int, i
 	wKingMg, wKingEg := e.KingEvaluation(board)
 	bKingMg, bKingEg := e.KingEvaluation(mirror)
 
-	mg = mg + wMatMg - bMatMg + wPosMg - bPosMg + wPassMg - bPassMg + wPiecesMg - bPiecesMg + wPawnMg - bPawnMg + wMobMg - bMobMg + wThMg - bThMg + wKingMg - bKingMg
-	eg = eg + wMatEg - bMatEg + wPosEg - bPosEg + wPassEg - bPassEg + wPiecesEg - bPiecesEg + wPawnEg - bPawnEg + wMobEg - bMobEg + wThEg - bThEg + wKingEg - bKingEg
+	mg = mg + wKingMg - bKingMg
+	eg = eg + wKingEg - bKingEg
 
 	if !noWinnable {
 		wWinMg, wWinEg := e.WinnableEvaluation(board, mg, eg)
