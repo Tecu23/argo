@@ -209,13 +209,17 @@ func (b *Board) OppositeBishops() bool {
 	bishopBB := b.Bitboards[WB]
 	for bishopBB != 0 {
 		sq := bishopBB.FirstOne()
-		c[0] = sq % 2
+		rank := sq / 8
+		file := sq % 8
+		c[0] = (rank + file) % 2
 	}
 
 	bishopBB = b.Bitboards[BB]
 	for bishopBB != 0 {
 		sq := bishopBB.FirstOne()
-		c[1] = sq % 2
+		rank := sq / 8
+		file := sq % 8
+		c[1] = (rank + file) % 2
 	}
 
 	return c[0] != c[1]
@@ -230,24 +234,14 @@ func (b *Board) OppositeBishops() bool {
 //
 // If there is a pawn of our color in the same file in front of a current pawn
 // it's no longer counts as passed.
-func (b *Board) CandidatePassed(side color.Color) int {
+func (b *Board) CandidatePassed() int {
 	count := 0
 	pawns := b.Bitboards[WP]
-	if side == color.BLACK {
-		pawns = b.Bitboards[BP]
-	}
-
-	tmpSq := 0
 
 	// Iterate through all squares
 	for sq := 0; sq < 64; sq++ {
-		tmpSq = sq
 		if !pawns.Test(sq) {
 			continue
-		}
-
-		if side == color.BLACK {
-			tmpSq = tmpSq ^ 56
 		}
 
 		if b.IsPassedPawn(sq) {

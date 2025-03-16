@@ -41,7 +41,7 @@ func (e *Evaluator) MobilityEvaluation(b *board.Board) (mg, eg int) {
 		mg, eg = mg+mobMg, eg+mobEg
 	}
 
-	return mg, 0
+	return mg, eg
 }
 
 // MobilityBonus attaches bonuses for middlegame and endgame by piece type and Mobility

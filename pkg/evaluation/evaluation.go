@@ -16,11 +16,7 @@ func NewEvaluator() *Evaluator {
 }
 
 func (e *Evaluator) Evaluate(board *board.Board) int {
-	wMG, wEG := e.EvaluateOneSide(board, false)
-	bMG, bEG := e.EvaluateOneSide(board.Mirror(), false)
-
-	mg := wMG - bMG
-	eg := wEG - bEG
+	mg, eg := e.EvaluateOneSide(board, false)
 
 	p := e.Phase(board)
 	r50 := e.Rule50(board)
@@ -38,40 +34,48 @@ func (e *Evaluator) Evaluate(board *board.Board) int {
 
 // Evaluate returns the current position evaluation
 func (e *Evaluator) EvaluateOneSide(board *board.Board, noWinnable bool) (int, int) {
-	mg, eg := e.MaterialEvaluation(board)
+	mg, eg := 0, 0
+	mirror := board.Mirror()
 
-	posMg, posEg := e.PositionalEvaluation(board)
-	mg, eg = mg+posMg, eg+posEg
+	wMatMg, wMatEg := e.MaterialEvaluation(board)
+	bMatMg, bMatEg := e.MaterialEvaluation(mirror)
 
-	imb := imbalance(board)
+	wPosMg, wPosEg := e.PositionalEvaluation(board)
+	bPosMg, bPosEg := e.PositionalEvaluation(mirror)
+
+	imb := e.ImbalanceEvaluation(board, mirror)
 	mg, eg = mg+imb, eg+imb
 
-	pawnMg, pawnEg := e.PawnsEvaluation(board)
-	mg, eg = mg+pawnMg, eg+pawnEg
+	wPawnMg, wPawnEg := e.PawnsEvaluation(board)
+	bPawnMg, bPawnEg := e.PawnsEvaluation(mirror)
 
-	piecesMg, piecesEg := e.PiecesEvaluation(board)
-	mg, eg = mg+piecesMg, eg+piecesEg
+	wPiecesMg, wPiecesEg := e.PiecesEvaluation(board)
+	bPiecesMg, bPiecesEg := e.PiecesEvaluation(mirror)
 
-	mobMg, mobEg := e.MobilityEvaluation(board)
-	mg, eg = mg+mobMg, eg+mobEg
+	wMobMg, wMobEg := e.MobilityEvaluation(board)
+	bMobMg, bMobEg := e.MobilityEvaluation(mirror)
 
-	thMg, thEg := e.ThreatsEvaluation(board)
-	mg, eg = mg+thMg, eg+thEg
+	wThMg, wThEg := e.ThreatsEvaluation(board)
+	bThMg, bThEg := e.ThreatsEvaluation(mirror)
 
-	passMg, passEg := e.PassedPawnEvaluation(board)
-	mg, eg = mg+passMg, eg+passEg
+	wPassMg, wPassEg := e.PassedPawnEvaluation(board)
+	bPassMg, bPassEg := e.PassedPawnEvaluation(mirror)
 
-	space := Space(board)
-	mg, eg = mg+space, eg+space
+	space := Space(board) - Space(mirror)
+	mg = mg + space
 
-	kingMg, kingEg := e.KingEvaluation(board)
-	mg, eg = mg+kingMg, eg+kingEg
+	wKingMg, wKingEg := e.KingEvaluation(board)
+	bKingMg, bKingEg := e.KingEvaluation(mirror)
+
+	mg = mg + wMatMg - bMatMg + wPosMg - bPosMg + wPassMg - bPassMg + wPiecesMg - bPiecesMg + wPawnMg - bPawnMg + wMobMg - bMobMg + wThMg - bThMg + wKingMg - bKingMg
+	eg = eg + wMatEg - bMatEg + wPosEg - bPosEg + wPassEg - bPassEg + wPiecesEg - bPiecesEg + wPawnEg - bPawnEg + wMobEg - bMobEg + wThEg - bThEg + wKingEg - bKingEg
 
 	if !noWinnable {
-		wMG, wEG := e.WinnableEvaluation(board, mg, eg)
-		mg, eg = mg+wMG, eg+wEG
-	}
+		wWinMg, wWinEg := e.WinnableEvaluation(board, mg, eg)
 
+		mg = mg + wWinMg
+		eg = eg + wWinEg
+	}
 	return mg, eg
 }
 
@@ -137,37 +141,47 @@ func (e *Evaluator) Phase(b *board.Board) int {
 }
 
 func (e *Evaluator) ScaleFactor(b *board.Board, eg int) int {
-	sf := 64
-
-	attackingSide := color.WHITE
-	opponentSide := color.BLACK
-
-	if eg < 0 {
-		attackingSide = color.BLACK
-		opponentSide = color.WHITE
+	if eg == -1 {
+		_, egT := e.EvaluateOneSide(b, false)
+		return egT
 	}
 
-	pawnCountWhite := b.GetPieceCountForSide(Pawn, attackingSide)
-	knightCountWhite := b.GetPieceCountForSide(Knight, attackingSide)
-	bishopCountWhite := b.GetPieceCountForSide(Bishop, attackingSide)
-	queenCountWhite := b.GetPieceCountForSide(Queen, attackingSide)
+	mirror := b.Mirror()
+	var pos_w *board.Board
+	var pos_b *board.Board
+	if eg > 0 {
+		pos_w = b
+		pos_b = mirror
+	} else {
+		pos_w = mirror
+		pos_b = b
+	}
 
-	pawnCountBlack := b.GetPieceCountForSide(Pawn, opponentSide)
-	knightCountBlack := b.GetPieceCountForSide(Knight, opponentSide)
-	bishopCountBlack := b.GetPieceCountForSide(Bishop, opponentSide)
-	queenCountBlack := b.GetPieceCountForSide(Queen, opponentSide)
+	sf := 64
 
-	npmWhite := nonPawnMaterial(b, attackingSide)
-	npmBlack := nonPawnMaterial(b, opponentSide)
+	pc_w := pos_w.Bitboards[WP].Count()
+	pc_b := pos_b.Bitboards[WP].Count()
+
+	qc_w := pos_w.Bitboards[WQ].Count()
+	qc_b := pos_b.Bitboards[WQ].Count()
+
+	bc_w := pos_w.Bitboards[WB].Count()
+	bc_b := pos_b.Bitboards[WB].Count()
+
+	nc_w := pos_w.Bitboards[WN].Count()
+	nc_b := pos_b.Bitboards[WN].Count()
+
+	npm_w := nonPawnMaterial(pos_w, color.WHITE)
+	npm_b := nonPawnMaterial(pos_b, color.WHITE)
 
 	bishopValueMg := 825
 	bishopValueEg := 915
 	rookValueMg := 1276
 
-	if pawnCountWhite == 0 && npmWhite-npmBlack <= bishopValueMg {
-		if npmWhite < rookValueMg {
+	if pc_w == 0 && npm_w-npm_b <= bishopValueMg {
+		if npm_w < rookValueMg {
 			sf = 0
-		} else if npmBlack <= bishopValueEg {
+		} else if npm_b <= bishopValueEg {
 			sf = 4
 		} else {
 			sf = 14
@@ -177,12 +191,12 @@ func (e *Evaluator) ScaleFactor(b *board.Board, eg int) int {
 	if sf == 64 {
 		ob := b.OppositeBishops()
 
-		if ob && npmWhite == bishopValueMg && npmBlack == bishopValueMg {
-			sf = 22 + 4*b.CandidatePassed(attackingSide) // Get passed pawns for white pos
+		if ob && npm_w == bishopValueMg && npm_b == bishopValueMg {
+			sf = 22 + 4*pos_w.CandidatePassed() // Get passed pawns for white pos
 		} else if ob {
-			sf = 22 + 3*b.PieceCount(attackingSide)
+			sf = 22 + 3*PieceCount(pos_w)
 		} else {
-			if npmWhite == rookValueMg && npmBlack == rookValueMg && pawnCountWhite-pawnCountBlack <= 1 {
+			if npm_w == rookValueMg && npm_b == rookValueMg && pc_w-pc_b <= 1 {
 				pawnKingBlack := 0
 				pawnCountWhiteFlank := []int{0, 0}
 
@@ -213,16 +227,21 @@ func (e *Evaluator) ScaleFactor(b *board.Board, eg int) int {
 				}
 			}
 
-			if queenCountWhite+queenCountBlack == 1 {
-				if queenCountWhite == 1 {
-					sf = 37 + 3*(bishopCountBlack+knightCountBlack)
+			if qc_w+qc_b == 1 {
+				if qc_w == 1 {
+					sf = 37 + 3*(bc_b+nc_b)
 				} else {
-					sf = 37 + 3*(bishopCountWhite+knightCountWhite)
+					sf = 37 + 3*(bc_w+nc_w)
 				}
 			} else {
-				sf = min(sf, 36+7*pawnCountWhite)
+				sf = min(sf, 36+7*pc_w)
 			}
 		}
 	}
+
 	return sf
+}
+
+func PieceCount(b *board.Board) int {
+	return b.Occupancies[color.WHITE].Count()
 }

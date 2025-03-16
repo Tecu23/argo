@@ -89,7 +89,7 @@ func (e *Evaluator) PiecesEvaluation(b *board.Board) (mg, eg int) {
 		eg += 14 * queenInfiltrationBonus
 	}
 
-	return mg, 0
+	return mg, eg
 }
 
 // minorBehindPawn return whether the bishop/knight is begind a pawn

@@ -16,8 +16,7 @@ func (e *Evaluator) KingEvaluation(b *board.Board) (mg, eg int) {
 	mg += shelterStorm(b, -1)
 
 	whiteMobilityMG, _ := e.MobilityEvaluation(b)
-	blackMobilityMG, _ := e.MobilityEvaluation(b)
-
+	blackMobilityMG, _ := e.MobilityEvaluation(b.Mirror())
 	kd := kingDanger(b, whiteMobilityMG, blackMobilityMG)
 	mg += (kd * kd / 4096) << 0
 	eg += (kd / 16) << 0

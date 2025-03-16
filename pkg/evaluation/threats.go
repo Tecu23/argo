@@ -384,13 +384,21 @@ func weakQueenProtection(b *board.Board) int {
 	weakPieces := 0
 
 	for sq := A8; sq <= H1; sq++ {
+		if !b.Occupancies[color.BLACK].Test(sq) {
+			continue
+		}
+
 		if weakEnemies(b, sq) == 0 {
 			continue
 		}
 
-		if evaluationhelpers.QueenAttack(b.Mirror(), (7-(sq/8)*8+(sq%8)), -1) == 0 {
+		rank := sq / 8
+		file := sq % 8
+
+		if evaluationhelpers.QueenAttack(b.Mirror(), (7-rank)*8+file, -1) == 0 {
 			continue
 		}
+
 		weakPieces++
 	}
 	return weakPieces

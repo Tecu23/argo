@@ -8,18 +8,39 @@ import (
 )
 
 func (e *Evaluator) WinnableEvaluation(b *board.Board, mg, eg int) (int, int) {
-	if mg == -1 || eg == -1 {
-		e.EvaluateOneSide(b, true)
+	return e.winnableMg(b, mg), e.winnableEg(b, eg)
+}
+
+func (e *Evaluator) winnableMg(b *board.Board, mg int) int {
+	if mg == -1 {
+		tmg, _ := e.EvaluateOneSide(b, true)
+		return tmg
 	}
 
 	factor := 0
-	if mg > 0 || eg > 0 {
+	if mg > 0 {
 		factor = 1
-	} else if mg < 0 || eg < 0 {
+	} else if mg < 0 {
 		factor = -1
 	}
 
-	return factor * max(min(winnable(b)+50, 0), -abs(mg)), factor * max(winnable(b), -abs(mg))
+	return factor * max(min(winnable(b)+50, 0), -abs(mg))
+}
+
+func (e *Evaluator) winnableEg(b *board.Board, eg int) int {
+	if eg == -1 {
+		_, teg := e.EvaluateOneSide(b, true)
+		return teg
+	}
+
+	factor := 0
+	if eg > 0 {
+		factor = 1
+	} else if eg < 0 {
+		factor = -1
+	}
+
+	return factor * max(winnable(b), -abs(eg))
 }
 
 // winnable computes the winnable correction value for this position, i.e. second
@@ -62,7 +83,7 @@ func winnable(b *board.Board) int {
 
 	mirror := b.Mirror()
 
-	passedCount := b.CandidatePassed(color.WHITE) + mirror.CandidatePassed(color.WHITE)
+	passedCount := b.CandidatePassed() + mirror.CandidatePassed()
 	bothFlanks := flanks[0] != 0 && flanks[1] != 0
 
 	outflanking := abs(kx[0]-kx[1]) - abs(ky[0]-ky[1])
