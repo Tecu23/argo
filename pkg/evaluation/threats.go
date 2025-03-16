@@ -5,7 +5,6 @@ import (
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
-	evaluationhelpers "github.com/Tecu23/argov2/pkg/evaluation/helpers"
 )
 
 // ThreatsEvaluation evaluates the threats in a certain position
@@ -114,12 +113,12 @@ func weakEnemies(b *board.Board, sq int) int {
 // x-ray attacks are included. For pawns pins or en-passant are ignored.
 func attack(b *board.Board, sq int) int {
 	score := 0
-	score += evaluationhelpers.PawnAttack(b, sq)
-	score += evaluationhelpers.KingAttack(b, sq)
-	score += evaluationhelpers.KnightAttack(b, sq, -1)
-	score += evaluationhelpers.BishopXrayAttack(b, sq, -1)
-	score += evaluationhelpers.RookXrayAttack(b, sq, -1)
-	score += evaluationhelpers.QueenAttack(b, sq, -1)
+	score += PawnAttack(b, sq)
+	score += KingAttack(b, sq)
+	score += KnightAttack(b, sq, -1)
+	score += BishopXrayAttack(b, sq, -1)
+	score += RookXrayAttack(b, sq, -1)
+	score += QueenAttack(b, sq, -1)
 
 	return score
 }
@@ -135,7 +134,7 @@ func kingThreat(b *board.Board) bool {
 			continue
 		}
 
-		if evaluationhelpers.KingAttack(b, sq) == 0 {
+		if KingAttack(b, sq) == 0 {
 			continue
 		}
 
@@ -197,7 +196,7 @@ func threatSafePawn(b *board.Board) int {
 		rank := sq / 8
 		file := sq % 8
 
-		if evaluationhelpers.PawnAttack(b, sq) == 0 {
+		if PawnAttack(b, sq) == 0 {
 			continue
 		}
 
@@ -260,19 +259,19 @@ func sliderOnQueen(b *board.Board) int {
 			continue
 		}
 
-		diagonal := evaluationhelpers.QueenAttackDiagonal(mirror, (7-rank)*8+file, -1)
+		diagonal := QueenAttackDiagonal(mirror, (7-rank)*8+file, -1)
 		v := 1
 		if queenCount(b) == 0 {
 			v = 2
 		}
 
-		if diagonal != 0 && evaluationhelpers.BishopXrayAttack(b, sq, -1) != 0 {
+		if diagonal != 0 && BishopXrayAttack(b, sq, -1) != 0 {
 			score += v
 		}
 
 		if diagonal == 0 &&
-			evaluationhelpers.RookXrayAttack(b, sq, -1) != 0 &&
-			evaluationhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) != 0 {
+			RookXrayAttack(b, sq, -1) != 0 &&
+			QueenAttack(mirror, (7-rank)*8+file, -1) != 0 {
 			score += v
 		}
 	}
@@ -325,7 +324,7 @@ func knightOnQueen(b *board.Board) int {
 			continue
 		}
 
-		if evaluationhelpers.KnightAttack(b, sq, -1) == 0 {
+		if KnightAttack(b, sq, -1) == 0 {
 			continue
 		}
 
@@ -364,7 +363,7 @@ func restricted(b *board.Board) int {
 			continue
 		}
 
-		if evaluationhelpers.PawnAttack(mirror, (7-rank)*8+file) > 0 {
+		if PawnAttack(mirror, (7-rank)*8+file) > 0 {
 			continue
 		}
 
@@ -395,7 +394,7 @@ func weakQueenProtection(b *board.Board) int {
 		rank := sq / 8
 		file := sq % 8
 
-		if evaluationhelpers.QueenAttack(b.Mirror(), (7-rank)*8+file, -1) == 0 {
+		if QueenAttack(b.Mirror(), (7-rank)*8+file, -1) == 0 {
 			continue
 		}
 
@@ -410,8 +409,8 @@ func minorThreat(b *board.Board, sq int) int {
 		return 0
 	}
 
-	if evaluationhelpers.KnightAttack(b, sq, -1) == 0 &&
-		evaluationhelpers.BishopXrayAttack(b, sq, -1) == 0 {
+	if KnightAttack(b, sq, -1) == 0 &&
+		BishopXrayAttack(b, sq, -1) == 0 {
 		return 0
 	}
 
@@ -460,7 +459,7 @@ func rookThreat(b *board.Board, sq int) int {
 		return 0
 	}
 
-	if evaluationhelpers.RookXrayAttack(b, sq, -1) == 0 {
+	if RookXrayAttack(b, sq, -1) == 0 {
 		return 0
 	}
 

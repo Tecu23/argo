@@ -7,7 +7,6 @@ import (
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
-	evaluationhelpers "github.com/Tecu23/argov2/pkg/evaluation/helpers"
 )
 
 // PiecesEvaluation returns the bonuses and penalties for the position of all piececs
@@ -147,7 +146,7 @@ func bishopPawns(b *board.Board, sq int) int {
 	}
 
 	pawnAttack := 1
-	if evaluationhelpers.PawnAttack(b, sq) > 0 {
+	if PawnAttack(b, sq) > 0 {
 		pawnAttack = 0
 	}
 
@@ -450,10 +449,10 @@ func kingAttackersCount(b *board.Board, sq int) int {
 	for x := 0; x < 8; x++ {
 		for y := 0; y < 8; y++ {
 			if kingRing(b, y*8+x, false) > 0 {
-				if evaluationhelpers.KnightAttack(b, y*8+x, sq) > 0 ||
-					evaluationhelpers.BishopXrayAttack(b, y*8+x, sq) > 0 ||
-					evaluationhelpers.RookXrayAttack(b, y*8+x, sq) > 0 ||
-					evaluationhelpers.QueenAttack(b, y*8+x, sq) > 0 {
+				if KnightAttack(b, y*8+x, sq) > 0 ||
+					BishopXrayAttack(b, y*8+x, sq) > 0 ||
+					RookXrayAttack(b, y*8+x, sq) > 0 ||
+					QueenAttack(b, y*8+x, sq) > 0 {
 					return 1
 				}
 			}

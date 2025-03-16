@@ -5,7 +5,6 @@ import (
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
-	evaluationhelpers "github.com/Tecu23/argov2/pkg/evaluation/helpers"
 )
 
 // MobilityEvaluation evaluates the mobility of the pieces
@@ -82,18 +81,18 @@ func mobility(b *board.Board, sq int) int {
 				continue
 			}
 
-			if b.Bitboards[WN].Test(sq) && evaluationhelpers.KnightAttack(b, y*8+x, sq) > 0 &&
+			if b.Bitboards[WN].Test(sq) && KnightAttack(b, y*8+x, sq) > 0 &&
 				!b.Bitboards[WQ].Test(y*8+x) {
 				score++
 			}
-			if b.Bitboards[WB].Test(sq) && evaluationhelpers.BishopXrayAttack(b, y*8+x, sq) > 0 &&
+			if b.Bitboards[WB].Test(sq) && BishopXrayAttack(b, y*8+x, sq) > 0 &&
 				!b.Bitboards[WQ].Test(y*8+x) {
 				score++
 			}
-			if b.Bitboards[WR].Test(sq) && evaluationhelpers.RookXrayAttack(b, y*8+x, sq) > 0 {
+			if b.Bitboards[WR].Test(sq) && RookXrayAttack(b, y*8+x, sq) > 0 {
 				score++
 			}
-			if b.Bitboards[WQ].Test(sq) && evaluationhelpers.QueenAttack(b, y*8+x, sq) > 0 {
+			if b.Bitboards[WQ].Test(sq) && QueenAttack(b, y*8+x, sq) > 0 {
 				score++
 			}
 		}
@@ -147,7 +146,7 @@ func blockersForKing(b *board.Board, sq int) int {
 	mirror := b.Mirror()
 	rank := sq / 8
 
-	if evaluationhelpers.PinnedDirection(mirror, (7-rank)*8+(sq%8)) > 0 {
+	if PinnedDirection(mirror, (7-rank)*8+(sq%8)) > 0 {
 		return 1
 	}
 

@@ -5,7 +5,6 @@ import (
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
-	evaluationhelpers "github.com/Tecu23/argov2/pkg/evaluation/helpers"
 )
 
 // KingEvaluation returns bonuses and penalties for attacks on enemy king
@@ -135,8 +134,8 @@ func weakSquares(b *board.Board, sq int) int {
 			return 1
 		}
 
-		if evaluationhelpers.KingAttack(mirror, (7-rank)*8+file) > 0 ||
-			evaluationhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) > 0 {
+		if KingAttack(mirror, (7-rank)*8+file) > 0 ||
+			QueenAttack(mirror, (7-rank)*8+file, -1) > 0 {
 			return 1
 		}
 	}
@@ -187,10 +186,10 @@ func kingAttacks(b *board.Board, sq int) int {
 	for x := kingFile - 1; x <= kingFile+1; x++ {
 		for y := kingRank - 1; y <= kingRank+1; y++ {
 			if x >= 0 && y >= 0 && x <= 7 && y <= 7 && (x != kingFile || y != kingRank) {
-				score += evaluationhelpers.KnightAttack(b, y*8+x, sq)
-				score += evaluationhelpers.BishopXrayAttack(b, y*8+x, sq)
-				score += evaluationhelpers.RookXrayAttack(b, y*8+x, sq)
-				score += evaluationhelpers.QueenAttack(b, y*8+x, sq)
+				score += KnightAttack(b, y*8+x, sq)
+				score += BishopXrayAttack(b, y*8+x, sq)
+				score += RookXrayAttack(b, y*8+x, sq)
+				score += QueenAttack(b, y*8+x, sq)
 			}
 		}
 	}
@@ -219,8 +218,8 @@ func check(b *board.Board, sq int, t int) bool {
 	rank := sq / 8
 	file := sq % 8
 
-	if (evaluationhelpers.RookXrayAttack(b, sq, -1) > 0 && (t == -1 || t == 2 || t == 4)) ||
-		(evaluationhelpers.QueenAttack(b, sq, -1) > 0 && (t == -1 || t == 3)) {
+	if (RookXrayAttack(b, sq, -1) > 0 && (t == -1 || t == 2 || t == 4)) ||
+		(QueenAttack(b, sq, -1) > 0 && (t == -1 || t == 3)) {
 
 		for i := 0; i < 4; i++ {
 			ix := 0
@@ -253,8 +252,8 @@ func check(b *board.Board, sq int, t int) bool {
 		}
 	}
 
-	if (evaluationhelpers.BishopXrayAttack(b, sq, -1) > 0 && (t == -1 || t == 1 || t == 4)) ||
-		(evaluationhelpers.QueenAttack(b, sq, -1) > 0 && (t == -1 || t == 3)) {
+	if (BishopXrayAttack(b, sq, -1) > 0 && (t == -1 || t == 1 || t == 4)) ||
+		(QueenAttack(b, sq, -1) > 0 && (t == -1 || t == 3)) {
 
 		factor1, factor2 := 0, 0
 
@@ -286,7 +285,7 @@ func check(b *board.Board, sq int, t int) bool {
 		}
 	}
 
-	if evaluationhelpers.KnightAttack(b, sq, -1) > 0 && (t == -1 || t == 0 || t == 4) {
+	if KnightAttack(b, sq, -1) > 0 && (t == -1 || t == 0 || t == 4) {
 		if (b.Bitboards[BK].Test((rank+1)*8+file+2) && rank < 7 && file < 6) ||
 			(b.Bitboards[BK].Test((rank-1)*8+file+2) && rank > 0 && file < 6) ||
 			(b.Bitboards[BK].Test((rank+2)*8+file+1) && rank < 6 && file < 7) ||
@@ -331,7 +330,7 @@ func safeCheck(b *board.Board, sq int, t int) float32 {
 
 			if (attack(mirror, (7-rank)*8+file) == 0 ||
 				(weakSquares(b, sq) > 0 && attack(b, sq) > 1)) &&
-				(t != 3 || evaluationhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) == 0) {
+				(t != 3 || QueenAttack(mirror, (7-rank)*8+file, -1) == 0) {
 				score += 1.0
 			}
 		}
@@ -355,7 +354,7 @@ func safeCheck(b *board.Board, sq int, t int) float32 {
 
 		if (attack(mirror, (7-rank)*8+file) == 0 ||
 			(weakSquares(b, sq) > 0 && attack(b, sq) > 1)) &&
-			(t != 3 || evaluationhelpers.QueenAttack(mirror, (7-rank)*8+file, -1) == 0) {
+			(t != 3 || QueenAttack(mirror, (7-rank)*8+file, -1) == 0) {
 			score += 1.0
 		}
 	}
@@ -462,8 +461,8 @@ func flankDefense(b *board.Board) int {
 func knightDefender(b *board.Board) int {
 	score := 0
 	for sq := A8; sq <= H1; sq++ {
-		if evaluationhelpers.KnightAttack(b, sq, -1) > 0 &&
-			evaluationhelpers.KingAttack(b, sq) > 0 {
+		if KnightAttack(b, sq, -1) > 0 &&
+			KingAttack(b, sq) > 0 {
 			score++
 		}
 	}
