@@ -38,6 +38,7 @@ func (e *Evaluator) KingEvaluation(b *board.Board) (mg, eg int) {
 // number of attacked and undefended squares around our king and the
 // quality of the pawn shelter
 func kingDanger(b *board.Board, wMobMG, bMobMG int) int {
+	mirror := b.Mirror()
 	score := 0
 
 	count := 0
@@ -63,7 +64,7 @@ func kingDanger(b *board.Board, wMobMG, bMobMG int) int {
 	blackBB := b.Occupancies[color.BLACK]
 	for blackBB != 0 {
 		sq := blackBB.FirstOne()
-		blockersForKingCount += blockersForKing(b, sq)
+		blockersForKingCount += blockersForKing(b, mirror, sq)
 	}
 
 	kingFlankAttack := flankAttack(b)

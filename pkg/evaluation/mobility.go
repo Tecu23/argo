@@ -9,34 +9,35 @@ import (
 
 // MobilityEvaluation evaluates the mobility of the pieces
 func (e *Evaluator) MobilityEvaluation(b *board.Board) (mg, eg int) {
+	mirror := b.Mirror()
 	mg, eg = 0, 0
 	sq := 0
 
 	knightBB := b.Bitboards[WN]
 	for knightBB != 0 {
 		sq = knightBB.FirstOne()
-		mobMg, mobEg := mobilityBonus(b, sq)
+		mobMg, mobEg := mobilityBonus(b, mirror, sq)
 		mg, eg = mg+mobMg, eg+mobEg
 	}
 
 	bishopBB := b.Bitboards[WB]
 	for bishopBB != 0 {
 		sq = bishopBB.FirstOne()
-		mobMg, mobEg := mobilityBonus(b, sq)
+		mobMg, mobEg := mobilityBonus(b, mirror, sq)
 		mg, eg = mg+mobMg, eg+mobEg
 	}
 
 	rookBB := b.Bitboards[WR]
 	for rookBB != 0 {
 		sq = rookBB.FirstOne()
-		mobMg, mobEg := mobilityBonus(b, sq)
+		mobMg, mobEg := mobilityBonus(b, mirror, sq)
 		mg, eg = mg+mobMg, eg+mobEg
 	}
 
 	queenBB := b.Bitboards[WQ]
 	for queenBB != 0 {
 		sq = queenBB.FirstOne()
-		mobMg, mobEg := mobilityBonus(b, sq)
+		mobMg, mobEg := mobilityBonus(b, mirror, sq)
 		mg, eg = mg+mobMg, eg+mobEg
 	}
 
@@ -44,21 +45,21 @@ func (e *Evaluator) MobilityEvaluation(b *board.Board) (mg, eg int) {
 }
 
 // MobilityBonus attaches bonuses for middlegame and endgame by piece type and Mobility
-func mobilityBonus(b *board.Board, sq int) (mg, eg int) {
+func mobilityBonus(b *board.Board, mirror *board.Board, sq int) (mg, eg int) {
 	if b.Bitboards[WN].Test(sq) {
-		return mobilityBonusValues[0][0][mobility(b, sq)], mobilityBonusValues[1][0][mobility(b, sq)]
+		return mobilityBonusValues[0][0][mobility(b, mirror, sq)], mobilityBonusValues[1][0][mobility(b, mirror, sq)]
 	}
 
 	if b.Bitboards[WB].Test(sq) {
-		return mobilityBonusValues[0][1][mobility(b, sq)], mobilityBonusValues[1][1][mobility(b, sq)]
+		return mobilityBonusValues[0][1][mobility(b, mirror, sq)], mobilityBonusValues[1][1][mobility(b, mirror, sq)]
 	}
 
 	if b.Bitboards[WR].Test(sq) {
-		return mobilityBonusValues[0][2][mobility(b, sq)], mobilityBonusValues[1][2][mobility(b, sq)]
+		return mobilityBonusValues[0][2][mobility(b, mirror, sq)], mobilityBonusValues[1][2][mobility(b, mirror, sq)]
 	}
 
 	if b.Bitboards[WQ].Test(sq) {
-		return mobilityBonusValues[0][3][mobility(b, sq)], mobilityBonusValues[1][3][mobility(b, sq)]
+		return mobilityBonusValues[0][3][mobility(b, mirror, sq)], mobilityBonusValues[1][3][mobility(b, mirror, sq)]
 	}
 
 	return 0, 0
@@ -67,7 +68,7 @@ func mobilityBonus(b *board.Board, sq int) (mg, eg int) {
 // mobility is the number of attacked squares in the Mobility area. For queens squares
 // defended by opponent knight, bishop or rook are ignored. For minor pieces squares
 // occupied by our queen are ignored
-func mobility(b *board.Board, sq int) int {
+func mobility(b *board.Board, mirror *board.Board, sq int) int {
 	if !b.Bitboards[WN].Test(sq) && !b.Bitboards[WB].Test(sq) && !b.Bitboards[WR].Test(sq) &&
 		!b.Bitboards[WQ].Test(sq) {
 		return 0
@@ -77,7 +78,7 @@ func mobility(b *board.Board, sq int) int {
 
 	for x := 0; x < 8; x++ {
 		for y := 0; y < 8; y++ {
-			if !mobilityArea(b, y*8+x) {
+			if !mobilityArea(b, mirror, y*8+x) {
 				continue
 			}
 
@@ -106,7 +107,7 @@ func mobility(b *board.Board, sq int) int {
 // will be excluded from the mobility area. Also excludes blockers for king from
 // mobility area - blockers for king can't really move until king moves (in most cases)
 // so logic behind it is the same as behind excluding king square from mobility area.
-func mobilityArea(b *board.Board, sq int) bool {
+func mobilityArea(b *board.Board, mirror *board.Board, sq int) bool {
 	if b.Bitboards[WK].Test(sq) {
 		return false
 	}
@@ -131,9 +132,7 @@ func mobilityArea(b *board.Board, sq int) bool {
 		return false
 	}
 
-	mirror := b.Mirror()
-
-	if blockersForKing(mirror, (7-rank)*8+file) > 0 {
+	if blockersForKing(mirror, b, (7-rank)*8+file) > 0 {
 		return false
 	}
 
@@ -142,8 +141,7 @@ func mobilityArea(b *board.Board, sq int) bool {
 
 // blockersForKing returns if a particular piece on a particular square is a blocker
 // for the king for a pin
-func blockersForKing(b *board.Board, sq int) int {
-	mirror := b.Mirror()
+func blockersForKing(_ *board.Board, mirror *board.Board, sq int) int {
 	rank := sq / 8
 
 	if PinnedDirection(mirror, (7-rank)*8+(sq%8)) > 0 {

@@ -9,6 +9,7 @@ import (
 
 // ThreatsEvaluation evaluates the threats in a certain position
 func (e *Evaluator) ThreatsEvaluation(b *board.Board) (mg, eg int) {
+	mirror := b.Mirror()
 	mg, eg = 0, 0
 
 	hangingBonus := hanging(b)
@@ -28,11 +29,11 @@ func (e *Evaluator) ThreatsEvaluation(b *board.Board) (mg, eg int) {
 	mg += 173 * threatSafeBonus
 	eg += 94 * threatSafeBonus
 
-	sliderOnQueenBonus := sliderOnQueen(b)
+	sliderOnQueenBonus := sliderOnQueen(b, mirror)
 	mg += 60 * sliderOnQueenBonus
 	eg += 18 * sliderOnQueenBonus
 
-	knightOnQueenBonus := knightOnQueen(b)
+	knightOnQueenBonus := knightOnQueen(b, mirror)
 	mg += 16 * knightOnQueenBonus
 	eg += 11 * knightOnQueenBonus
 
@@ -229,8 +230,7 @@ func safePawn(b *board.Board, sq int) bool {
 }
 
 // sliderOnQueen adds a bonus for safe slider attack threats on opponent queen
-func sliderOnQueen(b *board.Board) int {
-	mirror := b.Mirror()
+func sliderOnQueen(b *board.Board, mirror *board.Board) int {
 	score := 0
 
 	if queenCount(mirror) != 1 {
@@ -255,7 +255,7 @@ func sliderOnQueen(b *board.Board) int {
 			continue
 		}
 
-		if !mobilityArea(b, sq) {
+		if !mobilityArea(b, mirror, sq) {
 			continue
 		}
 
@@ -286,9 +286,7 @@ func queenCount(b *board.Board) int {
 
 // knightOnQueen returns a bonus for safe knight attack threaths on
 // opponent queen
-func knightOnQueen(b *board.Board) int {
-	mirror := b.Mirror()
-
+func knightOnQueen(b *board.Board, mirror *board.Board) int {
 	blackQueen := b.Bitboards[BQ]
 	blackQueenSq := blackQueen.FirstOne()
 
@@ -320,7 +318,7 @@ func knightOnQueen(b *board.Board) int {
 			continue
 		}
 
-		if !mobilityArea(b, sq) {
+		if !mobilityArea(b, mirror, sq) {
 			continue
 		}
 

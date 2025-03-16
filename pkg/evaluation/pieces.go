@@ -12,6 +12,7 @@ import (
 // PiecesEvaluation returns the bonuses and penalties for the position of all piececs
 func (e *Evaluator) PiecesEvaluation(b *board.Board) (mg, eg int) {
 	mg, eg = 0, 0
+	mirror := b.Mirror()
 
 	// scores for Knight, Bishop, Rook, Queen
 	knightBB := b.Bitboards[WN]
@@ -70,7 +71,7 @@ func (e *Evaluator) PiecesEvaluation(b *board.Board) (mg, eg int) {
 			factor = 1
 		}
 
-		trappedRookBonus := trappedRook(b, sq)
+		trappedRookBonus := trappedRook(b, mirror, sq)
 		mg -= trappedRookBonus * 55 * factor
 		eg -= trappedRookBonus * 13 * factor
 	}
@@ -294,12 +295,12 @@ func rookOnKingRing(b *board.Board, sq int) int {
 
 // trappedRook penalizes the took when is trapped by the king, even more
 // if the king cannot castle
-func trappedRook(b *board.Board, sq int) int {
+func trappedRook(b *board.Board, mirror *board.Board, sq int) int {
 	if rookOnFile(b, sq) > 0 {
 		return 0
 	}
 
-	if mobility(b, sq) > 3 {
+	if mobility(b, mirror, sq) > 3 {
 		return 0
 	}
 
