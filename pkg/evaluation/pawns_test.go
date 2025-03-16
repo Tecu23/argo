@@ -118,7 +118,7 @@ func TestDoubleIsolated(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
-			res := optimizedDoubleIsolated(&b, tt.sq)
+			res := doubleIsolated(&b, tt.sq)
 			if res != tt.result {
 				t.Errorf("Pawn Evaluation failed, %s: got %v, want %v", tt.name, res, tt.result)
 			}
@@ -239,6 +239,120 @@ func TestIsolated(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
 			res := isolated(&b, tt.sq)
+			if res != tt.result {
+				t.Errorf("Pawn Evaluation failed, %s: got %v, want %v", tt.name, res, tt.result)
+			}
+		})
+	}
+}
+
+func TestBackward(t *testing.T) {
+	tests := []struct {
+		name   string
+		fen    string
+		result bool
+		sq     int
+	}{
+		{
+			name:   "Backward pawn behind friendly pawns on adjacent files",
+			fen:    "rnbqkbnr/pppppppp/8/8/2P1P3/3P4/PP3PPP/RNBQKBNR w KQkq - 0 1",
+			result: false, // D3 is not backward because there are friendly pawns ahead on C4 and E4
+			sq:     D3,
+		},
+		{
+			name:   "Backward pawn with no friendly pawns on adjacent files",
+			fen:    "rnbqkbnr/pp1ppppp/8/1p1P4/1P6/2P5/P3PPPP/RNBQKBNR b KQkq - 0 1",
+			result: true, // D3 is backward, no friendly pawns ahead on adjacent files and advance is unsafe
+			sq:     C3,
+		},
+		{
+			name:   "Non-backward pawn despite no friendly pawns, can safely advance",
+			fen:    "rnbqkbnr/pp2pppp/8/8/8/3P4/PPP1PPPP/RNBQKBNR w KQkq - 0 1",
+			result: false, // D3 can safely advance, so not backward
+			sq:     D3,
+		},
+		{
+			name:   "Backward pawn blocked directly in front",
+			fen:    "rnbqkbnr/ppp2ppp/3p4/2P1p3/8/3P4/PP3PPP/RNBQKBNR w KQkq - 0 1",
+			result: true, // D3 is blocked by black pawn directly in front
+			sq:     D3,
+		},
+		// Edge file cases
+		{
+			name:   "Edge file (A-file) backward pawn",
+			fen:    "rnbqkbnr/pppppppp/8/8/1P6/P7/1P1PPPPP/RNBQKBNR w KQkq - 0 1",
+			result: false, // A3 is not backward because there's a friendly pawn on B4
+			sq:     A3,
+		},
+		{
+			name:   "Edge file (A-file) backward pawn, threatened by diagonal attacker",
+			fen:    "rnbqkbnr/2pppppp/p7/1p6/8/P7/2PPPPPP/RNBQKBNR w KQkq - 0 1",
+			result: true, // A3 is backward, advance is unsafe due to diagonal attacker
+			sq:     A3,
+		},
+		{
+			name:   "Edge file (H-file) backward pawn",
+			fen:    "rnbqkbnr/pppppppp/8/8/6P1/7P/PPPPPPP1/RNBQKBNR w KQkq - 0 1",
+			result: false, // H3 is not backward because there's a friendly pawn on G4
+			sq:     H3,
+		},
+		// Complex scenarios
+		{
+			name:   "Potential backward pawn with diagonal attackers",
+			fen:    "rnbqkbnr/ppp1p1pp/5p2/3p4/8/3P4/PPP1PPPP/RNBQKBNR w KQkq - 0 1",
+			result: false,
+			sq:     D3,
+		},
+		{
+			name:   "Pawn that appears backward but has support",
+			fen:    "rnbqkbnr/pppppppp/8/8/2P1P3/3P4/PP3PPP/RNBQKBNR w KQkq - 0 1",
+			result: false, // D3 has support from pawns on C4 and E4
+			sq:     D3,
+		},
+		{
+			name:   "Pawn on rank 2 can be backward",
+			fen:    "rnbqkbnr/ppp1pppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1",
+			result: false, // D4 can advance safely
+			sq:     D4,
+		},
+		{
+			name:   "Pawn on rank 2 with direct blocker",
+			fen:    "rnbqkbnr/ppp1pppp/3p4/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 1",
+			result: false, // D2 is backward, blocked directly
+			sq:     D4,
+		},
+		// // Non-pawn cases
+		// {
+		// 	name:   "Empty square is not backward",
+		// 	fen:    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+		// 	result: false,
+		// 	sq:     D2,
+		// },
+		// {
+		// 	name:   "Other piece (not pawn) is not backward",
+		// 	fen:    "rnbqkbnr/ppp1pppp/8/3p4/5P2/4P3/PPP3PP/RNBQKB1R w KQkq d6 0 2",
+		// 	result: true,
+		// 	sq:     E3,
+		// },
+		// // Special cases
+		// {
+		// 	name:   "Pawn on last rank (theoretical)",
+		// 	fen:    "rnbqkPnr/pppppppp/8/8/8/8/PPPPP1PP/RNBQKBNR w KQkq - 0 1",
+		// 	result: false, // F8 pawn can't advance further
+		// 	sq:     F8,
+		// },
+		// {
+		// 	name:   "Advanced pawn with diagonal attackers",
+		// 	fen:    "rnbqkbnr/ppp1pppp/8/2P1p3/4P3/3P4/PP3PPP/RNBQKBNR b KQkq e3 0 1",
+		// 	result: true, // D3 is backward due to diagonal attacker on E5
+		// 	sq:     D3,
+		// },
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, _ := board.ParseFEN(tt.fen)
+			res := optimizedBackward(&b, tt.sq)
 			if res != tt.result {
 				t.Errorf("Pawn Evaluation failed, %s: got %v, want %v", tt.name, res, tt.result)
 			}

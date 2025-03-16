@@ -137,6 +137,65 @@ func isolated(b *board.Board, sq int) bool {
 	return true
 }
 
+func optimizedBackward(b *board.Board, sq int) bool {
+	// Should return if square doesn't contain a white pawn
+	// But because we only call double isolated on white pawns this is not needed
+
+	rank := sq / 8
+	file := sq % 8
+
+	// Check if there are friendly pawns on adjanced files at or ahead of this pawn
+	leftFile := file > 0
+	rightFile := file < 7
+
+	// Create masks for adjacent files
+	var leftFileMask, rightFileMask bitboard.Bitboard
+	if leftFile {
+		leftFileMask = FileMasks[file-1]
+	}
+
+	if rightFile {
+		rightFileMask = FileMasks[file+1]
+	}
+
+	// Create mask for ranks at or ahead of our pawn
+	var forwardRanksMask bitboard.Bitboard
+	for r := rank; r < 8; r++ {
+		forwardRanksMask |= RankMasks[r]
+	}
+
+	// Check for white pawns on adjacent files at or ahead of this pawn
+	whitePawnsAheadLeft := leftFile && (b.Bitboards[WP]&leftFileMask&forwardRanksMask != 0)
+	whitePawnsAheadRight := rightFile && (b.Bitboards[WP]&rightFileMask&forwardRanksMask != 0)
+
+	if whitePawnsAheadLeft || whitePawnsAheadRight {
+		return false
+	}
+
+	// Check if the pawn is blocked or can be captured when advanced
+
+	// Position one square ahead
+	squareAhead := (rank-1)*8 + file
+	if rank > 0 && b.Bitboards[BP].Test(squareAhead) {
+		return true
+	}
+
+	// Positions that could attack the square ahead diagonally
+	if rank > 1 {
+		leftDiagAttacker := (rank-2)*8 + file - 1
+		rightDiagAttacker := (rank-2)*8 + file + 1
+
+		leftAttack := leftFile && b.Bitboards[BP].Test(leftDiagAttacker)
+		rightAttack := rightFile && b.Bitboards[BP].Test(rightDiagAttacker)
+
+		if leftAttack || rightAttack {
+			return true
+		}
+	}
+
+	return false
+}
+
 // backward returns is a pawn is backward. It happens when the pawn is behind
 // all the pawns of the same color on the adjancent files and cannot be safely advanced
 func backward(b *board.Board, sq int) bool {
