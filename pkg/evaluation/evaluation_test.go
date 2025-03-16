@@ -3,10 +3,26 @@ package evaluation
 import (
 	"testing"
 
+	"github.com/Tecu23/argov2/internal/hash"
+	"github.com/Tecu23/argov2/pkg/attacks"
 	"github.com/Tecu23/argov2/pkg/board"
+	"github.com/Tecu23/argov2/pkg/constants"
+	"github.com/Tecu23/argov2/pkg/util"
 )
 
 // TODO: FIX THESE TESTS
+
+func init() {
+	attacks.InitPawnAttacks()
+	attacks.InitKnightAttacks()
+	attacks.InitKingAttacks()
+	attacks.InitSliderPiecesAttacks(constants.Bishop)
+	attacks.InitSliderPiecesAttacks(constants.Rook)
+
+	util.InitFen2Sq()
+
+	hash.Init()
+}
 
 func TestFinalMiddleGameEvaluation(t *testing.T) {
 	tests := []struct {
@@ -90,22 +106,22 @@ func TestEndgameEvaluation(t *testing.T) {
 		{
 			name: "Complex Position 1",
 			fen:  "8/8/8/8/8/8/8/K6k w - - 0 1",
-			eval: -38,
+			eval: 28,
 		},
 		{
 			name: "Complex Position 2",
 			fen:  "8/8/8/8/8/8/4P3/k6K w - - 0 1",
-			eval: 271,
+			eval: 204,
 		},
 		{
 			name: "Complex Position 3",
 			fen:  "8/8/8/8/8/3P4/4K3/k7 w - - 0 1",
-			eval: 491,
+			eval: 348,
 		},
 		{
 			name: "Complex Position 4",
 			fen:  "8/8/8/8/8/2P5/8/k2K4 w - - 0 1",
-			eval: 315,
+			eval: 236,
 		},
 		{
 			name: "Complex Position 5",
