@@ -30,15 +30,20 @@ func (e *Evaluator) PawnsEvaluation(b *board.Board) (mg, eg int) {
 		}
 
 		if connected(b, sq) {
-			mg += connectedBonus(b, sq)
-			eg += connectedBonus(b, sq) * (8 - (sq / 8) - 3) / 4
+			connBonus := connectedBonus(b, sq)
+			mg += connBonus
+			eg += connBonus * (8 - (sq / 8) - 3) / 4
 		}
 
-		mg -= 13 * weakUnopposedPawn(b, sq)
-		eg -= 27 * weakUnopposedPawn(b, sq)
+		weakUnopposedBonus := weakUnopposedPawn(b, sq)
+		mg -= 13 * weakUnopposedBonus
+		eg -= 27 * weakUnopposedBonus
+
 		eg -= 56 * weakLever(b, sq)
-		mg += []int{0, -11, -3}[blocked(b, sq)]
-		eg += []int{0, -4, 4}[blocked(b, sq)]
+
+		blockedIdx := blocked(b, sq)
+		mg += []int{0, -11, -3}[blockedIdx]
+		eg += []int{0, -4, 4}[blockedIdx]
 
 	}
 
