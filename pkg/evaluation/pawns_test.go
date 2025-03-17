@@ -118,7 +118,12 @@ func TestDoubleIsolated(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
-			res := doubleIsolated(&b, tt.sq)
+			var res bool
+			if !isolated(&b, tt.sq) {
+				res = false
+			} else {
+				res = doubleIsolated(&b, tt.sq)
+			}
 			if res != tt.result {
 				t.Errorf("Pawn Evaluation failed, %s: got %v, want %v", tt.name, res, tt.result)
 			}

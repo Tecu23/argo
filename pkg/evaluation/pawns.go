@@ -13,12 +13,14 @@ func (e *Evaluator) PawnsEvaluation(b *board.Board) (mg, eg int) {
 	for pawnsBB != 0 {
 		sq := pawnsBB.FirstOne()
 
-		if doubleIsolated(b, sq) {
-			mg -= 11
-			eg -= 56
-		} else if isolated(b, sq) {
-			mg -= 5
-			eg -= 15
+		if isolated(b, sq) {
+			if doubleIsolated(b, sq) {
+				mg -= 11
+				eg -= 56
+			} else {
+				mg -= 5
+				eg -= 15
+			}
 		} else if backward(b, sq) {
 			mg -= 9
 			eg -= 24
@@ -35,11 +37,18 @@ func (e *Evaluator) PawnsEvaluation(b *board.Board) (mg, eg int) {
 			eg += connBonus * (8 - (sq / 8) - 3) / 4
 		}
 
-		weakUnopposedBonus := weakUnopposedPawn(b, sq)
+		weakUnopposedBonus := 0
+		if weakUnopposedPawn(b, sq) {
+			weakUnopposedBonus = 1
+		}
 		mg -= 13 * weakUnopposedBonus
 		eg -= 27 * weakUnopposedBonus
 
-		eg -= 56 * weakLever(b, sq)
+		weakLeverBonus := 0
+		if weakLever(b, sq) {
+			weakLeverBonus = 1
+		}
+		eg -= 56 * weakLeverBonus
 
 		blockedIdx := blocked(b, sq)
 		mg += []int{0, -11, -3}[blockedIdx]
@@ -59,10 +68,12 @@ func doubleIsolated(b *board.Board, sq int) bool {
 	file := sq % 8
 	rank := sq / 8
 
-	// Return early is the pawn is not isolated
-	if !isolated(b, sq) {
-		return false
-	}
+	// NOTE: No need for this as we check if pawn isolated first
+
+	// // Return early is the pawn is not isolated
+	// if !isolated(b, sq) {
+	// 	return false
+	// }
 
 	leftFile := file > 0
 	rightFile := file < 7
@@ -265,20 +276,20 @@ func connected(b *board.Board, sq int) bool {
 // supported counts the number of pawns supporting this pawn. The pawn is supported
 // if a friendly pawn is exacly in the adjancent file of the pawn and directly behind it
 func supported(b *board.Board, sq int) int {
-	if !b.Bitboards[WP].Test(sq) {
-		return 0
-	}
-
 	rank := sq / 8
 	file := sq % 8
 
+	if rank >= 7 {
+		return 0
+	}
+
 	score := 0
 
-	if b.Bitboards[WP].Test((rank+1)*8+file-1) && file > 0 {
+	if file > 0 && b.Bitboards[WP].Test((rank+1)*8+file-1) {
 		score++
 	}
 
-	if b.Bitboards[WP].Test((rank+1)*8+file+1) && file < 7 {
+	if file < 7 && b.Bitboards[WP].Test((rank+1)*8+file+1) {
 		score++
 	}
 
@@ -287,15 +298,11 @@ func supported(b *board.Board, sq int) int {
 
 // phalanx flag is set if there is friendly pawn on adjancent file and same rank
 func phalanx(b *board.Board, sq int) int {
-	if !b.Bitboards[WP].Test(sq) {
-		return 0
-	}
-
 	rank := sq / 8
 	file := sq % 8
 
-	if (b.Bitboards[WP].Test(rank*8+file-1) && file > 0) ||
-		(b.Bitboards[WP].Test(rank*8+file+1) && file < 7) {
+	if (file > 0 && b.Bitboards[WP].Test(rank*8+file-1)) ||
+		(file < 7 && b.Bitboards[WP].Test(rank*8+file+1)) {
 		return 1
 	}
 
@@ -311,9 +318,13 @@ func connectedBonus(b *board.Board, sq int) int {
 	rank := 8 - sq/8
 
 	seed := []int{0, 7, 8, 12, 29, 48, 86}
-	op := opposed(b, sq)
+	var op int
+	if opposed(b, sq) {
+		op = 1
+	}
 	ph := phalanx(b, sq)
 	su := supported(b, sq)
+
 	if rank < 2 || rank > 7 {
 		return 0
 	}
@@ -323,45 +334,45 @@ func connectedBonus(b *board.Board, sq int) int {
 
 // opposed flag is set if there is opponent opposing pawn on the same file
 // to prevent it from advancing
-func opposed(b *board.Board, sq int) int {
-	if !b.Bitboards[WP].Test(sq) {
-		return 0
-	}
-
+func opposed(b *board.Board, sq int) bool {
 	rank := sq / 8
 	file := sq % 8
 
-	for y := 0; y < rank; y++ {
-		if b.Bitboards[BP].Test(y*8 + file) {
-			return 1
-		}
+	fileMask := FileMasks[file]
+
+	var frontRanksMask bitboard.Bitboard
+	for r := 0; r < rank; r++ {
+		frontRanksMask |= RankMasks[r]
 	}
 
-	return 0
+	blackPawnsInFront := b.Bitboards[BP] & fileMask & frontRanksMask
+
+	if blackPawnsInFront > 0 {
+		return true
+	}
+
+	return false
 }
 
 // weakUnopposedPawn checks if out pawn is weak and unopposed
-func weakUnopposedPawn(b *board.Board, sq int) int {
-	if opposed(b, sq) > 0 {
-		return 0
+func weakUnopposedPawn(b *board.Board, sq int) bool {
+	if opposed(b, sq) {
+		return false
 	}
-	score := 0
 
 	if isolated(b, sq) {
-		score++
-	} else if backward(b, sq) {
-		score++
+		return true
 	}
 
-	return score
+	if backward(b, sq) {
+		return true
+	}
+
+	return false
 }
 
 // blocked bonus for blocked pawns on the 5th or 6th rank
 func blocked(b *board.Board, sq int) int {
-	if !b.Bitboards[WP].Test(sq) {
-		return 0
-	}
-
 	rank := sq / 8
 	file := sq % 8
 
@@ -377,29 +388,25 @@ func blocked(b *board.Board, sq int) int {
 }
 
 // weakLever adds a penalty for unsupported pawns attacked twice by enemy pawns
-func weakLever(b *board.Board, sq int) int {
-	if !b.Bitboards[WP].Test(sq) {
-		return 0
-	}
-
+func weakLever(b *board.Board, sq int) bool {
 	rank := sq / 8
 	file := sq % 8
 
-	if !b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 && file > 0 {
-		return 0
+	if rank > 0 && file > 0 && !b.Bitboards[BP].Test((rank-1)*8+file-1) {
+		return false
 	}
 
-	if !b.Bitboards[BP].Test((rank-1)*8+file+1) && rank > 0 && file < 7 {
-		return 0
+	if rank > 0 && file < 7 && !b.Bitboards[BP].Test((rank-1)*8+file+1) {
+		return false
 	}
 
-	if b.Bitboards[WP].Test((rank+1)*8+file-1) && rank < 7 && file > 0 {
-		return 0
+	if rank < 7 && file > 0 && b.Bitboards[WP].Test((rank+1)*8+file-1) {
+		return false
 	}
 
-	if b.Bitboards[WP].Test((rank+1)*8+file+1) && rank < 7 && file < 7 {
-		return 0
+	if rank < 7 && file < 7 && b.Bitboards[WP].Test((rank+1)*8+file+1) {
+		return false
 	}
 
-	return 1
+	return true
 }
