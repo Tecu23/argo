@@ -1,6 +1,8 @@
 // Package evaluation is responsible with evaluating the current board position
 package evaluation
 
+import "github.com/Tecu23/argov2/pkg/bitboard"
+
 // Piece value for evaluation
 const (
 	// for middlegame
@@ -171,4 +173,72 @@ var mobilityBonusValues = [2][4][]int{
 			127, 131, 133, 136, 141, 147, 150, 151, 168, 168, 171, 182, 182, 192, 219,
 		},
 	},
+}
+
+// KingRingPatterns contains precomputed king ring patterns for all 64 squares
+var KingRingPatterns = [64]bitboard.Bitboard{
+	0x0000000000070707, // Square a8 (0)
+	0x0000000000070707, // Square b8 (1)
+	0x00000000000e0e0e, // Square c8 (2)
+	0x00000000001c1c1c, // Square d8 (3)
+	0x0000000000383838, // Square e8 (4)
+	0x0000000000707070, // Square f8 (5)
+	0x0000000000e0e0e0, // Square g8 (6)
+	0x0000000000e0e0e0, // Square h8 (7)
+	0x0000000000070707, // Square a7 (8)
+	0x0000000000070707, // Square b7 (9)
+	0x00000000000e0e0e, // Square c7 (10)
+	0x00000000001c1c1c, // Square d7 (11)
+	0x0000000000383838, // Square e7 (12)
+	0x0000000000707070, // Square f7 (13)
+	0x0000000000e0e0e0, // Square g7 (14)
+	0x0000000000e0e0e0, // Square h7 (15)
+	0x0000000007070700, // Square a6 (16)
+	0x0000000007070700, // Square b6 (17)
+	0x000000000e0e0e00, // Square c6 (18)
+	0x000000001c1c1c00, // Square d6 (19)
+	0x0000000038383800, // Square e6 (20)
+	0x0000000070707000, // Square f6 (21)
+	0x00000000e0e0e000, // Square g6 (22)
+	0x00000000e0e0e000, // Square h6 (23)
+	0x0000000707070000, // Square a5 (24)
+	0x0000000707070000, // Square b5 (25)
+	0x0000000e0e0e0000, // Square c5 (26)
+	0x0000001c1c1c0000, // Square d5 (27)
+	0x0000003838380000, // Square e5 (28)
+	0x0000007070700000, // Square f5 (29)
+	0x000000e0e0e00000, // Square g5 (30)
+	0x000000e0e0e00000, // Square h5 (31)
+	0x0000070707000000, // Square a4 (32)
+	0x0000070707000000, // Square b4 (33)
+	0x00000e0e0e000000, // Square c4 (34)
+	0x00001c1c1c000000, // Square d4 (35)
+	0x0000383838000000, // Square e4 (36)
+	0x0000707070000000, // Square f4 (37)
+	0x0000e0e0e0000000, // Square g4 (38)
+	0x0000e0e0e0000000, // Square h4 (39)
+	0x0007070700000000, // Square a3 (40)
+	0x0007070700000000, // Square b3 (41)
+	0x000e0e0e00000000, // Square c3 (42)
+	0x001c1c1c00000000, // Square d3 (43)
+	0x0038383800000000, // Square e3 (44)
+	0x0070707000000000, // Square f3 (45)
+	0x00e0e0e000000000, // Square g3 (46)
+	0x00e0e0e000000000, // Square h3 (47)
+	0x0707070000000000, // Square a2 (48)
+	0x0707070000000000, // Square b2 (49)
+	0x0e0e0e0000000000, // Square c2 (50)
+	0x1c1c1c0000000000, // Square d2 (51)
+	0x3838380000000000, // Square e2 (52)
+	0x7070700000000000, // Square f2 (53)
+	0xe0e0e00000000000, // Square g2 (54)
+	0xe0e0e00000000000, // Square h2 (55)
+	0x0707070000000000, // Square a1 (56)
+	0x0707070000000000, // Square b1 (57)
+	0x0e0e0e0000000000, // Square c1 (58)
+	0x1c1c1c0000000000, // Square d1 (59)
+	0x3838380000000000, // Square e1 (60)
+	0x7070700000000000, // Square f1 (61)
+	0xe0e0e00000000000, // Square g1 (62)
+	0xe0e0e00000000000, // Square h1 (63)
 }

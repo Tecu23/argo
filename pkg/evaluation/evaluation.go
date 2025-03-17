@@ -56,12 +56,12 @@ func (e *Evaluator) EvaluateOneSide(
 	imb := e.ImbalanceEvaluation(board, mirror)
 	mg, eg = mg+imb, eg+imb
 
-	// wPiecesMg, wPiecesEg := e.PiecesEvaluation(board)
-	// bPiecesMg, bPiecesEg := e.PiecesEvaluation(mirror)
-	//
-	// mg = mg + wPiecesMg - bPiecesMg
-	// eg = eg + wPiecesEg - bPiecesEg
-	//
+	wPiecesMg, wPiecesEg := e.PiecesEvaluation(board, mirror)
+	bPiecesMg, bPiecesEg := e.PiecesEvaluation(mirror, board)
+
+	mg = mg + wPiecesMg - bPiecesMg
+	eg = eg + wPiecesEg - bPiecesEg
+
 	// wMobMg, wMobEg := e.MobilityEvaluation(board)
 	// bMobMg, bMobEg := e.MobilityEvaluation(mirror)
 	//

@@ -4,6 +4,7 @@ package evaluation
 import (
 	"testing"
 
+	"github.com/Tecu23/argov2/pkg/bitboard"
 	"github.com/Tecu23/argov2/pkg/board"
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
@@ -118,11 +119,27 @@ func TestDoubleIsolated(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
+
+			file := tt.sq % 8
+
+			leftFile := file > 0
+			rightFile := file < 7
+
+			// Create maks for adjancent files
+			var leftFileMask, rightFileMask bitboard.Bitboard
+			if leftFile {
+				leftFileMask = FileMasks[file-1]
+			}
+
+			if rightFile {
+				rightFileMask = FileMasks[file+1]
+			}
+
 			var res bool
-			if !isIsolated(&b, tt.sq) {
+			if !isIsolated(&b, leftFile, rightFile, leftFileMask, rightFileMask) {
 				res = false
 			} else {
-				res = doubleIsolated(&b, tt.sq)
+				res = doubleIsolated(&b, tt.sq, leftFile, rightFile, leftFileMask, rightFileMask)
 			}
 			if res != tt.result {
 				t.Errorf("Pawn Evaluation failed, %s: got %v, want %v", tt.name, res, tt.result)
@@ -243,7 +260,23 @@ func TestIsolated(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
-			res := isIsolated(&b, tt.sq)
+
+			file := tt.sq % 8
+
+			leftFile := file > 0
+			rightFile := file < 7
+
+			// Create maks for adjancent files
+			var leftFileMask, rightFileMask bitboard.Bitboard
+			if leftFile {
+				leftFileMask = FileMasks[file-1]
+			}
+
+			if rightFile {
+				rightFileMask = FileMasks[file+1]
+			}
+
+			res := isIsolated(&b, leftFile, rightFile, leftFileMask, rightFileMask)
 			if res != tt.result {
 				t.Errorf("Pawn Evaluation failed, %s: got %v, want %v", tt.name, res, tt.result)
 			}
@@ -353,6 +386,10 @@ func TestBackward(t *testing.T) {
 			sq:     D3,
 		},
 	}
+
+	// for _, bb := range KingRingPatterns {
+	// 	bb.PrintBitboard()
+	// }
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

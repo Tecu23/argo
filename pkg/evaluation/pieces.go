@@ -10,9 +10,8 @@ import (
 )
 
 // PiecesEvaluation returns the bonuses and penalties for the position of all piececs
-func (e *Evaluator) PiecesEvaluation(b *board.Board) (mg, eg int) {
+func (e *Evaluator) PiecesEvaluation(b *board.Board, mirror *board.Board) (mg, eg int) {
 	mg, eg = 0, 0
-	mirror := b.Mirror()
 
 	// scores for Knight, Bishop, Rook, Queen
 	knightBB := b.Bitboards[WN]
@@ -468,23 +467,20 @@ func kingRing(b *board.Board, sq int, full bool) int {
 	rank := sq / 8
 	file := sq % 8
 
-	if !full && b.Bitboards[BP].Test((rank-1)*8+file+1) && file < 7 && file > 0 &&
-		b.Bitboards[BP].Test((rank-1)*8+file-1) && rank > 0 {
+	if !full && rank > 0 && file < 7 && file > 0 &&
+		b.Bitboards[BP].Test((rank-1)*8+file+1) &&
+		b.Bitboards[BP].Test((rank-1)*8+file-1) {
 		return 0
 	}
 
-	for ix := -2; ix <= 2; ix++ {
-		for iy := -2; iy <= 2; iy++ {
-			if ix+file < 0 || ix+file > 7 || iy+rank < 0 || iy+rank > 7 {
-				continue
-			}
+	bb := b.Bitboards[BK]
+	kingSq := bb.FirstOne()
 
-			if b.Bitboards[BK].Test((rank+iy)*8+file+ix) &&
-				((ix >= -1 && ix <= 1) || file+ix == 0 || file+ix == 7) &&
-				((iy >= -1 && iy <= 1) || rank+iy == 0 || rank+iy == 7) {
-				return 1
-			}
-		}
+	fileMask := FileMasks[file]
+	rankMask := RankMasks[rank]
+
+	if fileMask&rankMask&KingRingPatterns[kingSq] != 0 {
+		return 1
 	}
 
 	return 0
