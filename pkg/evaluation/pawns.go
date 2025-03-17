@@ -231,22 +231,22 @@ func backward(b *board.Board, sq int) bool {
 // pawn on the same file but here we attach doubled pawn penalty only if pawn which has
 // another friendly pawn on square directly behind that pawn and is not supported
 func doubled(b *board.Board, sq int) bool {
-	if !b.Bitboards[WP].Test(sq) {
-		return false
-	}
-
 	rank := sq / 8
 	file := sq % 8
+
+	if rank >= 7 {
+		return false
+	}
 
 	if !b.Bitboards[WP].Test((rank+1)*8 + file) {
 		return false
 	}
 
-	if b.Bitboards[WP].Test((rank+1)*8+file-1) && file > 0 {
+	if file > 0 && b.Bitboards[WP].Test((rank+1)*8+file-1) {
 		return false
 	}
 
-	if b.Bitboards[WP].Test((rank+1)*8+file+1) && file < 7 {
+	if file < 7 && b.Bitboards[WP].Test((rank+1)*8+file+1) {
 		return false
 	}
 
