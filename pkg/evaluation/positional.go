@@ -10,6 +10,7 @@ import (
 // using piece square table bonuses. It returns bothe middlegame and endgame evaluations
 func (e *Evaluator) PositionalEvaluation(b *board.Board) (mg, eg int) {
 	pawnBB := b.Bitboards[WP]
+	var pawnMg, pawnEg int
 	for pawnBB != 0 {
 		sq := pawnBB.FirstOne()
 		rank := sq / 8
@@ -17,6 +18,10 @@ func (e *Evaluator) PositionalEvaluation(b *board.Board) (mg, eg int) {
 
 		mg += psqtPawnBonus[0][7-rank][file]
 		eg += psqtPawnBonus[1][7-rank][file]
+
+		pawnMg, pawnEg = e.evaluatePawn(b, sq)
+
+		mg, eg = mg+pawnMg, eg+pawnEg
 	}
 
 	knightBB := b.Bitboards[WN]

@@ -367,12 +367,12 @@ func pawnAttacksSpan(b *board.Board, sq int) int {
 
 	for y := 0; y < rank; y++ {
 		if b.Bitboards[BP].Test(y*8+file-1) && file > 0 &&
-			(y == file-1 || (b.Bitboards[WP].Test((y+1)*8+file-1) && file > 0 && !backward(mirror, (7-y)*8+file-1))) {
+			(y == file-1 || (b.Bitboards[WP].Test((y+1)*8+file-1) && file > 0 && !isBackward(mirror, (7-y)*8+file-1))) {
 			return 1
 		}
 
 		if b.Bitboards[BP].Test(y*8+file+1) && file < 7 &&
-			(y == file-1 || (b.Bitboards[WP].Test((y+1)*8+file+1) && file < 7 && !backward(mirror, (7-y)*8+file+1))) {
+			(y == file-1 || (b.Bitboards[WP].Test((y+1)*8+file+1) && file < 7 && !isBackward(mirror, (7-y)*8+file+1))) {
 			return 1
 		}
 	}

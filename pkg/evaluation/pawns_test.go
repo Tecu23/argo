@@ -119,7 +119,7 @@ func TestDoubleIsolated(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
 			var res bool
-			if !isolated(&b, tt.sq) {
+			if !isIsolated(&b, tt.sq) {
 				res = false
 			} else {
 				res = doubleIsolated(&b, tt.sq)
@@ -243,7 +243,7 @@ func TestIsolated(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
-			res := isolated(&b, tt.sq)
+			res := isIsolated(&b, tt.sq)
 			if res != tt.result {
 				t.Errorf("Pawn Evaluation failed, %s: got %v, want %v", tt.name, res, tt.result)
 			}
@@ -326,38 +326,38 @@ func TestBackward(t *testing.T) {
 			result: false, // D2 is backward, blocked directly
 			sq:     D4,
 		},
-		// // Non-pawn cases
-		// {
-		// 	name:   "Empty square is not backward",
-		// 	fen:    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-		// 	result: false,
-		// 	sq:     D2,
-		// },
-		// {
-		// 	name:   "Other piece (not pawn) is not backward",
-		// 	fen:    "rnbqkbnr/ppp1pppp/8/3p4/5P2/4P3/PPP3PP/RNBQKB1R w KQkq d6 0 2",
-		// 	result: true,
-		// 	sq:     E3,
-		// },
-		// // Special cases
-		// {
-		// 	name:   "Pawn on last rank (theoretical)",
-		// 	fen:    "rnbqkPnr/pppppppp/8/8/8/8/PPPPP1PP/RNBQKBNR w KQkq - 0 1",
-		// 	result: false, // F8 pawn can't advance further
-		// 	sq:     F8,
-		// },
-		// {
-		// 	name:   "Advanced pawn with diagonal attackers",
-		// 	fen:    "rnbqkbnr/ppp1pppp/8/2P1p3/4P3/3P4/PP3PPP/RNBQKBNR b KQkq e3 0 1",
-		// 	result: true, // D3 is backward due to diagonal attacker on E5
-		// 	sq:     D3,
-		// },
+		// Non-pawn cases
+		{
+			name:   "Empty square is not backward",
+			fen:    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			result: false,
+			sq:     D2,
+		},
+		{
+			name:   "Other piece (not pawn) is not backward",
+			fen:    "rnbqkbnr/ppp1pppp/8/3p4/5P2/4P3/PPP3PP/RNBQKB1R w KQkq d6 0 2",
+			result: true,
+			sq:     E3,
+		},
+		// Special cases
+		{
+			name:   "Pawn on last rank (theoretical)",
+			fen:    "rnbqkPnr/pppppppp/8/8/8/8/PPPPP1PP/RNBQKBNR w KQkq - 0 1",
+			result: false, // F8 pawn can't advance further
+			sq:     F8,
+		},
+		{
+			name:   "Advanced pawn with diagonal attackers",
+			fen:    "rnbqkbnr/ppp1pppp/8/2P1p3/4P3/3P4/PP3PPP/RNBQKBNR b KQkq e3 0 1",
+			result: true, // D3 is backward due to diagonal attacker on E5
+			sq:     D3,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
-			res := optimizedBackward(&b, tt.sq)
+			res := isBackward(&b, tt.sq)
 			if res != tt.result {
 				t.Errorf("Pawn Evaluation failed, %s: got %v, want %v", tt.name, res, tt.result)
 			}
