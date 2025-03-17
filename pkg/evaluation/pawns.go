@@ -198,11 +198,10 @@ func optimizedBackward(b *board.Board, sq int) bool {
 
 	// Positions that could attack the square ahead diagonally
 	if rank > 1 {
-		leftDiagAttacker := (rank-2)*8 + file - 1
-		rightDiagAttacker := (rank-2)*8 + file + 1
+		aheadRankMask := RankMasks[rank-2]
 
-		leftAttack := leftFile && b.Bitboards[BP].Test(leftDiagAttacker)
-		rightAttack := rightFile && b.Bitboards[BP].Test(rightDiagAttacker)
+		leftAttack := leftFile && b.Bitboards[BP]&aheadRankMask&leftFileMask != 0
+		rightAttack := rightFile && b.Bitboards[BP]&aheadRankMask&rightFileMask != 0
 
 		if leftAttack || rightAttack {
 			return true

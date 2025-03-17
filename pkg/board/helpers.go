@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Tecu23/argov2/internal/hash"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/util"
@@ -102,11 +103,12 @@ func ParseFEN(FEN string) (Board, error) {
 // Mirror returns a new board that's flipped vertically (white pieces become black and vice versa)
 func (b *Board) Mirror() *Board {
 	// Create a new board
-	mirrored := NewBoard()
+	mirrored := &Board{}
 
 	mirrored.Rule50 = b.Rule50
 	mirrored.MoveNumber = b.MoveNumber
 
+	mirroredHash := uint64(0)
 	for pc := WP; pc <= BK; pc++ {
 		oppPc := util.OppositeColorPiece(pc)
 		bb := b.Bitboards[pc]
@@ -114,27 +116,33 @@ func (b *Board) Mirror() *Board {
 		var sq int
 		var oppSq int
 
-		for bb.Count() > 0 {
+		for bb != 0 {
 			sq = bb.FirstOne()
 			oppSq = sq ^ 56
 
 			mirrored.SetSq(oppPc, oppSq)
+			mirroredHash ^= hash.HashTable.PieceSquare[oppPc*64+oppSq]
 		}
 	}
 
 	// Mirror castling rights
 	var newCastling Castlings
-	if uint(b.Castlings)&ShortW != 0 {
-		newCastling |= Castlings(ShortB)
-	}
-	if uint(b.Castlings)&LongW != 0 {
-		newCastling |= Castlings(LongB)
-	}
+
 	if uint(b.Castlings)&ShortB != 0 {
 		newCastling |= Castlings(ShortW)
+		mirroredHash ^= hash.HashTable.Castling[0]
 	}
 	if uint(b.Castlings)&LongB != 0 {
 		newCastling |= Castlings(LongW)
+		mirroredHash ^= hash.HashTable.Castling[1]
+	}
+	if uint(b.Castlings)&ShortW != 0 {
+		newCastling |= Castlings(ShortB)
+		mirroredHash ^= hash.HashTable.Castling[2]
+	}
+	if uint(b.Castlings)&LongW != 0 {
+		newCastling |= Castlings(LongB)
+		mirroredHash ^= hash.HashTable.Castling[3]
 	}
 
 	mirrored.Castlings = newCastling
@@ -142,14 +150,19 @@ func (b *Board) Mirror() *Board {
 	// Mirror en passant square if exists
 	if b.EnPassant != -1 {
 		mirrored.EnPassant = b.EnPassant ^ 56 // Flip rank (0-7 becomes 7-0)
+		file := mirrored.EnPassant % 8
+		mirroredHash ^= hash.HashTable.EnPassant[file]
 	}
 
 	// Switch side to move
 	mirrored.Side = b.Side.Opp()
+	if mirrored.Side == color.WHITE {
+		mirroredHash ^= hash.HashTable.Side
+	}
 
-	// Update hash
-	mirrored.hash = mirrored.calculateHash()
-
+	// NOTE: This will not be the same as calculate hash but we do not
+	// need it to be the same. We only need the mirror position for eval
+	mirrored.hash = mirroredHash
 	return mirrored
 }
 
