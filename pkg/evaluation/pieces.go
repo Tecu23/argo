@@ -68,9 +68,9 @@ func (e *Evaluator) evaluateRook(b *board.Board, sq int) (mg, eg int) {
 }
 
 func (e *Evaluator) evaluateQueen(b *board.Board, sq int) (mg, eg int) {
-	weakQueenBonus := weakQueen(b, sq)
-	mg -= 56 * weakQueenBonus
-	eg -= 15 * weakQueenBonus
+	// weakQueenBonus := weakQueen(b, sq)
+	// mg -= 56 * weakQueenBonus
+	// eg -= 15 * weakQueenBonus
 
 	queenInfiltrationBonus := queenInfiltration(b, sq)
 	mg -= 2 * queenInfiltrationBonus
