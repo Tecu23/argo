@@ -7,7 +7,7 @@ import (
 	"github.com/Tecu23/argov2/internal/hash"
 	"github.com/Tecu23/argov2/pkg/attacks"
 	"github.com/Tecu23/argov2/pkg/board"
-	"github.com/Tecu23/argov2/pkg/constants"
+	. "github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/util"
 )
 
@@ -15,8 +15,8 @@ func init() {
 	attacks.InitPawnAttacks()
 	attacks.InitKnightAttacks()
 	attacks.InitKingAttacks()
-	attacks.InitSliderPiecesAttacks(constants.Bishop)
-	attacks.InitSliderPiecesAttacks(constants.Rook)
+	attacks.InitSliderPiecesAttacks(Bishop)
+	attacks.InitSliderPiecesAttacks(Rook)
 
 	util.InitFen2Sq()
 
@@ -255,6 +255,7 @@ func init() {
 // 			b, _ := board.ParseFEN(tt.fen)
 // 			ev := NewEvaluator()
 // 			result = ev.Evaluate(&b)
+//
 // 			if result != tt.eval {
 // 				t.Errorf("Endgame Evaluation, %s: got %v, want %v", tt.name, result, tt.eval)
 // 			}

@@ -96,7 +96,9 @@ func minorBehindPawn(b *board.Board, sq int) int {
 	rank := sq / 8
 	file := sq % 8
 
-	if !b.Bitboards[WP].Test((rank-1)*8+file) && !b.Bitboards[BP].Test((rank-1)*8+file) {
+	if rank > 0 &&
+		!b.Bitboards[WP].Test((rank-1)*8+file) &&
+		!b.Bitboards[BP].Test((rank-1)*8+file) {
 		return 0
 	}
 
@@ -461,7 +463,7 @@ func kingAttackersCount(b *board.Board, sq int) int {
 	return 0
 }
 
-// kingRing is square occupied by king and 8 squares around the king. Squares
+// PERF:kingRing is square occupied by king and 8 squares around the king. Squares
 // defended by two pawns are removed from king ring
 func kingRing(b *board.Board, sq int, full bool) int {
 	rank := sq / 8

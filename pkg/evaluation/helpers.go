@@ -1,6 +1,7 @@
 package evaluation
 
 import (
+	"github.com/Tecu23/argov2/pkg/attacks"
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
@@ -25,35 +26,30 @@ func PawnAttack(b *board.Board, sq int) int {
 // KnightAttack counts the number of knights that attack sq
 // If a sq2 is sent, the function evaluates if the knight at sq2 attacks sq
 func KnightAttack(b *board.Board, sq int, sq2 int) int {
+	if sq2 != -1 {
+		// Check if sq2 has a white knight
+		if !b.Bitboards[WN].Test(sq2) {
+			return 0
+		}
+
+		// Check if knight is pinned
+		if Pinned(b, sq2) != 0 {
+			return 0 // Pinned knights can't attack
+		}
+
+		// Check if knight at sq2 attacks sq
+		if attacks.KnightAttacks[sq2].Test(sq) {
+			return 1
+		}
+		return 0
+	}
+
 	score := 0
-	factor1, factor2, factor3 := 0, 0, 0
 
-	rank := sq / 8
-	file := sq % 8
-
-	rank2 := sq2 / 8
-	file2 := sq2 % 8
-
-	for i := 0; i < 8; i++ {
-		factor1, factor2, factor3 = 0, 0, 0
-		if i > 3 {
-			factor1 = 1
-		}
-		if i%4 > 1 {
-			factor2 = 1
-		}
-
-		if i%2 == 0 {
-			factor3 = 1
-		}
-
-		ix := (factor1 + 1) * (factor2*2 - 1)
-		iy := (2 - factor1) * (factor3*2 - 1)
-
-		if b.Bitboards[WN].Test((rank+iy)*8+file+ix) &&
-			(rank+iy >= 0 && rank+iy <= 7 && file+ix >= 0 && file+ix <= 7) &&
-			(sq2 == -1 || file2 == file+ix && rank2 == rank+iy) &&
-			Pinned(b, (rank+iy)*8+file+ix) == 0 {
+	knightsBB := (b.Bitboards[WN] & attacks.KnightAttacks[sq])
+	for knightsBB != 0 {
+		knightsSq := knightsBB.FirstOne()
+		if Pinned(b, knightsSq) == 0 {
 			score++
 		}
 	}
@@ -61,7 +57,80 @@ func KnightAttack(b *board.Board, sq int, sq2 int) int {
 	return score
 }
 
-func BishopXrayAttack(b *board.Board, sq int, sq2 int) int {
+// BishopXrayAttack counts the number of bishops that attack sq
+// If a sq2 is sent, the function evaluates if the bishop at sq2 attacks sq
+func BishopXrayAttack(b *board.Board, sq, sq2 int) int {
+	// Get occupied squares excluding queens (which we can x-ray through)
+	occupancy := b.Occupancies[color.BOTH] & ^(b.Bitboards[WQ] | b.Bitboards[BQ])
+
+	// If sq2 is provided, check if a bishop on sq2 attacks sq
+	if sq2 != -1 {
+		// Check if sq2 has a white bishop
+		if !b.Bitboards[WB].Test(sq2) {
+			return 0
+		}
+
+		// Check pin direction
+		dir := PinnedDirection(b, sq2)
+		if dir != 0 {
+			// Get diagonal direction from sq2 to sq
+			rank := sq / 8
+			file := sq % 8
+			rank2 := sq2 / 8
+			file2 := sq2 % 8
+
+			// Calculate direction factors
+			ix := sign(file - file2)
+			iy := sign(rank - rank2)
+
+			// Check if pin allows movement in this direction
+			if abs(ix+iy*3) != dir {
+				return 0
+			}
+		}
+
+		// Check if sq2 bishop attacks sq
+		bishopAttacks := attacks.GetBishopAttacks(sq2, occupancy)
+		if bishopAttacks.Test(sq) {
+			return 1
+		}
+		return 0
+	}
+
+	// Count white bishops attacking sq
+	score := 0
+	whiteBishops := b.Bitboards[WB]
+
+	for whiteBishops != 0 {
+		bishopSq := whiteBishops.FirstOne()
+		bishopAttacks := attacks.GetBishopAttacks(bishopSq, occupancy)
+
+		if bishopAttacks.Test(sq) {
+			// Check pin direction
+			dir := PinnedDirection(b, bishopSq)
+			if dir == 0 {
+				score++
+			} else {
+				// Get diagonal direction from bishop to sq
+				rank := sq / 8
+				file := sq % 8
+				rank2 := bishopSq / 8
+				file2 := bishopSq % 8
+
+				ix := sign(file - file2)
+				iy := sign(rank - rank2)
+
+				if abs(ix+iy*3) == dir {
+					score++
+				}
+			}
+		}
+	}
+
+	return score
+}
+
+func oldBishopXrayAttack(b *board.Board, sq int, sq2 int) int {
 	score := 0
 	factor1, factor2 := 0, 0
 
@@ -318,5 +387,15 @@ func PinnedDirection(b *board.Board, sq int) int {
 		}
 	}
 
+	return 0
+}
+
+// Helper function to get sign of a number
+func sign(x int) int {
+	if x > 0 {
+		return 1
+	} else if x < 0 {
+		return -1
+	}
 	return 0
 }

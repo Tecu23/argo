@@ -387,10 +387,6 @@ func TestBackward(t *testing.T) {
 		},
 	}
 
-	// for _, bb := range KingRingPatterns {
-	// 	bb.PrintBitboard()
-	// }
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, _ := board.ParseFEN(tt.fen)
