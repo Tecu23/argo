@@ -9,84 +9,72 @@ import (
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
-// PiecesEvaluation returns the bonuses and penalties for the position of all piececs
-func (e *Evaluator) PiecesEvaluation(b *board.Board, mirror *board.Board) (mg, eg int) {
-	mg, eg = 0, 0
+func (e *Evaluator) evaluateKnight(b *board.Board, sq int) (mg, eg int) {
+	minorBonus := minorBehindPawn(b, sq)
+	mg += 18 * minorBonus
+	eg += 3 * minorBonus
 
-	// scores for Knight, Bishop, Rook, Queen
-	knightBB := b.Bitboards[WN]
-	for knightBB != 0 {
-		sq := knightBB.FirstOne()
+	kingProtectorBonus := kingProtector(b, sq)
+	mg -= 8 * kingProtectorBonus
+	eg -= 9 * kingProtectorBonus
 
-		minorBonus := minorBehindPawn(b, sq)
-		mg += 18 * minorBonus
-		eg += 3 * minorBonus
+	return mg, eg
+}
 
-		kingProtectorBonus := kingProtector(b, sq)
-		mg -= 8 * kingProtectorBonus
-		eg -= 9 * kingProtectorBonus
-	}
+func (e *Evaluator) evaluateBishop(b *board.Board, sq int) (mg, eg int) {
+	minorBonus := minorBehindPawn(b, sq)
+	mg += 18 * minorBonus
+	eg += 3 * minorBonus
 
-	bishopBB := b.Bitboards[WB]
-	for bishopBB != 0 {
-		sq := bishopBB.FirstOne()
+	bishopPawnsBonus := bishopPawns(b, sq)
+	mg -= 3 * bishopPawnsBonus
+	eg -= 7 * bishopPawnsBonus
 
-		minorBonus := minorBehindPawn(b, sq)
-		mg += 18 * minorBonus
-		eg += 3 * minorBonus
+	bishopXrayBonus := bishopXrayPawns(b, sq)
+	mg -= 4 * bishopXrayBonus
+	eg -= 5 * bishopXrayBonus
 
-		bishopPawnsBonus := bishopPawns(b, sq)
-		mg -= 3 * bishopPawnsBonus
-		eg -= 7 * bishopPawnsBonus
+	kingProtectorBonus := kingProtector(b, sq)
+	mg -= 6 * kingProtectorBonus
+	eg -= 9 * kingProtectorBonus
 
-		bishopXrayBonus := bishopXrayPawns(b, sq)
-		mg -= 4 * bishopXrayBonus
-		eg -= 5 * bishopXrayBonus
+	// mg += 24 * bishopOnKingRing(b, sq)
+	mg += 45 * longDiagonalBishop(b, sq)
 
-		kingProtectorBonus := kingProtector(b, sq)
-		mg -= 6 * kingProtectorBonus
-		eg -= 9 * kingProtectorBonus
+	return mg, eg
+}
 
-		mg += 24 * bishopOnKingRing(b, sq)
-		mg += 45 * longDiagonalBishop(b, sq)
-	}
+func (e *Evaluator) evaluateRook(b *board.Board, sq int) (mg, eg int) {
+	rookOnQueenBonus := rookOnQueenFile(b, sq)
+	mg += 6 * rookOnQueenBonus
+	eg += 11 * rookOnQueenBonus
 
-	rookBB := b.Bitboards[WR]
-	for rookBB != 0 {
-		sq := rookBB.FirstOne()
+	rookOnFileIdx := rookOnFile(b, sq)
+	mg += []int{0, 19, 48}[rookOnFileIdx]
+	eg += []int{0, 7, 29}[rookOnFileIdx]
 
-		rookOnQueenBonus := rookOnQueenFile(b, sq)
-		mg += 6 * rookOnQueenBonus
-		eg += 11 * rookOnQueenBonus
+	// mg += 16 * rookOnKingRing(b, sq)
 
-		rookOnFileIdx := rookOnFile(b, sq)
-		mg += []int{0, 19, 48}[rookOnFileIdx]
-		eg += []int{0, 7, 29}[rookOnFileIdx]
+	// factor := 2
+	// if uint(b.Castlings)&ShortW != 0 || uint(b.Castlings)&LongW != 0 {
+	// 	factor = 1
+	// }
 
-		mg += 16 * rookOnKingRing(b, sq)
+	// trappedRookBonus := trappedRook(b, mirror, sq)
+	// mg -= trappedRookBonus * 55 * factor
+	// eg -= trappedRookBonus * 13 * factor
 
-		factor := 2
-		if uint(b.Castlings)&ShortW != 0 || uint(b.Castlings)&LongW != 0 {
-			factor = 1
-		}
+	return mg, eg
+}
 
-		trappedRookBonus := trappedRook(b, mirror, sq)
-		mg -= trappedRookBonus * 55 * factor
-		eg -= trappedRookBonus * 13 * factor
-	}
+func (e *Evaluator) evaluateQueen(b *board.Board, sq int) (mg, eg int) {
+	weakQueenBonus := weakQueen(b, sq)
+	mg -= 56 * weakQueenBonus
+	eg -= 15 * weakQueenBonus
 
-	queenBB := b.Bitboards[WQ]
-	for queenBB != 0 {
-		sq := queenBB.FirstOne()
-
-		weakQueenBonus := weakQueen(b, sq)
-		mg -= 56 * weakQueenBonus
-		eg -= 15 * weakQueenBonus
-
-		queenInfiltrationBonus := queenInfiltration(b, sq)
-		mg -= 2 * queenInfiltrationBonus
-		eg += 14 * queenInfiltrationBonus
-	}
+	queenInfiltrationBonus := queenInfiltration(b, sq)
+	mg -= 2 * queenInfiltrationBonus
+	eg += 14 * queenInfiltrationBonus
 
 	return mg, eg
 }

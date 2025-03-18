@@ -28,7 +28,7 @@ import (
 // 6. For knights, bishops, rooks, queens: use precomputed attack tables for sliding pieces and direct attacks for knights/king.
 // 7. Add each valid generated move to movelist. This function doesn't check for check legality - that is done in MakeMove.
 func (b *Board) GenerateMoves() []move.Move {
-	var result []move.Move
+	result := make([]move.Move, 0, 10)
 	sourceSq, targetSq := 0, 0
 	bitboard, attcks := bitboard.Bitboard(0), bitboard.Bitboard(0)
 
