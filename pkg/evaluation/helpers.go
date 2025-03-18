@@ -130,51 +130,6 @@ func BishopXrayAttack(b *board.Board, sq, sq2 int) int {
 	return score
 }
 
-func oldBishopXrayAttack(b *board.Board, sq int, sq2 int) int {
-	score := 0
-	factor1, factor2 := 0, 0
-
-	rank := sq / 8
-	file := sq % 8
-
-	rank2 := sq2 / 8
-	file2 := sq2 % 8
-
-	for i := 0; i < 4; i++ {
-		factor1, factor2 = 0, 0
-		if i > 1 {
-			factor1 = 1
-		}
-
-		if i%2 == 0 {
-			factor2 = 1
-		}
-
-		ix := factor1*2 - 1
-		iy := factor2*2 - 1
-
-		for d := 1; d < 8; d++ {
-			if b.Bitboards[WB].Test((rank+d*iy)*8+file+d*ix) &&
-				(file+d*ix >= 0) && (file+d*ix <= 7) &&
-				(sq2 == -1 || file2 == file+d*ix && rank2 == rank+d*iy) {
-				dir := PinnedDirection(b, (rank+d*iy)*8+file+d*ix)
-
-				if dir == 0 || abs(ix+iy*3) == dir {
-					score++
-				}
-			}
-
-			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8+file+d*ix) &&
-				!b.Bitboards[WQ].Test((rank+d*iy)*8+file+d*ix) &&
-				!b.Bitboards[BQ].Test((rank+d*iy)*8+file+d*ix) {
-				break
-			}
-		}
-	}
-
-	return score
-}
-
 func RookXrayAttack(b *board.Board, sq int, sq2 int) int {
 	score := 0
 
@@ -339,55 +294,150 @@ func Pinned(b *board.Board, sq int) int {
 	return PinnedDirection(b, sq)
 }
 
+// PinnedDirection returns the direction that the piece on sq is pinned to the king.
+// If the piece is not pinned returns 0
 func PinnedDirection(b *board.Board, sq int) int {
 	if !b.Occupancies[color.BOTH].Test(sq) {
 		return 0
 	}
 
-	rank := sq / 8
-	file := sq % 8
 	c := 1
-
 	if b.Occupancies[color.BLACK].Test(sq) {
 		c = -1
 	}
 
-	for i := 0; i < 8; i++ {
-		factor := 0
-		if i > 3 {
-			factor = 1
+	kingBB := b.Bitboards[WK]
+	kingSq := kingBB.FirstOne()
+
+	dir := getDirection(sq, kingSq)
+	if dir == DirNone {
+		return 0
+	}
+
+	rank1, file1 := sq/8, sq%8
+
+	// Calculate direction vectors based on direction
+	var dx, dy int
+	switch dir {
+	case DirWest:
+		dx, dy = -1, 0
+	case DirNorth:
+		dx, dy = 0, -1
+	case DirEast:
+		dx, dy = 1, 0
+	case DirSouth:
+		dx, dy = 0, 1
+	case DirNorthWest:
+		dx, dy = -1, -1
+	case DirNorthEast:
+		dx, dy = 1, -1
+	case DirSouthWest:
+		dx, dy = -1, 1
+	case DirSouthEast:
+		dx, dy = 1, 1
+	}
+
+	// Check for pieces between our piece and the king
+	// Start one square away from our piece in the direction of the king
+	for d := 1; ; d++ {
+		checkRank := rank1 + d*dy
+		checkFile := file1 + d*dx
+		checkSq := checkRank*8 + checkFile
+
+		// If we've reached the king, stop checking
+		if checkSq == kingSq {
+			break
 		}
 
-		ix := (i+factor)%3 - 1
-		iy := (((i + factor) / 3) << 0) - 1
+		// If there's a piece between us and the king, no pin possible
+		if b.Occupancies[color.BOTH].Test(checkSq) {
+			return 0
+		}
+	}
 
-		king := false
+	// Check in the opposite direction for potential pinning pieces
+	dx = -dx
+	dy = -dy
 
-		for d := 1; d < 8; d++ {
-			if b.Bitboards[WK].Test((rank+d*iy)*8 + file + d*ix) {
-				king = true
-			}
-			if b.Occupancies[color.BOTH].Test((rank+d*iy)*8 + file + d*ix) {
-				break
-			}
+	// Check if there are attacking pieces that could create a pin
+	isDiagonal := (dir == DirNorthWest || dir == DirNorthEast ||
+		dir == DirSouthWest || dir == DirSouthEast)
+
+	for d := 1; d < 8; d++ {
+		checkRank := rank1 + d*dy
+		checkFile := file1 + d*dx
+
+		// Check if we're still on the board
+		if checkRank < 0 || checkRank > 7 || checkFile < 0 || checkFile > 7 {
+			break
 		}
 
-		if king {
-			for d := 1; d < 8; d++ {
-				if b.Bitboards[BQ].Test((rank-d*iy)*8+file-d*ix) ||
-					(b.Bitboards[BB].Test((rank-d*iy)*8+file-d*ix) && ix*iy != 0) ||
-					(b.Bitboards[BR].Test((rank-d*iy)*8+file-d*ix) && ix*iy == 0) {
-					return abs(ix+iy*3) * c
-				}
+		checkSq := checkRank*8 + checkFile
 
-				if b.Occupancies[color.BOTH].Test((rank-d*iy)*8 + file - d*ix) {
-					break
+		// If we hit a piece, check if it's a potential pinner
+		if b.Occupancies[color.BOTH].Test(checkSq) {
+			if isDiagonal {
+				// On diagonal, check for bishop or queen
+				if b.Bitboards[BQ].Test(checkSq) || b.Bitboards[BB].Test(checkSq) {
+					return abs(dx+dy*3) * c
+				}
+			} else {
+				// On rank/file, check for rook or queen
+				if b.Bitboards[BQ].Test(checkSq) || b.Bitboards[BR].Test(checkSq) {
+					return abs(dx+dy*3) * c
 				}
 			}
+			// If we hit a non-pinning piece, no pin possible
+			break
 		}
 	}
 
 	return 0
+}
+
+// getDirection is a helper function that returns the direction between 2 pieces
+func getDirection(sq1, sq2 int) int {
+	r1, f1 := sq1/8, sq1%8
+	r2, f2 := sq2/8, sq2%8
+
+	rDiff := r2 - r1
+	fDiff := f2 - f1
+
+	// If squares are the same, no direction
+	if rDiff == 0 && fDiff == 0 {
+		return DirNone
+	}
+
+	// Check horizontal alignment (same rank)
+	if rDiff == 0 {
+		if fDiff > 0 {
+			return DirEast
+		}
+		return DirWest
+	}
+
+	// Check vertical alignment (same file)
+	if fDiff == 0 {
+		if rDiff > 0 {
+			return DirSouth
+		}
+		return DirNorth
+	}
+
+	// Check diagonal alignment (abs of rank diff equals abs of file diff)
+	if abs(rDiff) == abs(fDiff) {
+		if rDiff > 0 && fDiff > 0 {
+			return DirSouthEast
+		} else if rDiff > 0 && fDiff < 0 {
+			return DirSouthWest
+		} else if rDiff < 0 && fDiff > 0 {
+			return DirNorthEast
+		}
+		return DirNorthWest
+	}
+
+	// Not aligned
+	return DirNone
 }
 
 // Helper function to get sign of a number
