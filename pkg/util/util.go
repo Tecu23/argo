@@ -216,3 +216,23 @@ func OppositeColorPiece(piece int) int {
 	// Return Empty for invalid input
 	return Empty
 }
+
+func GetPieceType(piece int) int {
+	if piece == Empty {
+		return -1
+	}
+
+	if piece == WK || piece == BK {
+		return Pawn
+	} else if piece == WN || piece == BN {
+		return Knight
+	} else if piece == WB || piece == BB {
+		return Bishop
+	} else if piece == WR || piece == BR {
+		return Rook
+	} else if piece == WQ || piece == BQ {
+		return Queen
+	}
+
+	return King
+}

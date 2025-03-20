@@ -5,7 +5,7 @@ GOARCH ?= $(shell go env GOARCH)
 CGO_ENABLED ?= 0
 
 # Project structure
-MAIN_PKG := ./cmd/engine
+MAIN_PKG := ./cmd/argo
 BINARY_NAME := argo
 BIN_DIR := bin
 DIST_DIR := dist

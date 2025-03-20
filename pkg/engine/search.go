@@ -31,10 +31,10 @@ func (e *Engine) orderMoves(moves []move.Move, b *board.Board, ttMove move.Move)
 		// TT move gets highest priority
 		if mv == ttMove {
 			score = 20000
-		} else if mv.GetCapture() != 0 {
+		} else if mv.IsCapture() {
 			// MVV-LVA scoring
-			victim := b.GetPieceAt(mv.GetTarget())
-			aggressor := b.GetPieceAt(mv.GetSource())
+			victim := mv.GetCapturedPiece()
+			aggressor := mv.GetMovingPiece()
 			score = 10000 + (nnue.GetPieceValue(victim) - nnue.GetPieceValue(aggressor)/10)
 		}
 
@@ -59,6 +59,8 @@ func (e *Engine) orderMoves(moves []move.Move, b *board.Board, ttMove move.Move)
 func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) SearchInfo {
 	e.nodes = 0
 	e.tt.NewSearch()
+
+	e.evaluator.Reset(b)
 
 	var bestMove move.Move
 	var bestScore int
@@ -139,8 +141,13 @@ func (e *Engine) searchRoot(
 			continue
 		}
 
+		// Update NNUE accumulator for this move
+		e.evaluator.ProcessMove(&copyB, mv)
+
 		// Search this position
 		score := -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, 1, tm)
+
+		e.evaluator.PopAccumulation()
 
 		// Check for search abort
 		if ctx.Err() != nil || tm.IsDone() {
@@ -254,11 +261,14 @@ func (e *Engine) alphaBeta(
 			continue
 		}
 
+		// Update NNUE accumulator for this move
+		e.evaluator.ProcessMove(&copyB, mv)
+
 		hasLegalMoves = true
 		moveCount++
 
 		var score int
-		isCapture := mv.GetCapture() != 0
+		isCapture := mv.IsCapture()
 		givesCheck := copyB.InCheck()
 
 		reduction := 0
@@ -276,6 +286,8 @@ func (e *Engine) alphaBeta(
 		} else {
 			score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, ply+1, tm)
 		}
+
+		e.evaluator.PopAccumulation()
 
 		if score > bestScore {
 			bestScore = score
@@ -354,7 +366,12 @@ func (e *Engine) quiescence(
 			continue
 		}
 
+		// Update NNUE accumulator for this move
+		e.evaluator.ProcessMove(&copyB, mv)
+
 		score := -e.quiescence(ctx, &copyB, -beta, -alpha, ply+1, tm)
+
+		e.evaluator.PopAccumulation()
 
 		if ctx.Err() != nil || tm.IsDone() {
 			if ply&1 == 0 {

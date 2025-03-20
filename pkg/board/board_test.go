@@ -254,40 +254,10 @@ func boardsAreDifferent(b *Board, copy *Board) bool {
 // 	}
 // }
 
-// Benchmark tests
-func BenchmarkSetSq(b *testing.B) {
-	board := Board{}
-	b.ResetTimer()
+func BenchmarkPerftDriver(b *testing.B) {
+	board, _ := ParseFEN(StartPosition)
 
 	for i := 0; i < b.N; i++ {
-		board.SetSq(WP, E4)
-		board.SetSq(Empty, E4)
-	}
-}
-
-func BenchmarkCopyBoard(b *testing.B) {
-	board := Board{}
-	board.SetSq(WK, E1)
-	board.SetSq(BK, E8)
-	board.SetSq(WP, E4)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		_ = board.CopyBoard()
-	}
-}
-
-func BenchmarkTakeBack(b *testing.B) {
-	board := Board{}
-	board.SetSq(WK, E1)
-	board.SetSq(BK, E8)
-	copy := board.CopyBoard()
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		board.SetSq(WP, E4)
-		board.TakeBack(copy)
+		PerftDriver(&board, 7)
 	}
 }

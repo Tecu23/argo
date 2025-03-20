@@ -184,15 +184,15 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		// preserve board state
 		copyB := b.CopyBoard()
 
-		src := m.GetSource()
-		tgt := m.GetTarget()
-		pc := m.GetPiece()
+		src := m.GetSourceSquare()
+		tgt := m.GetTargetSquare()
+		pc := m.GetMovingPiece()
 		clr := util.PcColor(pc)
-		prom := m.GetPromoted()
+		prom := m.GetPromotedPiece()
 		// capt := m.GetCapture()
-		dblPwn := m.GetDoublePush()
-		ep := m.GetEnpassant()
-		cast := m.GetCastling()
+		dblPwn := m.IsDoublePush()
+		ep := m.IsEnPassant()
+		cast := m.IsCastle()
 
 		// If there was an en passant square, remove it from hash
 		if b.EnPassant != -1 {
@@ -202,7 +202,7 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		b.EnPassant = -1
 
 		// Handle en passant
-		if ep != 0 {
+		if ep {
 			b.SetSq(Empty, src)
 			if clr == color.WHITE {
 				b.SetSq(Empty, tgt+8)
@@ -248,7 +248,7 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		}
 
 		// Handle castling
-		if cast != 0 {
+		if cast {
 			switch tgt {
 			// WHITE Short Castle
 			case G1:
@@ -270,7 +270,7 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		}
 
 		// Double push pawn update
-		if dblPwn != 0 {
+		if dblPwn {
 			if clr == color.WHITE {
 				b.EnPassant = src - 8
 				b.hash ^= hash.HashTable.EnPassant[(src-8)%8]
@@ -339,7 +339,7 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 			b.Bitboards[WK].Set(kingPos)
 		}
 	} else { // capture moves
-		if m.GetCapture() != 0 {
+		if m.IsCapture() {
 			return b.MakeMove(m, AllMoves)
 		}
 		return false // 0 means don't make it
@@ -380,8 +380,8 @@ func (b *Board) ParseMove(moveString string) (Board, bool) {
 	for cnt := 0; cnt < len(moves); cnt++ {
 		mv := moves[cnt]
 
-		if mv.GetSource() == src && mv.GetTarget() == tgt {
-			prom := mv.GetPromoted()
+		if mv.GetSourceSquare() == src && mv.GetTargetSquare() == tgt {
+			prom := mv.GetPromotedPiece()
 
 			if prom != 0 {
 				// Check if promotion matches requested piece
@@ -606,11 +606,11 @@ func (b *Board) calculateHash() uint64 {
 
 // Update hash incrementally when making moves
 func (b *Board) updateHashForMove(m move.Move) {
-	from := m.GetSource()
-	to := m.GetTarget()
-	piece := m.GetPiece()
-	capture := m.GetCapture()
-	promotion := m.GetPromoted()
+	from := m.GetSourceSquare()
+	to := m.GetTargetSquare()
+	piece := m.GetMovingPiece()
+	capture := m.IsCapture()
+	promotion := m.GetPromotedPiece()
 
 	// Remove piece from source square
 	b.hash ^= hash.HashTable.PieceSquare[piece*64+from]
@@ -623,8 +623,9 @@ func (b *Board) updateHashForMove(m move.Move) {
 	}
 
 	// Handle Capture
-	if capture != 0 {
-		b.hash ^= hash.HashTable.PieceSquare[piece*64+to]
+	if capture {
+		capturedPiece := m.GetCapturedPiece()
+		b.hash ^= hash.HashTable.PieceSquare[capturedPiece*64+to]
 	}
 
 	// Update en passant
@@ -634,7 +635,7 @@ func (b *Board) updateHashForMove(m move.Move) {
 	}
 
 	// Handle new en passant
-	if m.GetDoublePush() != 0 {
+	if m.IsDoublePush() {
 		file := to % 8
 		b.hash ^= hash.HashTable.EnPassant[file]
 	}
@@ -666,6 +667,7 @@ func (b *Board) Hash() uint64 {
 	return b.hash
 }
 
+// GetPieceAt returns the piece at a given square, if it exists
 func (b *Board) GetPieceAt(square int) int {
 	for piece := WP; piece <= BK; piece++ {
 		if b.Bitboards[piece].Test(square) {

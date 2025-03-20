@@ -7,6 +7,7 @@ import (
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/move"
+	"github.com/Tecu23/argov2/pkg/util"
 )
 
 // Evaluator uses a neural network (NNUE) to evaluate chess positions.
@@ -21,7 +22,7 @@ type Evaluator struct {
 // NewEvaluator creates and initializes a new NNUE evaluator instance.
 func NewEvaluator() *Evaluator {
 	evaluator := &Evaluator{
-		History:          []Accumulator{{}}, // Start with an initial accumulator state
+		History:          make([]Accumulator, 0, 128), // Start with an initial accumulator state
 		HistoryIndex:     0,
 		AccumulatorTable: &AccumulatorTable{}, // Create a new table for caching accumulators
 	}
@@ -183,10 +184,6 @@ func (e *Evaluator) SetPieceOnSquare(
 	add bool,
 	pieceType, pieceColor, square, wKingSq, bKingSq int,
 ) {
-	square = square
-	wKingSq = wKingSq
-	bKingSq = bKingSq
-
 	e.SetPieceOnSquareAccumulator(add, White, pieceType, pieceColor, square, wKingSq)
 	e.SetPieceOnSquareAccumulator(add, Black, pieceType, pieceColor, square, bKingSq)
 }
@@ -218,27 +215,27 @@ func (e *Evaluator) SetPieceOnSquareAccumulator(
 // It determines the move type (normal, capture, castling, en passant, promotion)
 // and applies the appropriate update to the accumulator history.
 func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
-	from := m.GetSource()
-	to := m.GetTarget()
-	piece := m.GetPiece()
+	from := m.GetSourceSquare()
+	to := m.GetTargetSquare()
+	piece := m.GetMovingPiece()
 
 	from = ConvertSquare(from)
 	to = ConvertSquare(to)
 
 	// moveType := m.MoveType
-	isCapture := m.GetCapture() != 0
-	isCastling := m.GetCastling() != 0
+	isCapture := m.IsCapture()
+	isCastling := m.IsCastle()
 	isQueenCast := m.IsQueenCastle()
-	enPass := m.GetEnpassant()
+	enPass := m.IsEnPassant()
 
 	capturedPiece := -1
 	if isCapture {
-		capturedPiece = b.GetPieceAt(to)
+		capturedPiece = m.GetCapturedPiece()
 	}
 
-	promPc := m.GetPromoted()
+	promPc := m.GetPromotedPiece()
 	c := White
-	if b.Side == color.BLACK {
+	if b.Side != color.BLACK {
 		c = Black
 	}
 
@@ -247,22 +244,28 @@ func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 	bKingBB := b.Bitboards[BK]
 	bKingSq := bKingBB.FirstOne()
 
+	wKingSq = ConvertSquare(wKingSq)
+	bKingSq = ConvertSquare(bKingSq)
+
 	// Initialize for the new move
 	e.AddNewAccumulation()
 
-	if piece == King {
+	if piece == WK || piece == BK {
 		// Handle king moves separately - may require full reset
 		requiresReset := KingSquareIndex(to, c) != KingSquareIndex(from, c) ||
 			FileIndex(from)+FileIndex(to) == 7
 
 		if !requiresReset {
 			if isCapture {
+				capt := util.GetPieceType(capturedPiece)
+				pc := util.GetPieceType(piece)
+
 				SetUnsetUnsetPieceBothColors(
 					&e.History[e.HistoryIndex-1],
 					&e.History[e.HistoryIndex],
-					FeatureIndex{piece, c, to, wKingSq, bKingSq},
-					FeatureIndex{piece, c, from, wKingSq, bKingSq},
-					FeatureIndex{capturedPiece, 1 - c, to, wKingSq, bKingSq},
+					FeatureIndex{pc, c, to, wKingSq, bKingSq},
+					FeatureIndex{pc, c, from, wKingSq, bKingSq},
+					FeatureIndex{capt, 1 - c, to, wKingSq, bKingSq},
 				)
 			} else if isCastling {
 				val := 3
@@ -276,32 +279,37 @@ func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 				}
 				rookTo := to + val
 
+				pc := util.GetPieceType(piece)
+
 				SetSetUnsetUnsetPieceBothColors(
 					&e.History[e.HistoryIndex-1],
 					&e.History[e.HistoryIndex],
-					FeatureIndex{piece, c, to, wKingSq, bKingSq},
+					FeatureIndex{pc, c, to, wKingSq, bKingSq},
 					FeatureIndex{Rook, c, rookTo, wKingSq, bKingSq},
-					FeatureIndex{piece, c, from, wKingSq, bKingSq},
+					FeatureIndex{pc, c, from, wKingSq, bKingSq},
 					FeatureIndex{Rook, c, rookFrom, wKingSq, bKingSq},
 				)
 			} else {
+				pc := util.GetPieceType(piece)
 				SetUnsetPieceBothColors(
 					&e.History[e.HistoryIndex-1],
 					&e.History[e.HistoryIndex],
-					FeatureIndex{piece, c, to, wKingSq, bKingSq},
-					FeatureIndex{piece, c, from, wKingSq, bKingSq},
+					FeatureIndex{pc, c, to, wKingSq, bKingSq},
+					FeatureIndex{pc, c, from, wKingSq, bKingSq},
 				)
 			}
 		} else {
 			// Handle the opponent's view, then reset for the king's side
 			if isCapture {
+				pc := util.GetPieceType(piece)
+				capt := util.GetPieceType(capturedPiece)
 				SetUnsetUnsetPiece(
 					&e.History[e.HistoryIndex-1],
 					&e.History[e.HistoryIndex],
 					1-c,
-					FeatureIndex{piece, c, to, wKingSq, bKingSq},
-					FeatureIndex{piece, c, from, wKingSq, bKingSq},
-					FeatureIndex{capturedPiece, 1 - c, to, wKingSq, bKingSq},
+					FeatureIndex{pc, c, to, wKingSq, bKingSq},
+					FeatureIndex{pc, c, from, wKingSq, bKingSq},
+					FeatureIndex{capt, 1 - c, to, wKingSq, bKingSq},
 				)
 			} else if isCastling {
 				val := 3
@@ -314,23 +322,25 @@ func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 					val = 1
 				}
 				rookTo := to + val
+				pc := util.GetPieceType(piece)
 
 				SetSetUnsetUnsetPiece(
 					&e.History[e.HistoryIndex-1],
 					&e.History[e.HistoryIndex],
 					1-c,
-					FeatureIndex{piece, c, to, wKingSq, bKingSq},
+					FeatureIndex{pc, c, to, wKingSq, bKingSq},
 					FeatureIndex{Rook, c, rookTo, wKingSq, bKingSq},
-					FeatureIndex{piece, c, from, wKingSq, bKingSq},
+					FeatureIndex{pc, c, from, wKingSq, bKingSq},
 					FeatureIndex{Rook, c, rookFrom, wKingSq, bKingSq},
 				)
 			} else {
+				pc := util.GetPieceType(piece)
 				SetUnsetPiece(
 					&e.History[e.HistoryIndex-1],
 					&e.History[e.HistoryIndex],
 					1-c,
-					FeatureIndex{piece, c, to, wKingSq, bKingSq},
-					FeatureIndex{piece, c, from, wKingSq, bKingSq},
+					FeatureIndex{pc, c, to, wKingSq, bKingSq},
+					FeatureIndex{pc, c, from, wKingSq, bKingSq},
 				)
 			}
 			e.ResetAccumulator(b, c)
@@ -343,34 +353,41 @@ func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 		}
 
 		if isCapture {
-			if enPass != 0 {
+			if enPass {
 				epSquare := to - 8
 				if c == Black {
 					epSquare = to + 8
 				}
+				pc := util.GetPieceType(piece)
+				mov := util.GetPieceType(movingPiece)
 
 				SetUnsetUnsetPieceBothColors(
 					&e.History[e.HistoryIndex-1],
 					&e.History[e.HistoryIndex],
-					FeatureIndex{movingPiece, c, to, wKingSq, bKingSq},
-					FeatureIndex{piece, c, from, wKingSq, bKingSq},
+					FeatureIndex{mov, c, to, wKingSq, bKingSq},
+					FeatureIndex{pc, c, from, wKingSq, bKingSq},
 					FeatureIndex{Pawn, 1 - c, epSquare, wKingSq, bKingSq},
 				)
 			} else {
+				pc := util.GetPieceType(piece)
+				mov := util.GetPieceType(movingPiece)
+				capt := util.GetPieceType(capturedPiece)
 				SetUnsetUnsetPieceBothColors(
 					&e.History[e.HistoryIndex-1],
 					&e.History[e.HistoryIndex],
-					FeatureIndex{movingPiece, c, to, wKingSq, bKingSq},
-					FeatureIndex{piece, c, from, wKingSq, bKingSq},
-					FeatureIndex{capturedPiece, 1 - c, to, wKingSq, bKingSq},
+					FeatureIndex{mov, c, to, wKingSq, bKingSq},
+					FeatureIndex{pc, c, from, wKingSq, bKingSq},
+					FeatureIndex{capt, 1 - c, to, wKingSq, bKingSq},
 				)
 			}
 		} else {
+			pc := util.GetPieceType(piece)
+			mov := util.GetPieceType(movingPiece)
 			SetUnsetPieceBothColors(
 				&e.History[e.HistoryIndex-1],
 				&e.History[e.HistoryIndex],
-				FeatureIndex{movingPiece, c, to, wKingSq, bKingSq},
-				FeatureIndex{piece, c, from, wKingSq, bKingSq},
+				FeatureIndex{mov, c, to, wKingSq, bKingSq},
+				FeatureIndex{pc, c, from, wKingSq, bKingSq},
 			)
 		}
 	}

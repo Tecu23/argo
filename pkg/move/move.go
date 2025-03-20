@@ -12,100 +12,129 @@ import (
 )
 
 /*
-         binary move bits representaion                    hexadecimal constants
+        binary move bits representaion                             hexadecimal constants
 
-   0000 0000 0000 0000 0011 1111 source square              0x3f
-   0000 0000 0000 1111 1100 0000 target square              0xfc0
-   0000 0000 1111 0000 0000 0000 piece                      0xf000
-   0000 1111 0000 0000 0000 0000 promoted piece             0xf0000
-   0001 0000 0000 0000 0000 0000 capture flag               0x100000
-   0010 0000 0000 0000 0000 0000 double push flag           0x200000
-   0100 0000 0000 0000 0000 0000 enpassant capture flag     0x400000
-   1000 0000 0000 0000 0000 0000 castling flag              0x800000
+   0000 0000 0000 0000 0000 0000 0011 1111   source square              0x0000003F
+   0000 0000 0000 0000 0000 1111 1100 0000   target square              0x00000FC0
+   0000 0000 0000 0000 1111 0000 0000 0000   moving piece               0x0000F000
+   0000 0000 0000 1111 0000 0000 0000 0000   promoted piece             0x000F0000
+   0000 0000 1111 0000 0000 0000 0000 0000   captured piece             0x00F00000
+   0000 0001 0000 0000 0000 0000 0000 0000   capture flag               0x01000000
+   0000 0010 0000 0000 0000 0000 0000 0000   double push flag           0x02000000
+   0000 0100 0000 0000 0000 0000 0000 0000   enpassant flag             0x04000000
+   0000 1000 0000 0000 0000 0000 0000 0000   castling flag              0x08000000
+   0011 0000 0000 0000 0000 0000 0000 0000   castling type              0x30000000
+   1100 0000 0000 0000 0000 0000 0000 0000   unused bits                0xC0000000
+
 */
 
-// Move encoding uses a 64-bit integer to store source, target, piece, promoted piece,
-// and flags for capture, double push, en passant, and castling.
-//
-// Bit layout commented above shows how each part is stored in the move integer.
+// Move encoding uses a 32-bit integer to store source, target, piece, promoted piece,
+// capured piece  and flags for capture, double push, en passant, and castling.
 const (
-	SourceMask     = 0x3f
-	TargetMask     = 0xfc0
-	PieceMask      = 0xf000
-	PromotedMask   = 0xf0000
-	CaptureMask    = 0x100000
-	DoublePushMask = 0x200000
-	EnpassantMask  = 0x400000
-	CastlingMask   = 0x800000
+	SourceMask        = 0x0000003F
+	TargetMask        = 0x00000FC0
+	PieceMask         = 0x0000F000
+	PromotedPieceMask = 0x000F0000
+	CapturedPieceMask = 0x00F00000
+	CaptureFlagMask   = 0x01000000
+	DoublePushMask    = 0x02000000
+	EnPasssantMask    = 0x04000000
 
-	SourceShift     = 0
-	TargetShift     = 6
-	PieceShift      = 12
-	PromotedShift   = 16
-	CaptureShift    = 20
-	DoublePushShift = 21
-	EnpassantShift  = 22
-	CastlingShift   = 23
+	CastlingFlagMask = 0x08000000
+	CastlingTypeMask = 0x30000000
+
+	SourceShift         = 0
+	TargetShift         = 6
+	PieceShift          = 12
+	PromotedShift       = 16
+	CapturedPieceShift  = 20
+	CaptureFlagShift    = 24
+	DoublePushFlagShift = 25
+	EnPassantShift      = 26
+	CastlingFlagShift   = 27
+	CastlingTypeShift   = 28
 
 	NoMove = Move(0)
 )
 
-// Move is a 64-bit unsigned integer that encodes a chess move.
-type Move uint64
+// CastleType are the types of castleling available on a chess board
+type CastleType uint8
+
+// Castling Types
+const (
+	WhiteKingCastle  CastleType = 0
+	WhiteQueenCastle CastleType = 1
+	BlackKingCastle  CastleType = 2
+	BlackQueenCastle CastleType = 3
+)
+
+// Move is a 32-bit unsigned integer that encodes a chess move.
+type Move uint32
 
 // EncodeMove creates a move from components: source, target, piece, promoted piece, capture flag,
 // double-push flag, en passant flag, and castling flag.
 func EncodeMove(
-	source, target, piece, promoted, capture, doublePush, enpassant, castling int,
+	source, target, piece, promoted, captured, captureFlag, doublePush, enpassant, castlingFlag, castlingType int,
 ) Move {
 	move := Move(
 		(source) | (target << TargetShift) | (piece << PieceShift) |
-			(promoted << PromotedShift) | (capture << CaptureShift) |
-			(doublePush << DoublePushShift) | (enpassant << EnpassantShift) |
-			(castling << CastlingShift),
+			(promoted << PromotedShift) | (captured << CapturedPieceShift) |
+			(captureFlag << CaptureFlagShift) | (doublePush << DoublePushFlagShift) |
+			(enpassant << EnPassantShift) | (castlingFlag << CastlingFlagShift) |
+			(castlingType << CastlingTypeShift),
 	)
 
 	return move
 }
 
-// GetSource should retrieve the source square of a move
-func (m Move) GetSource() int {
+// GetSourceSquare should retrieve the source square of a move
+func (m Move) GetSourceSquare() int {
 	return int(m & SourceMask)
 }
 
-// GetTarget should retrieve the target square of a move
-func (m Move) GetTarget() int {
+// GetTargetSquare should retrieve the target square of a move
+func (m Move) GetTargetSquare() int {
 	return int(m&TargetMask) >> TargetShift
 }
 
-// GetPiece should retrieve the piece that is moved
-func (m Move) GetPiece() int {
+// GetMovingPiece should retrieve the piece that is moved
+func (m Move) GetMovingPiece() int {
 	return int(m&PieceMask) >> PieceShift
 }
 
-// GetPromoted should retrieve the promoted piece if it exists
-func (m Move) GetPromoted() int {
-	return int(m&PromotedMask) >> PromotedShift
+// GetPromotedPiece should retrieve the promoted piece if it exists
+func (m Move) GetPromotedPiece() int {
+	return int(m&PromotedPieceMask) >> PromotedShift
 }
 
-// GetCapture should retrieve the capture flag
-func (m Move) GetCapture() int {
-	return int(m&CaptureMask) >> CaptureShift
+// GetCapturedPiece should retrieve the captured piece if it exists
+func (m Move) GetCapturedPiece() int {
+	return int(m&CapturedPieceMask) >> CapturedPieceShift
 }
 
-// GetDoublePush should retrieve the double push flag
-func (m Move) GetDoublePush() int {
-	return int(m&DoublePushMask) >> DoublePushShift
+// IsCapture should return is the move is capture
+func (m Move) IsCapture() bool {
+	return int(m&CaptureFlagMask)>>CaptureFlagShift != 0
 }
 
-// GetEnpassant should retrieve the en passant flag
-func (m Move) GetEnpassant() int {
-	return int(m&EnpassantMask) >> EnpassantShift
+// IsDoublePush should return if the move is a double push
+func (m Move) IsDoublePush() bool {
+	return int(m&DoublePushMask)>>DoublePushFlagShift != 0
 }
 
-// GetCastling should retrieve the castling flah
-func (m Move) GetCastling() int {
-	return int(m&CastlingMask) >> CastlingShift
+// IsEnPassant should return is the move is an enpassant capture
+func (m Move) IsEnPassant() bool {
+	return int(m&EnPasssantMask)>>EnPassantShift != 0
+}
+
+// IsCastle should return the castling flah
+func (m Move) IsCastle() bool {
+	return int(m&CastlingFlagMask)>>CastlingFlagShift != 0
+}
+
+// GetCastleType should return the type of castling
+func (m Move) GetCastleType() CastleType {
+	return CastleType(int(m&CastlingTypeMask) >> CastlingTypeShift)
 }
 
 // String prints the move in algebraic notation (e.g. "e2e4").
@@ -115,7 +144,7 @@ func (m Move) String() string {
 	}
 
 	sPromotion := ""
-	prom := m.GetPromoted()
+	prom := m.GetPromotedPiece()
 	if prom != 0 {
 		if prom == WQ || prom == BQ {
 			sPromotion = "q"
@@ -129,8 +158,8 @@ func (m Move) String() string {
 	}
 	return fmt.Sprintf(
 		"%s%s%s",
-		util.Sq2Fen[m.GetSource()],
-		util.Sq2Fen[m.GetTarget()],
+		util.Sq2Fen[m.GetSourceSquare()],
+		util.Sq2Fen[m.GetTargetSquare()],
 		sPromotion,
 	)
 }
@@ -139,34 +168,38 @@ func (m Move) String() string {
 func (m Move) PrintMove() {
 	fmt.Printf(
 		"%s%s",
-		util.Sq2Fen[m.GetSource()],
-		util.Sq2Fen[m.GetTarget()],
+		util.Sq2Fen[m.GetSourceSquare()],
+		util.Sq2Fen[m.GetTargetSquare()],
 	)
 
-	if m.GetPromoted() != 0 {
-		fmt.Printf("%c ", unicode.ToLower(rune(util.ASCIIPieces[m.GetPromoted()])))
+	if m.GetPromotedPiece() != 0 {
+		fmt.Printf("%c ", unicode.ToLower(rune(util.ASCIIPieces[m.GetPromotedPiece()])))
 	} else {
 		fmt.Printf("  ")
 	}
 
-	fmt.Printf("   %c ", util.ASCIIPieces[m.GetPiece()])
-	fmt.Printf("       %d ", m.GetCapture())
-	fmt.Printf("        %d ", m.GetDoublePush())
-	fmt.Printf("        %d ", m.GetEnpassant())
-	fmt.Printf("         %d\n", m.GetCastling())
+	if m.GetCapturedPiece() != 0 {
+		fmt.Printf("%c ", unicode.ToLower(rune(util.ASCIIPieces[m.GetCapturedPiece()])))
+	} else {
+		fmt.Printf("  ")
+	}
+
+	fmt.Printf("   %c ", util.ASCIIPieces[m.GetMovingPiece()])
+	fmt.Printf("       %v ", m.IsCapture())
+	fmt.Printf("        %v ", m.IsDoublePush())
+	fmt.Printf("        %v ", m.IsEnPassant())
+	fmt.Printf("         %v\n", m.IsCastle())
+	fmt.Printf("         %d\n", m.GetCastleType())
 }
 
 // IsQueenCastle determines if the move is a queenside castle
 func (m Move) IsQueenCastle() bool {
 	// First check if it's a castling move at all
-	if m.GetCastling() == 0 {
+	if !m.IsCastle() {
 		return false
 	}
 
-	// For white, queenside castling is e1 to c1 (source 4 to target 2)
-	// For black, queenside castling is e8 to c8 (source 60 to target 58)
-	source := m.GetSource()
-	target := m.GetTarget()
+	casType := m.GetCastleType()
 
-	return (source == E1 && target == C1) || (source == E8 && target == C8)
+	return casType == WhiteQueenCastle || casType == BlackQueenCastle
 }
