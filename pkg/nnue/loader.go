@@ -1,3 +1,5 @@
+// Package nnue keeps the NNUE (Efficiently Updated Neural Network) responsible for
+// evaluation the current position
 package nnue
 
 import (
@@ -6,7 +8,8 @@ import (
 	"os"
 )
 
-// LoadWeights loads network weights from a file
+// LoadWeights loads network weights from a binary file.
+// The file is expected to contain input weights, input bias, hidden weights, and hidden bias in sequence.
 func LoadWeights(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {

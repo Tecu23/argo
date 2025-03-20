@@ -1,3 +1,5 @@
+// Package nnue keeps the NNUE (Efficiently Updated Neural Network) responsible for
+// evaluation the current position
 package nnue
 
 import (
@@ -6,26 +8,30 @@ import (
 	. "github.com/Tecu23/argov2/pkg/constants"
 )
 
-// Accumulator represents the efficiently updatable first layer
+// Accumulator represents the first layer of the neural network that is efficiently updatable.
+// It stores a summation vector per color (0: White, 1: Black) with a fixed hidden size.
 type Accumulator struct {
-	Summation [2][HiddenSize]int16 // [color][neuron]
+	Summation [2][HiddenSize]int16 // [color][neuron] stores the sum for each hidden neuron
 }
 
-// AccumulatorTableEntry caches a position's accumulator state
+// AccumulatorTableEntry caches the accumulator state for a specific board positon,
+// along with the bitboards for piece occupancy per color and piece type.
 type AccumulatorTableEntry struct {
-	PieceOcc    [2][6]bitboard.Bitboard // [color][piece type] bitboards
-	Accumulator Accumulator
+	PieceOcc    [2][6]bitboard.Bitboard // [color][piece type] bitboards for caching updates
+	Accumulator Accumulator             // The associated accumulator for this entry
 }
 
-// AccumulatorTable caches accumulators for different king positions
+// AccumulatorTable caches accumulators for different king positions.
+// It is indexed by color and a precomputed king bucket index (0-31).
 type AccumulatorTable struct {
-	Entries [2][32]AccumulatorTableEntry // [color][kingIndex]
+	Entries [2][32]AccumulatorTableEntry // [color][kingIndex] mapping of cached accumulator entries
 }
 
-// Reset initializes the accumulator table with bias values
+// Reset initializes the accumulator table with the network's input bias values.
+// This is called to start evaluation with a baseline accumulator state.
 func (a *AccumulatorTable) Reset() {
-	for c := 0; c < 2; c++ {
-		for s := 0; s < 32; s++ {
+	for c := 0; c < 2; c++ { // Loop over both colors
+		for s := 0; s < 32; s++ { // Loop over all possible king bucket indices
 			// Copy input bias to initialize accumulator
 			for i := 0; i < HiddenSize; i++ {
 				a.Entries[c][s].Accumulator.Summation[c][i] = InputBias[i]
@@ -34,9 +40,11 @@ func (a *AccumulatorTable) Reset() {
 	}
 }
 
-// Use updates the accumulator based on current board position
+// Use updates the accumulator for a given perspective (view) based on the current board position.
+// It calculates which king bucket (entry) to use based on the king's square and then adjustes the accumulator.
 func (a *AccumulatorTable) Use(view int, b *board.Board, evaluator *Evaluator) {
 	var kingSq int
+	// Determine the king's square based on the perspective (White or Black)
 	if view == White {
 		kingBB := b.Bitboards[WK]
 		kingSq = kingBB.FirstOne()
@@ -46,12 +54,14 @@ func (a *AccumulatorTable) Use(view int, b *board.Board, evaluator *Evaluator) {
 
 	}
 
+	// Convert from engine square representation to NNUE expected format
 	kingSq = ConvertSquare(kingSq)
 
+	// Determine if the king is on the king-side (file > 3) to choose the correct bucket
 	kingSide := FileIndex(kingSq) > 3
 	ksIndex := KingSquareIndex(kingSq, view)
 
-	// Determine entry index
+	// Determine entry index based on king side
 	entryIdx := 0
 	if kingSide {
 		entryIdx = 16 + ksIndex
@@ -59,25 +69,25 @@ func (a *AccumulatorTable) Use(view int, b *board.Board, evaluator *Evaluator) {
 		entryIdx = ksIndex
 	}
 
-	// Get the entry
+	// Get a reference to the cached accumulator entry for this king position and color
 	entry := &a.Entries[view][entryIdx]
 
-	// Update the accumulator based on piece differences
+	// Loop over both colors and each piece type to update the accumulator based on changes in piece occupancy
 	for c := 0; c < 2; c++ {
 		for pt := 0; pt < 6; pt++ {
-			boardBB := b.GetPieceBB(c, pt)
-			entryBB := entry.PieceOcc[c][pt]
+			boardBB := b.GetPieceBB(c, pt)   // Current board bitboard for this color and piece type
+			entryBB := entry.PieceOcc[c][pt] // Cached bitboard from the previous state
 
-			// Squares where pieces need to be added
+			// Identify squares where pieces have been added (present on board but not in cache)
 			toSet := boardBB & ^entryBB
 
-			// Squares where pieces need to be removed
+			// Identify squares where pieces have been removed (present in cache but not on board)
 			toUnset := entryBB & ^boardBB
 
-			// Add new pieces
+			// Process pieces that need to be added
 			for toSet != 0 {
 				sq := toSet.FirstOne()
-				sq = ConvertSquare(sq)
+				sq = ConvertSquare(sq) // Convert Square to input into the NNUE
 				idx := Index(pt, c, sq, view, kingSq)
 				AddWeightsToAccumulator(
 					true,
@@ -99,19 +109,20 @@ func (a *AccumulatorTable) Use(view int, b *board.Board, evaluator *Evaluator) {
 				)
 			}
 
-			// Store the updated piece bitboard
+			// Update the cached piece occupancy to match the current board
 			entry.PieceOcc[c][pt] = boardBB
 		}
 	}
 
-	// Copy the updated accumulator to the evaluator
+	// Copy the updated accumulator to the evaluator's current history state
 	copy(
 		evaluator.History[evaluator.HistoryIndex].Summation[view][:],
 		entry.Accumulator.Summation[view][:],
 	)
 }
 
-// AddWeightsToAccumulator adds or subtracts weights to/from an accumulator
+// AddWeightsToAccumulator adds (or subtracts) network input weights to/from the accumulator.
+// The 'add' flag determines if weights are added (true) or substracted (false)
 func AddWeightsToAccumulator(add bool, idx int, src, target []int16) {
 	for i := 0; i < len(src); i++ {
 		if add {
@@ -122,7 +133,8 @@ func AddWeightsToAccumulator(add bool, idx int, src, target []int16) {
 	}
 }
 
-// Update helpers for different move types
+// SetUnsetPiece updates the accumulator when a piece moves from one square to another.
+// It substracts the weights from the source square and adds the weights for the target square.
 func SetUnsetPiece(input, output *Accumulator, side int, set, unset FeatureIndex) {
 	idx1 := set.Get(side)
 	idx2 := unset.Get(side)
@@ -134,11 +146,15 @@ func SetUnsetPiece(input, output *Accumulator, side int, set, unset FeatureIndex
 	}
 }
 
+// SetUnsetPieceBothColors applies the piece move update for both White and Black perspective
 func SetUnsetPieceBothColors(input, output *Accumulator, set, unset FeatureIndex) {
 	SetUnsetPiece(input, output, White, set, unset)
 	SetUnsetPiece(input, output, Black, set, unset)
 }
 
+// SetUnsetUnsetPiece updates the accumulator for moves involving a piece move with an additional removal.
+// For example, when capturing, it adds the moving piece's weight, substracts the weight from the origin,
+// and substracts the captured piece's weights
 func SetUnsetUnsetPiece(input, output *Accumulator, side int, set, unset1, unset2 FeatureIndex) {
 	idx1 := set.Get(side)
 	idx2 := unset1.Get(side)
@@ -152,11 +168,14 @@ func SetUnsetUnsetPiece(input, output *Accumulator, side int, set, unset1, unset
 	}
 }
 
+// SetUnsetUnsetPieceBothColors applies the above update for both colors.
 func SetUnsetUnsetPieceBothColors(input, output *Accumulator, set, unset1, unset2 FeatureIndex) {
 	SetUnsetUnsetPiece(input, output, White, set, unset1, unset2)
 	SetUnsetUnsetPiece(input, output, Black, set, unset1, unset2)
 }
 
+// SetSetUnsetUnsetPiece handles cases where two pieces are set and two are removed in a single update.
+// It is used for moves like castling where multiple pieces change positions.
 func SetSetUnsetUnsetPiece(
 	input, output *Accumulator,
 	side int,
@@ -176,6 +195,7 @@ func SetSetUnsetUnsetPiece(
 	}
 }
 
+// SetSetUnsetUnsetPieceBothColors applies the above castling or double-update for both colors
 func SetSetUnsetUnsetPieceBothColors(
 	input, output *Accumulator,
 	set1, set2, unset1, unset2 FeatureIndex,

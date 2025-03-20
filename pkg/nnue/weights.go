@@ -1,14 +1,24 @@
+// Package nnue keeps the NNUE (Efficiently Updated Neural Network) responsible for
+// evaluation the current position
 package nnue
 
-// Network weight arrays
+// Global arrays to store the network weights and biases.
+// These are populated by the LoadWeights function and used during evaluation.
+
 var (
-	InputWeights  [InputSize][HiddenSize]int16
+	// InputWeights maps each input feature (based on piece, square, etc.) to the hidden layer neurons.
+	InputWeights [InputSize][HiddenSize]int16
+	// HiddenWeights connects the concatenated hidden layer output to the final evaluation output.
 	HiddenWeights [OutputSize][HiddenDSize]int16
-	InputBias     [HiddenSize]int16
-	HiddenBias    [OutputSize]int32
+	// InputBias provides the baseline activation for the hidden layer neurons.
+	InputBias [HiddenSize]int16
+	// HiddenBias is added to the final weighted sum from the hidden layer.
+	HiddenBias [OutputSize]int32
 )
 
-// Piece value for evaluation
+// Static piece value constants used during evaluation.
+// They provide bonus values for pieces in the middlegame and endgame.
+// The bonus for the king is a high constant to reflect its critical importance.
 const (
 	// for middlegame
 	pawnBonusMG   = 124
