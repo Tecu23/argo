@@ -10,7 +10,8 @@ import (
 
 // PcFen contains pieces in Fen format for validation
 const (
-	PcFen = "PpNnBbRrQqKk     "
+	PcFen    = "PpNnBbRrQqKk     "
+	PieceFen = "PNBRQK     "
 )
 
 // ASCIIPieces maps piece indices to ASCII representation for printing.

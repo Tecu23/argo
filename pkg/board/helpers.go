@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Tecu23/argov2/internal/hash"
+	"github.com/Tecu23/argov2/pkg/bitboard"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/util"
@@ -396,4 +397,42 @@ func (b *Board) PieceCount(side color.Color) int {
 	}
 
 	return b.Occupancies[color.BLACK].Count()
+}
+
+func (b *Board) GetPieceBB(color, piece int) bitboard.Bitboard {
+	if color == 0 {
+		switch piece {
+		case Pawn:
+			return b.Bitboards[WP]
+		case Bishop:
+			return b.Bitboards[WB]
+		case Knight:
+			return b.Bitboards[WN]
+		case Rook:
+			return b.Bitboards[WR]
+		case Queen:
+			return b.Bitboards[WQ]
+		case King:
+			return b.Bitboards[WK]
+		default:
+			return Empty
+		}
+	}
+
+	switch piece {
+	case Pawn:
+		return b.Bitboards[BP]
+	case Bishop:
+		return b.Bitboards[BB]
+	case Knight:
+		return b.Bitboards[BN]
+	case Rook:
+		return b.Bitboards[BR]
+	case Queen:
+		return b.Bitboards[BQ]
+	case King:
+		return b.Bitboards[BK]
+	default:
+		return Empty
+	}
 }

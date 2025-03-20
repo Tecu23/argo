@@ -3,6 +3,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/Tecu23/argov2/pkg/attacks"
 	"github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/engine"
+	"github.com/Tecu23/argov2/pkg/nnue"
 	"github.com/Tecu23/argov2/pkg/uci"
 	"github.com/Tecu23/argov2/pkg/util"
 )
@@ -30,11 +32,21 @@ func main() {
 
 	logger := log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)
 
+	// file, err := os.Create("cpu.prof")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	//
+	// if err := pprof.StartCPUProfile(file); err != nil {
+	// 	log.Fatal(err)
+	// }
+	//
+	// defer pprof.StopCPUProfile()
+	//
 	options := engine.NewOptions()
 	engine := engine.NewEngine(options)
 
 	protocol := uci.New(name, author, version, engine, []uci.Option{})
-
 	protocol.Run(logger)
 }
 
@@ -48,4 +60,10 @@ func initHelpers() {
 	util.InitFen2Sq()
 
 	hash.Init()
+
+	err := nnue.LoadWeights("./default.net")
+	if err != nil {
+		fmt.Printf("Error loading weights: %v\n", err)
+		return
+	}
 }

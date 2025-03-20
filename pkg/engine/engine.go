@@ -7,8 +7,8 @@ import (
 
 	"github.com/Tecu23/argov2/internal/reduction"
 	. "github.com/Tecu23/argov2/internal/types"
-	"github.com/Tecu23/argov2/pkg/evaluation"
 	"github.com/Tecu23/argov2/pkg/move"
+	"github.com/Tecu23/argov2/pkg/nnue"
 )
 
 type mainLine struct {
@@ -26,7 +26,7 @@ type Engine struct {
 	progress       func(SearchInfo)
 	timeManager    *timeManager
 	cancel         context.CancelFunc
-	evaluator      evaluation.Evaluator
+	evaluator      nnue.Evaluator
 	tt             *TranspositionTable
 	reductionTable *reduction.Table
 }
@@ -34,7 +34,7 @@ type Engine struct {
 func NewEngine(options Options) *Engine {
 	return &Engine{
 		Options:        options,
-		evaluator:      *evaluation.NewEvaluator(),
+		evaluator:      *nnue.NewEvaluator(),
 		tt:             NewTranspositionTable(32),
 		reductionTable: reduction.New(),
 	}

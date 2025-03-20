@@ -6,8 +6,8 @@ import (
 
 	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/board"
-	"github.com/Tecu23/argov2/pkg/evaluation"
 	"github.com/Tecu23/argov2/pkg/move"
+	"github.com/Tecu23/argov2/pkg/nnue"
 )
 
 const (
@@ -35,7 +35,7 @@ func (e *Engine) orderMoves(moves []move.Move, b *board.Board, ttMove move.Move)
 			// MVV-LVA scoring
 			victim := b.GetPieceAt(mv.GetTarget())
 			aggressor := b.GetPieceAt(mv.GetSource())
-			score = 10000 + (evaluation.GetPieceValue(victim) - evaluation.GetPieceValue(aggressor)/10)
+			score = 10000 + (nnue.GetPieceValue(victim) - nnue.GetPieceValue(aggressor)/10)
 		}
 
 		scores[i] = MoveScore{mv, score}

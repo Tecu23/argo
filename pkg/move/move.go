@@ -155,3 +155,18 @@ func (m Move) PrintMove() {
 	fmt.Printf("        %d ", m.GetEnpassant())
 	fmt.Printf("         %d\n", m.GetCastling())
 }
+
+// IsQueenCastle determines if the move is a queenside castle
+func (m Move) IsQueenCastle() bool {
+	// First check if it's a castling move at all
+	if m.GetCastling() == 0 {
+		return false
+	}
+
+	// For white, queenside castling is e1 to c1 (source 4 to target 2)
+	// For black, queenside castling is e8 to c8 (source 60 to target 58)
+	source := m.GetSource()
+	target := m.GetTarget()
+
+	return (source == E1 && target == C1) || (source == E8 && target == C8)
+}
