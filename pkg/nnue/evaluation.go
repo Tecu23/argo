@@ -82,25 +82,23 @@ func (e *Evaluator) eval(activePlayer int) int {
 	accActive := e.History[e.HistoryIndex].Summation[activePlayer][:]
 	accInactive := e.History[e.HistoryIndex].Summation[1-activePlayer][:]
 
-	// Compute the output score
-	var sum int32
+	// // Compute the output score
+	// var sum int32
+	//
+	// // Apply ReLU (max(0, x)) and compute the dot product for the active side
+	// for i := 0; i < HiddenSize; i++ {
+	// 	// ReLU: max(0, x)
+	// 	if accActive[i] > 0 {
+	// 		sum += int32(accActive[i]) * int32(HiddenWeights[0][i])
+	// 	}
+	// 	if accInactive[i] > 0 {
+	// 		sum += int32(accInactive[i]) * int32(HiddenWeights[0][i+HiddenSize])
+	// 	}
+	// }
 
-	// Apply ReLU (max(0, x)) and compute the dot product for the active side
-	for i := 0; i < HiddenSize; i++ {
-		// ReLU: max(0, x)
-		if accActive[i] > 0 {
-			sum += int32(accActive[i]) * int32(HiddenWeights[0][i])
-		}
-	}
+	hiddenWeightsFlat := HiddenWeights[0]
 
-	// Similarly, for the inactive side using the corresponding half of hidden weights
-	for i := 0; i < HiddenSize; i++ {
-		if accInactive[i] > 0 {
-			sum += int32(accInactive[i]) * int32(HiddenWeights[0][i+HiddenSize])
-		}
-	}
-
-	sum += HiddenBias[0]
+	sum := computeScoreASM(accActive, accInactive, hiddenWeightsFlat[:], HiddenBias[0])
 
 	// Scale the sum based on the weight multipliers to obtain the final evaluation score
 	result := int(
@@ -110,44 +108,7 @@ func (e *Evaluator) eval(activePlayer int) int {
 	return result
 }
 
-// GetPieceValue returns a static bonus value for a given piece in the middlegame.
-// (The commented code hints at an endgame evaluation variant.)
-func GetPieceValue(piece int) int {
-	// if isEG {
-	// 	switch piece {
-	// 	case WP, BP:
-	// 		return pawnBonusEG
-	// 	case WN, BN:
-	// 		return knightBonusEG
-	// 	case WB, BB:
-	// 		return bishopBonusEG
-	// 	case WR, BR:
-	// 		return rookBonusEG
-	// 	case WQ, BQ:
-	// 		return queenBonusEG
-	// 	case WK, BK:
-	// 		return 200_000
-	// 	default:
-	// 		return 0
-	// 	}
-	// }
-	switch piece {
-	case WP, BP:
-		return pawnBonusMG
-	case WN, BN:
-		return knightBonusMG
-	case WB, BB:
-		return bishopBonusMG
-	case WR, BR:
-		return rookBonusMG
-	case WQ, BQ:
-		return queenBonusMG
-	case WK, BK:
-		return 200_000
-	default:
-		return 0
-	}
-}
+func computeScoreASM(accActive, accInactive []int16, hiddenWeights []int16, hiddenBias int32) int32
 
 // AddNewAccumulation adds a new accumulator state to the history stack,
 // so that subsequent move updates are applied on a new state.
@@ -214,7 +175,7 @@ func (e *Evaluator) SetPieceOnSquareAccumulator(
 // It determines the move type (normal, capture, castling, en passant, promotion)
 // and applies the appropriate update to the accumulator history.
 func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
-	// fmt.Println("Called process move")
+	// fmt.Println("Called process move", m)
 	from := m.GetSourceSquare()
 	to := m.GetTargetSquare()
 	piece := m.GetMovingPiece()
@@ -386,5 +347,26 @@ func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 				FeatureIndex{pc, c, from, wKingSq, bKingSq},
 			)
 		}
+	}
+}
+
+// GetPieceValue returns a static bonus value for a given piece in the middlegame.
+// (The commented code hints at an endgame evaluation variant.)
+func GetPieceValue(piece int) int {
+	switch piece {
+	case WP, BP:
+		return pawnBonusMG
+	case WN, BN:
+		return knightBonusMG
+	case WB, BB:
+		return bishopBonusMG
+	case WR, BR:
+		return rookBonusMG
+	case WQ, BQ:
+		return queenBonusMG
+	case WK, BK:
+		return 200_000
+	default:
+		return 0
 	}
 }

@@ -58,19 +58,31 @@ func main() {
 
 		moves := b.GenerateMoves()
 		for _, move := range moves {
-			copyB := b.CopyBoard()
-			if !copyB.MakeMove(move, board.AllMoves) {
+			copy1 := b.CopyBoard()
+			if !copy1.MakeMove(move, board.AllMoves) {
 				continue
 			}
-			evaluator.ProcessMove(&copyB, move)
+			evaluator.ProcessMove(&copy1, move)
 
-			// Now let's evaluate this position
-			score := evaluator.Evaluate(&copyB)
-			fmt.Printf("Score After move: %s, %d\n", move.String(), score)
+			score := evaluator.Evaluate(&copy1)
+			fmt.Printf("Score After moves: %s, %d\n", move.String(), score)
+
+			mvs := copy1.GenerateMoves()
+			for _, m := range mvs {
+				copy2 := copy1.CopyBoard()
+				if !copy2.MakeMove(m, board.AllMoves) {
+					continue
+				}
+				evaluator.ProcessMove(&copy2, m)
+
+				score := evaluator.Evaluate(&copy2)
+				fmt.Printf("Score After moves: %s %s, %d\n", move.String(), m.String(), score)
+
+				evaluator.PopAccumulation()
+			}
 
 			evaluator.PopAccumulation()
 		}
-
 		return
 	}
 

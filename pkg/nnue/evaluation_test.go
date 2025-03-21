@@ -87,3 +87,13 @@ func TestEval(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkEval(b *testing.B) {
+	board, _ := board.ParseFEN("r1bqkbnr/ppp2ppp/2np4/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4")
+	evaluator := NewEvaluator()
+
+	evaluator.Reset(&board)
+	for i := 0; i < b.N; i++ {
+		evaluator.Evaluate(&board)
+	}
+}

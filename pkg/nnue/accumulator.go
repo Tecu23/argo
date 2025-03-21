@@ -1,3 +1,5 @@
+// File: accumulator.go
+
 // Package nnue keeps the NNUE (Efficiently Updated Neural Network) responsible for
 // evaluation the current position
 package nnue
@@ -30,10 +32,9 @@ type AccumulatorTable struct {
 // Reset initializes the accumulator table with the network's input bias values.
 // This is called to start evaluation with a baseline accumulator state.
 func (a *AccumulatorTable) Reset() {
-	for c := 0; c < 2; c++ { // Loop over both colors
-		for s := 0; s < 32; s++ { // Loop over all possible king bucket indices
-			// Copy input bias to initialize accumulator
-			for i := 0; i < HiddenSize; i++ {
+	for c := range 2 {
+		for s := range 32 {
+			for i := range HiddenSize {
 				a.Entries[c][s].Accumulator.Summation[c][i] = InputBias[i]
 			}
 		}
@@ -133,25 +134,28 @@ func AddWeightsToAccumulator(add bool, idx int, src, target []int16) {
 	}
 }
 
-// SetUnsetPiece updates the accumulator when a piece moves from one square to another.
-// It substracts the weights from the source square and adds the weights for the target square.
-func SetUnsetPiece(input, output *Accumulator, side int, set, unset FeatureIndex) {
-	idx1 := set.Get(side)
-	idx2 := unset.Get(side)
-
-	for i := 0; i < HiddenSize; i++ {
-		output.Summation[side][i] = input.Summation[side][i] +
-			InputWeights[idx1][i] -
-			InputWeights[idx2][i]
-	}
-}
-
 // SetUnsetPieceBothColors applies the piece move update for both White and Black perspective
 func SetUnsetPieceBothColors(input, output *Accumulator, set, unset FeatureIndex) {
 	// fmt.Println("Called SetUnset Piece")
 	SetUnsetPiece(input, output, White, set, unset)
 	SetUnsetPiece(input, output, Black, set, unset)
 }
+
+// SetUnsetPiece updates the accumulator when a piece moves from one square to another.
+// It substracts the weights from the source square and adds the weights for the target square.
+func SetUnsetPiece(input, output *Accumulator, side int, set, unset FeatureIndex) {
+	idx1 := set.Get(side)
+	idx2 := unset.Get(side)
+
+	setUnsetPieceASM(
+		input.Summation[side][:],
+		output.Summation[side][:],
+		InputWeights[idx1][:],
+		InputWeights[idx2][:],
+	)
+}
+
+func setUnsetPieceASM(input, output []int16, weightsSet, weightsUnset []int16)
 
 // SetUnsetUnsetPiece updates the accumulator for moves involving a piece move with an additional removal.
 // For example, when capturing, it adds the moving piece's weight, substracts the weight from the origin,
@@ -161,15 +165,16 @@ func SetUnsetUnsetPiece(input, output *Accumulator, side int, set, unset1, unset
 	idx2 := unset1.Get(side)
 	idx3 := unset2.Get(side)
 
-	// fmt.Printf("set unset unset piece: %d, %d, %d\n", idx1, idx2, idx3)
-
-	for i := 0; i < HiddenSize; i++ {
-		output.Summation[side][i] = input.Summation[side][i] +
-			InputWeights[idx1][i] -
-			InputWeights[idx2][i] -
-			InputWeights[idx3][i]
-	}
+	setUnsetUnsetPieceASM(
+		input.Summation[side][:],
+		output.Summation[side][:],
+		InputWeights[idx1][:],
+		InputWeights[idx2][:],
+		InputWeights[idx3][:],
+	)
 }
+
+func setUnsetUnsetPieceASM(input, output []int16, set, unset1, unset2 []int16)
 
 // SetUnsetUnsetPieceBothColors applies the above update for both colors.
 func SetUnsetUnsetPieceBothColors(input, output *Accumulator, set, unset1, unset2 FeatureIndex) {
@@ -190,6 +195,7 @@ func SetSetUnsetUnsetPiece(
 	idx3 := unset1.Get(side)
 	idx4 := unset2.Get(side)
 
+	// fmt.Println("Set Set Unset Unset Piece")
 	for i := 0; i < HiddenSize; i++ {
 		output.Summation[side][i] = input.Summation[side][i] +
 			InputWeights[idx1][i] +
