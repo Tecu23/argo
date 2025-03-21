@@ -46,11 +46,30 @@ func main() {
 	defer pprof.StopCPUProfile()
 
 	if debug {
+		b, _ := board.ParseFEN(
+			"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+		)
 
-		b, _ := board.ParseFEN(constants.StartPosition)
-		nodes := board.PerftTest(&b, 5)
+		evaluator := nnue.NewEvaluator()
+		evaluator.Reset(&b)
 
-		fmt.Println(nodes)
+		score := evaluator.Evaluate(&b)
+		fmt.Println("Initial Score", score)
+
+		moves := b.GenerateMoves()
+		for _, move := range moves {
+			copyB := b.CopyBoard()
+			if !copyB.MakeMove(move, board.AllMoves) {
+				continue
+			}
+			evaluator.ProcessMove(&copyB, move)
+
+			// Now let's evaluate this position
+			score := evaluator.Evaluate(&copyB)
+			fmt.Printf("Score After move: %s, %d\n", move.String(), score)
+
+			evaluator.PopAccumulation()
+		}
 
 		return
 	}

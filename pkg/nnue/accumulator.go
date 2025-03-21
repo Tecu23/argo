@@ -148,6 +148,7 @@ func SetUnsetPiece(input, output *Accumulator, side int, set, unset FeatureIndex
 
 // SetUnsetPieceBothColors applies the piece move update for both White and Black perspective
 func SetUnsetPieceBothColors(input, output *Accumulator, set, unset FeatureIndex) {
+	// fmt.Println("Called SetUnset Piece")
 	SetUnsetPiece(input, output, White, set, unset)
 	SetUnsetPiece(input, output, Black, set, unset)
 }
@@ -160,6 +161,8 @@ func SetUnsetUnsetPiece(input, output *Accumulator, side int, set, unset1, unset
 	idx2 := unset1.Get(side)
 	idx3 := unset2.Get(side)
 
+	// fmt.Printf("set unset unset piece: %d, %d, %d\n", idx1, idx2, idx3)
+
 	for i := 0; i < HiddenSize; i++ {
 		output.Summation[side][i] = input.Summation[side][i] +
 			InputWeights[idx1][i] -
@@ -170,6 +173,7 @@ func SetUnsetUnsetPiece(input, output *Accumulator, side int, set, unset1, unset
 
 // SetUnsetUnsetPieceBothColors applies the above update for both colors.
 func SetUnsetUnsetPieceBothColors(input, output *Accumulator, set, unset1, unset2 FeatureIndex) {
+	// fmt.Println("Called SetUnsetUnset Piece")
 	SetUnsetUnsetPiece(input, output, White, set, unset1, unset2)
 	SetUnsetUnsetPiece(input, output, Black, set, unset1, unset2)
 }
@@ -200,6 +204,7 @@ func SetSetUnsetUnsetPieceBothColors(
 	input, output *Accumulator,
 	set1, set2, unset1, unset2 FeatureIndex,
 ) {
+	// fmt.Println("Called SetSetUnsetUnset Piece")
 	SetSetUnsetUnsetPiece(input, output, White, set1, set2, unset1, unset2)
 	SetSetUnsetUnsetPiece(input, output, Black, set1, set2, unset1, unset2)
 }

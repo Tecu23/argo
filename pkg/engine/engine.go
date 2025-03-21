@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Tecu23/argov2/internal/history"
 	"github.com/Tecu23/argov2/internal/reduction"
 	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/move"
@@ -29,6 +30,8 @@ type Engine struct {
 	evaluator      nnue.Evaluator
 	tt             *TranspositionTable
 	reductionTable *reduction.Table
+	historyTable   *history.HistoryTable
+	killerMoves    [MaxDepth][MaxKillers]move.Move
 }
 
 func NewEngine(options Options) *Engine {
@@ -37,6 +40,7 @@ func NewEngine(options Options) *Engine {
 		evaluator:      *nnue.NewEvaluator(),
 		tt:             NewTranspositionTable(32),
 		reductionTable: reduction.New(),
+		historyTable:   history.New(),
 	}
 }
 

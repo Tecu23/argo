@@ -90,7 +90,6 @@ func (b *Board) GenerateMoves() []move.Move {
 						targetSq = attcks.FirstOne()
 
 						captured := b.GetPieceAt(targetSq)
-
 						if sourceSq >= A7 && sourceSq <= H7 {
 
 							result = append(
@@ -168,23 +167,10 @@ func (b *Board) GenerateMoves() []move.Move {
 						// check enpassant capture
 						if enpassantAttacks != 0 {
 							// init enpassant capture target square
-							targetEnpassant := enpassantAttacks.FirstOne()
-
-							captured := b.GetPieceAt(targetEnpassant)
+							targetSq := enpassantAttacks.FirstOne()
 							result = append(
 								result,
-								move.EncodeMove(
-									sourceSq,
-									targetEnpassant,
-									piece,
-									0,
-									captured,
-									1,
-									0,
-									1,
-									0,
-									0,
-								),
+								move.EncodeMove(sourceSq, targetSq, piece, 0, WP, 1, 0, 1, 0, 0),
 							)
 						}
 					}
@@ -299,7 +285,6 @@ func (b *Board) GenerateMoves() []move.Move {
 						targetSq = attcks.FirstOne()
 
 						captured := b.GetPieceAt(targetSq)
-
 						if sourceSq >= A2 && sourceSq <= H2 {
 
 							result = append(
@@ -333,11 +318,10 @@ func (b *Board) GenerateMoves() []move.Move {
 						// check enpassant capture
 						if enpassantAttacks != 0 {
 							// init enpassant capture target square
-							targetEnpassant := enpassantAttacks.FirstOne()
-							captured := b.GetPieceAt(targetEnpassant)
+							targetSq := enpassantAttacks.FirstOne()
 							result = append(
 								result,
-								move.EncodeMove(sourceSq, targetEnpassant, piece, 0, captured, 1, 0, 1, 0, 0),
+								move.EncodeMove(sourceSq, targetSq, piece, 0, BP, 1, 0, 1, 0, 0),
 							)
 						}
 					}
@@ -694,7 +678,6 @@ func (b *Board) GenerateCaptures() []move.Move {
 					for attcks != 0 {
 						targetSq = attcks.FirstOne()
 						captured := b.GetPieceAt(targetSq)
-
 						// Handle promotion captures
 						if sourceSq >= A7 && sourceSq <= H7 {
 							result = append(
@@ -767,22 +750,10 @@ func (b *Board) GenerateCaptures() []move.Move {
 					if b.EnPassant != -1 {
 						enpassantAttacks := attacks.PawnAttacks[color.WHITE][sourceSq] & (1 << b.EnPassant)
 						if enpassantAttacks != 0 {
-							targetEnpassant := enpassantAttacks.FirstOne()
-							captured := b.GetPieceAt(targetEnpassant)
+							targetSq := enpassantAttacks.FirstOne()
 							result = append(
 								result,
-								move.EncodeMove(
-									sourceSq,
-									targetEnpassant,
-									piece,
-									0,
-									captured,
-									1,
-									0,
-									1,
-									0,
-									0,
-								),
+								move.EncodeMove(sourceSq, targetSq, piece, 0, WP, 1, 0, 1, 0, 0),
 							)
 						}
 					}
@@ -800,7 +771,6 @@ func (b *Board) GenerateCaptures() []move.Move {
 					for attcks != 0 {
 						targetSq = attcks.FirstOne()
 						captured := b.GetPieceAt(targetSq)
-
 						// Handle promotion captures
 						if sourceSq >= A2 && sourceSq <= H2 {
 							result = append(result, move.EncodeMove(sourceSq, targetSq, piece, BQ, captured, 1, 0, 0, 0, 0))
@@ -817,9 +787,8 @@ func (b *Board) GenerateCaptures() []move.Move {
 					if b.EnPassant != -1 {
 						enpassantAttacks := attacks.PawnAttacks[color.BLACK][sourceSq] & (1 << b.EnPassant)
 						if enpassantAttacks != 0 {
-							targetEnpassant := enpassantAttacks.FirstOne()
-							captured := b.GetPieceAt(targetEnpassant)
-							result = append(result, move.EncodeMove(sourceSq, targetEnpassant, piece, 0, captured, 1, 0, 1, 0, 0))
+							targetSq := enpassantAttacks.FirstOne()
+							result = append(result, move.EncodeMove(sourceSq, targetSq, piece, 0, BP, 1, 0, 1, 0, 0))
 						}
 					}
 					bitboard &= bitboard - 1 // clear LSB

@@ -4,7 +4,6 @@ package nnue
 
 import (
 	"github.com/Tecu23/argov2/pkg/board"
-	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/move"
 	"github.com/Tecu23/argov2/pkg/util"
@@ -215,6 +214,7 @@ func (e *Evaluator) SetPieceOnSquareAccumulator(
 // It determines the move type (normal, capture, castling, en passant, promotion)
 // and applies the appropriate update to the accumulator history.
 func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
+	// fmt.Println("Called process move")
 	from := m.GetSourceSquare()
 	to := m.GetTargetSquare()
 	piece := m.GetMovingPiece()
@@ -222,7 +222,6 @@ func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 	from = ConvertSquare(from)
 	to = ConvertSquare(to)
 
-	// moveType := m.MoveType
 	isCapture := m.IsCapture()
 	isCastling := m.IsCastle()
 	isQueenCast := m.IsQueenCastle()
@@ -234,10 +233,7 @@ func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 	}
 
 	promPc := m.GetPromotedPiece()
-	c := White
-	if b.Side != color.BLACK {
-		c = Black
-	}
+	c := util.GetPieceColor(piece)
 
 	wKingBB := b.Bitboards[WK]
 	wKingSq := wKingBB.FirstOne()

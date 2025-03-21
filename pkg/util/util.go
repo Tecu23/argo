@@ -222,7 +222,7 @@ func GetPieceType(piece int) int {
 		return -1
 	}
 
-	if piece == WK || piece == BK {
+	if piece == WP || piece == BP {
 		return Pawn
 	} else if piece == WN || piece == BN {
 		return Knight
@@ -235,4 +235,13 @@ func GetPieceType(piece int) int {
 	}
 
 	return King
+}
+
+// 0 for white and 1 for black
+func GetPieceColor(piece int) int {
+	if piece == WP || piece == WN || piece == WB || piece == WR || piece == WQ || piece == WK {
+		return 0
+	}
+
+	return 1
 }
