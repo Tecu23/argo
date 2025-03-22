@@ -9,29 +9,33 @@ const StartPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 
 // Piece constants are an enumeration for piece types.
 // They help identify which piece's attack mask or magic to use.
 const (
-	Pawn int = iota
-	Knight
-	Bishop
-	Rook
-	Queen
-	King
+	Pawn       int = iota // 0
+	Knight                // 1
+	Bishop                // 2
+	Rook                  // 3
+	Queen                 // 4
+	King                  // 5
+	PieceTypes            // 6
 )
 
 // Constants for piece encoding, castling, etc. Provided here for completeness.
 const (
-	WP = iota
-	WN
-	WB
-	WR
-	WQ
-	WK
-	BP
-	BN
-	BB
-	BR
-	BQ
-	BK
-	Empty = 15
+	WP     = iota // 0
+	WN            // 1
+	WB            // 2
+	WR            // 3
+	WQ            // 4
+	WK            // 5
+	_             // skip (6)
+	_             // skip (7)
+	BP            // 8
+	BN            // 9
+	BB            // 10
+	BR            // 11
+	BQ            // 12
+	BK            // 13
+	Pieces        // 14
+	Empty         // 15
 )
 
 // The constants below define row (rank) and file bitboards.
