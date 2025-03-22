@@ -10,6 +10,9 @@ cover.out
 
 # Profiling Variables
 cpu.prof
+profile.out
 
 # PDF Profiling
 profile.pdf
+
+evaluation.test

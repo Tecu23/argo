@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Tecu23/argov2/internal/hash"
+	"github.com/Tecu23/argov2/pkg/bitboard"
 	"github.com/Tecu23/argov2/pkg/color"
 	. "github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/util"
@@ -97,4 +99,340 @@ func ParseFEN(FEN string) (Board, error) {
 	b.calculateHash()
 
 	return b, nil
+}
+
+// Mirror returns a new board that's flipped vertically (white pieces become black and vice versa)
+func (b *Board) Mirror() *Board {
+	// Create a new board
+	mirrored := &Board{}
+
+	mirrored.Rule50 = b.Rule50
+	mirrored.MoveNumber = b.MoveNumber
+
+	mirroredHash := uint64(0)
+	for pc := WP; pc <= BK; pc++ {
+		oppPc := util.OppositeColorPiece(pc)
+		bb := b.Bitboards[pc]
+
+		var sq int
+		var oppSq int
+
+		for bb != 0 {
+			sq = bb.FirstOne()
+			oppSq = sq ^ 56
+
+			mirrored.SetSq(oppPc, oppSq)
+			mirroredHash ^= hash.HashTable.PieceSquare[oppPc*64+oppSq]
+		}
+	}
+
+	// Mirror castling rights
+	var newCastling Castlings
+
+	if uint(b.Castlings)&ShortB != 0 {
+		newCastling |= Castlings(ShortW)
+		mirroredHash ^= hash.HashTable.Castling[0]
+	}
+	if uint(b.Castlings)&LongB != 0 {
+		newCastling |= Castlings(LongW)
+		mirroredHash ^= hash.HashTable.Castling[1]
+	}
+	if uint(b.Castlings)&ShortW != 0 {
+		newCastling |= Castlings(ShortB)
+		mirroredHash ^= hash.HashTable.Castling[2]
+	}
+	if uint(b.Castlings)&LongW != 0 {
+		newCastling |= Castlings(LongB)
+		mirroredHash ^= hash.HashTable.Castling[3]
+	}
+
+	mirrored.Castlings = newCastling
+
+	// Mirror en passant square if exists
+	if b.EnPassant != -1 {
+		mirrored.EnPassant = b.EnPassant ^ 56 // Flip rank (0-7 becomes 7-0)
+		file := mirrored.EnPassant % 8
+		mirroredHash ^= hash.HashTable.EnPassant[file]
+	}
+
+	// Switch side to move
+	mirrored.Side = b.Side.Opp()
+	if mirrored.Side == color.WHITE {
+		mirroredHash ^= hash.HashTable.Side
+	}
+
+	// NOTE: This will not be the same as calculate hash but we do not
+	// need it to be the same. We only need the mirror position for eval
+	mirrored.hash = mirroredHash
+	return mirrored
+}
+
+func (b *Board) GetPieceCountForSide(piece int, clr color.Color) int {
+	switch piece {
+	case Pawn:
+		if clr == color.BLACK {
+			return b.Bitboards[BP].Count()
+		} else {
+			return b.Bitboards[WP].Count()
+		}
+	case Knight:
+		if clr == color.BLACK {
+			return b.Bitboards[BN].Count()
+		} else {
+			return b.Bitboards[WN].Count()
+		}
+	case Bishop:
+		if clr == color.BLACK {
+			return b.Bitboards[BB].Count()
+		} else {
+			return b.Bitboards[WB].Count()
+		}
+	case Rook:
+		if clr == color.BLACK {
+			return b.Bitboards[BR].Count()
+		} else {
+			return b.Bitboards[WR].Count()
+		}
+	case Queen:
+		if clr == color.BLACK {
+			return b.Bitboards[BQ].Count()
+		} else {
+			return b.Bitboards[WQ].Count()
+		}
+	case King:
+		if clr == color.BLACK {
+			return b.Bitboards[BK].Count()
+		} else {
+			return b.Bitboards[WK].Count()
+		}
+	}
+
+	return 0
+}
+
+func (b *Board) OppositeBishops() bool {
+	bishopCount := b.GetPieceCountForSide(Bishop, color.WHITE)
+	oppBishopCount := b.GetPieceCountForSide(Bishop, color.BLACK)
+
+	if bishopCount != 1 || oppBishopCount != 1 {
+		return false
+	}
+
+	c := []int{0, 0}
+
+	bishopBB := b.Bitboards[WB]
+	for bishopBB != 0 {
+		sq := bishopBB.FirstOne()
+		rank := sq / 8
+		file := sq % 8
+		c[0] = (rank + file) % 2
+	}
+
+	bishopBB = b.Bitboards[BB]
+	for bishopBB != 0 {
+		sq := bishopBB.FirstOne()
+		rank := sq / 8
+		file := sq % 8
+		c[1] = (rank + file) % 2
+	}
+
+	return c[0] != c[1]
+}
+
+// Candidate passed checks if pawn is passed or candidate passer. A pawn is passed
+// if one of the three following conditions is true:
+//
+//	(a) there is no stoppers except some levers
+//	(b) the only stoppers are the leverPush, but we outnumber them
+//	(c) there is only one front stopper which can be levered.
+//
+// If there is a pawn of our color in the same file in front of a current pawn
+// it's no longer counts as passed.
+func (b *Board) CandidatePassed() int {
+	count := 0
+	pawns := b.Bitboards[WP]
+
+	// Iterate through all squares
+	for sq := 0; sq < 64; sq++ {
+		if !pawns.Test(sq) {
+			continue
+		}
+
+		if b.IsPassedPawn(sq) {
+			count++
+		}
+	}
+
+	return count
+}
+
+// IsPassedPawn checks if a white pawn on a given square is passed
+func (b *Board) IsPassedPawn(square int) bool {
+	file := square % 8
+	rank := square / 8
+
+	// Must be a white pawn
+	if !b.Bitboards[WP].Test(square) {
+		return false
+	}
+	ty1 := 8
+	ty2 := 8
+
+	// Loop over the remaining ranks to check for other pawns
+	for y := rank - 1; y >= 0; y-- {
+
+		sq := y*8 + file
+		if b.Bitboards[WP].Test(sq) {
+			return false
+		}
+
+		if b.Bitboards[BP].Test(sq) {
+			ty1 = y
+		}
+
+		if file > 0 {
+			sq := y*8 + (file - 1)
+			if b.Bitboards[BP].Test(sq) {
+				ty2 = y
+			}
+		}
+		// Check right file if it exists
+		if file < 7 {
+			sq := y*8 + (file + 1)
+			if b.Bitboards[BP].Test(sq) {
+				ty2 = y
+			}
+		}
+	}
+
+	if ty1 == 8 && ty2 >= rank-1 {
+		return true
+	}
+
+	if ty2 < rank-2 || ty1 < rank-1 {
+		return false
+	}
+
+	if ty2 >= rank && ty1 == rank-1 && rank < 4 {
+		if b.Bitboards[WP].Test((rank+1)*8+file-1) &&
+			!b.Bitboards[BP].Test(rank*8+file-1) &&
+			!b.Bitboards[BP].Test((rank-1)*8+file-2) {
+			return true
+		}
+
+		if b.Bitboards[WP].Test((rank+1)*8+file+1) &&
+			!b.Bitboards[BP].Test(rank*8+file+1) &&
+			!b.Bitboards[BP].Test((rank-1)*8+file+2) {
+			return true
+		}
+	}
+
+	if b.Bitboards[BP].Test((rank-1)*8 + file) {
+		return false
+	}
+
+	lever := 0
+	if b.Bitboards[BP].Test((rank-1)*8 + file - 1) {
+		lever++
+	}
+	if b.Bitboards[BP].Test((rank-1)*8 + file + 1) {
+		lever++
+	}
+
+	leverpush := 0
+	if b.Bitboards[BP].Test((rank-2)*8 + file - 1) {
+		leverpush++
+	}
+	if b.Bitboards[BP].Test((rank-2)*8 + file + 1) {
+		leverpush++
+	}
+
+	phalanx := 0
+	if b.Bitboards[WP].Test(rank*8 + file - 1) {
+		phalanx++
+	}
+	if b.Bitboards[WP].Test(rank*8 + file + 1) {
+		phalanx++
+	}
+
+	if lever-countSupportingPawns(b, rank*8+file) > 1 {
+		return false
+	}
+
+	if leverpush-phalanx > 0 {
+		return false
+	}
+
+	if lever > 0 && leverpush > 0 {
+		return false
+	}
+
+	return true
+}
+
+// Helper function to count pawns supporting a square
+func countSupportingPawns(b *Board, square int) int {
+	file := square % 8
+	rank := square / 8
+	count := 0
+
+	// Check bottom-left supporter
+	if file > 0 && rank < 7 {
+		if b.Bitboards[WP].Test(square + 7) {
+			count++
+		}
+	}
+	// Check bottom-right supporter
+	if file < 7 && rank < 7 {
+		if b.Bitboards[WP].Test(square + 9) {
+			count++
+		}
+	}
+	return count
+}
+
+func (b *Board) PieceCount(side color.Color) int {
+	if side == color.WHITE {
+		return b.Occupancies[color.WHITE].Count()
+	}
+
+	return b.Occupancies[color.BLACK].Count()
+}
+
+func (b *Board) GetPieceBB(color, piece int) bitboard.Bitboard {
+	if color == 0 {
+		switch piece {
+		case Pawn:
+			return b.Bitboards[WP]
+		case Bishop:
+			return b.Bitboards[WB]
+		case Knight:
+			return b.Bitboards[WN]
+		case Rook:
+			return b.Bitboards[WR]
+		case Queen:
+			return b.Bitboards[WQ]
+		case King:
+			return b.Bitboards[WK]
+		default:
+			return Empty
+		}
+	}
+
+	switch piece {
+	case Pawn:
+		return b.Bitboards[BP]
+	case Bishop:
+		return b.Bitboards[BB]
+	case Knight:
+		return b.Bitboards[BN]
+	case Rook:
+		return b.Bitboards[BR]
+	case Queen:
+		return b.Bitboards[BQ]
+	case King:
+		return b.Bitboards[BK]
+	default:
+		return Empty
+	}
 }

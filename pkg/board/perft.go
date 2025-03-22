@@ -59,10 +59,10 @@ func PerftTest(b *Board, depth int) int64 {
 	}
 	// print results
 	fmt.Printf(
-		"\n Nodes: %d Time: %d, with: %d nodes/s\n\n ",
+		"\n Nodes: %d Time: %d, with: %.0f nodes/s\n\n ",
 		totalMoves,
 		util.GetTimeInMiliseconds()-start,
-		totalMoves/((util.GetTimeInMiliseconds()-start)/1000),
+		float64(totalMoves)/(float64(util.GetTimeInMiliseconds()-start)/1000.0),
 	)
 
 	return totalMoves

@@ -11,279 +11,458 @@ func init() {
 	util.InitFen2Sq()
 }
 
-// TestMoveEncoding tests the EncodeMove function and all getter methods
-func TestMoveEncoding(t *testing.T) {
-	testCases := []struct {
-		name       string
-		source     int
-		target     int
-		piece      int
-		promoted   int
-		capture    int
-		doublePush int
-		enpassant  int
-		castling   int
+func TestEncodeDecode(t *testing.T) {
+	tests := []struct {
+		name         string
+		source       int
+		target       int
+		piece        int
+		promoted     int
+		captured     int
+		captureFlag  int
+		doublePush   int
+		enpassant    int
+		castlingFlag int
+		castlingType int
 	}{
 		{
-			name:       "Simple pawn move",
-			source:     12, // e2
-			target:     20, // e4
-			piece:      1,  // pawn
-			promoted:   0,  // no promotion
-			capture:    0,  // no capture
-			doublePush: 1,  // double push
-			enpassant:  0,  // no en passant
-			castling:   0,  // no castling
+			name:         "pawn push",
+			source:       E2,
+			target:       E3,
+			piece:        WP,
+			promoted:     0,
+			captured:     0,
+			captureFlag:  0,
+			doublePush:   0,
+			enpassant:    0,
+			castlingFlag: 0,
+			castlingType: 0,
 		},
 		{
-			name:       "Pawn capture with promotion",
-			source:     51, // d7
-			target:     58, // e8
-			piece:      1,  // pawn
-			promoted:   5,  // queen promotion
-			capture:    1,  // capture
-			doublePush: 0,  // no double push
-			enpassant:  0,  // no en passant
-			castling:   0,  // no castling
+			name:         "pawn double push",
+			source:       E2,
+			target:       E4,
+			piece:        WP,
+			promoted:     0,
+			captured:     0,
+			captureFlag:  0,
+			doublePush:   1,
+			enpassant:    0,
+			castlingFlag: 0,
+			castlingType: 0,
 		},
 		{
-			name:       "En passant capture",
-			source:     35, // e5
-			target:     42, // f6
-			piece:      1,  // pawn
-			promoted:   0,  // no promotion
-			capture:    1,  // capture
-			doublePush: 0,  // no double push
-			enpassant:  1,  // en passant
-			castling:   0,  // no castling
+			name:         "pawn capture",
+			source:       E2,
+			target:       F3,
+			piece:        WP,
+			promoted:     0,
+			captured:     BP,
+			captureFlag:  1,
+			doublePush:   0,
+			enpassant:    0,
+			castlingFlag: 0,
+			castlingType: 0,
 		},
 		{
-			name:       "Kingside castling",
-			source:     4, // e1
-			target:     6, // g1
-			piece:      6, // king
-			promoted:   0, // no promotion
-			capture:    0, // no capture
-			doublePush: 0, // no double push
-			enpassant:  0, // no en passant
-			castling:   1, // castling
+			name:         "pawn promotion",
+			source:       E7,
+			target:       E8,
+			piece:        WP,
+			promoted:     WQ,
+			captured:     0,
+			captureFlag:  0,
+			doublePush:   0,
+			enpassant:    0,
+			castlingFlag: 0,
+			castlingType: 0,
+		},
+		{
+			name:         "pawn promotion with capture",
+			source:       E7,
+			target:       F8,
+			piece:        WP,
+			promoted:     WQ,
+			captured:     BR,
+			captureFlag:  1,
+			doublePush:   0,
+			enpassant:    0,
+			castlingFlag: 0,
+			castlingType: 0,
+		},
+		{
+			name:         "en passant capture",
+			source:       E5,
+			target:       F6,
+			piece:        WP,
+			promoted:     0,
+			captured:     BP,
+			captureFlag:  1,
+			doublePush:   0,
+			enpassant:    1,
+			castlingFlag: 0,
+			castlingType: 0,
+		},
+		{
+			name:         "white kingside castling",
+			source:       E1,
+			target:       G1,
+			piece:        WK,
+			promoted:     0,
+			captured:     0,
+			captureFlag:  0,
+			doublePush:   0,
+			enpassant:    0,
+			castlingFlag: 1,
+			castlingType: int(WhiteKingCastle),
+		},
+		{
+			name:         "white queenside castling",
+			source:       E1,
+			target:       C1,
+			piece:        WK,
+			promoted:     0,
+			captured:     0,
+			captureFlag:  0,
+			doublePush:   0,
+			enpassant:    0,
+			castlingFlag: 1,
+			castlingType: int(WhiteQueenCastle),
+		},
+		{
+			name:         "black kingside castling",
+			source:       E8,
+			target:       G8,
+			piece:        BK,
+			promoted:     0,
+			captured:     0,
+			captureFlag:  0,
+			doublePush:   0,
+			enpassant:    0,
+			castlingFlag: 1,
+			castlingType: int(BlackKingCastle),
+		},
+		{
+			name:         "black queenside castling",
+			source:       E8,
+			target:       C8,
+			piece:        BK,
+			promoted:     0,
+			captured:     0,
+			captureFlag:  0,
+			doublePush:   0,
+			enpassant:    0,
+			castlingFlag: 1,
+			castlingType: int(BlackQueenCastle),
+		},
+		{
+			name:         "regular knight move",
+			source:       B1,
+			target:       C3,
+			piece:        WN,
+			promoted:     0,
+			captured:     0,
+			captureFlag:  0,
+			doublePush:   0,
+			enpassant:    0,
+			castlingFlag: 0,
+			castlingType: 0,
+		},
+		{
+			name:         "knight capture",
+			source:       B1,
+			target:       C3,
+			piece:        WN,
+			promoted:     0,
+			captured:     BP,
+			captureFlag:  1,
+			doublePush:   0,
+			enpassant:    0,
+			castlingFlag: 0,
+			castlingType: 0,
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Encode move
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Encode the move
 			move := EncodeMove(
-				tc.source,
-				tc.target,
-				tc.piece,
-				tc.promoted,
-				tc.capture,
-				tc.doublePush,
-				tc.enpassant,
-				tc.castling,
+				tt.source, tt.target, tt.piece, tt.promoted, tt.captured,
+				tt.captureFlag, tt.doublePush, tt.enpassant, tt.castlingFlag, tt.castlingType,
 			)
 
-			// Test all getters
-			if got := move.GetSource(); got != tc.source {
-				t.Errorf("GetSource() = %v, want %v", got, tc.source)
+			// Test all the getters to make sure they extract the correct values
+			if got := move.GetSourceSquare(); got != tt.source {
+				t.Errorf("GetSourceSquare() = %v, want %v", got, tt.source)
 			}
-			if got := move.GetTarget(); got != tc.target {
-				t.Errorf("GetTarget() = %v, want %v", got, tc.target)
+			if got := move.GetTargetSquare(); got != tt.target {
+				t.Errorf("GetTargetSquare() = %v, want %v", got, tt.target)
 			}
-			if got := move.GetPiece(); got != tc.piece {
-				t.Errorf("GetPiece() = %v, want %v", got, tc.piece)
+			if got := move.GetMovingPiece(); got != tt.piece {
+				t.Errorf("GetMovingPiece() = %v, want %v", got, tt.piece)
 			}
-			if got := move.GetPromoted(); got != tc.promoted {
-				t.Errorf("GetPromoted() = %v, want %v", got, tc.promoted)
+			if got := move.GetPromotedPiece(); got != tt.promoted {
+				t.Errorf("GetPromotedPiece() = %v, want %v", got, tt.promoted)
 			}
-			if got := move.GetCapture(); got != tc.capture {
-				t.Errorf("GetCapture() = %v, want %v", got, tc.capture)
+			if got := move.GetCapturedPiece(); got != tt.captured {
+				t.Errorf("GetCapturedPiece() = %v, want %v", got, tt.captured)
 			}
-			if got := move.GetDoublePush(); got != tc.doublePush {
-				t.Errorf("GetDoublePush() = %v, want %v", got, tc.doublePush)
+			if got := move.IsCapture(); got != (tt.captureFlag != 0) {
+				t.Errorf("IsCapture() = %v, want %v", got, tt.captureFlag != 0)
 			}
-			if got := move.GetEnpassant(); got != tc.enpassant {
-				t.Errorf("GetEnpassant() = %v, want %v", got, tc.enpassant)
+			if got := move.IsDoublePush(); got != (tt.doublePush != 0) {
+				t.Errorf("IsDoublePush() = %v, want %v", got, tt.doublePush != 0)
 			}
-			if got := move.GetCastling(); got != tc.castling {
-				t.Errorf("GetCastling() = %v, want %v", got, tc.castling)
+			if got := move.IsEnPassant(); got != (tt.enpassant != 0) {
+				t.Errorf("IsEnPassant() = %v, want %v", got, tt.enpassant != 0)
 			}
-		})
-	}
-}
-
-// TestMoveBitMasks tests that the bit masks correctly isolate move components
-func TestMoveBitMasks(t *testing.T) {
-	testCases := []struct {
-		name string
-		move Move
-		want struct {
-			source     int
-			target     int
-			piece      int
-			promoted   int
-			capture    int
-			doublePush int
-			enpassant  int
-			castling   int
-		}
-	}{
-		{
-			name: "Test all bits set",
-			move: Move(0xFFFFFF), // All relevant bits set
-			want: struct {
-				source     int
-				target     int
-				piece      int
-				promoted   int
-				capture    int
-				doublePush int
-				enpassant  int
-				castling   int
-			}{
-				source:     0x3f,
-				target:     0x3f,
-				piece:      0xf,
-				promoted:   0xf,
-				capture:    1,
-				doublePush: 1,
-				enpassant:  1,
-				castling:   1,
-			},
-		},
-		{
-			name: "Test alternating bits",
-			move: Move(0x555555), // Alternating bits
-			want: struct {
-				source     int
-				target     int
-				piece      int
-				promoted   int
-				capture    int
-				doublePush int
-				enpassant  int
-				castling   int
-			}{
-				source:     0x15,
-				target:     0x15,
-				piece:      0x5,
-				promoted:   0x5,
-				capture:    0,
-				doublePush: 1,
-				enpassant:  0,
-				castling:   1,
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			move := tc.move
-			if got := move.GetSource(); got != tc.want.source {
-				t.Errorf("GetSource() = %v, want %v", got, tc.want.source)
+			if got := move.IsCastle(); got != (tt.castlingFlag != 0) {
+				t.Errorf("IsCastle() = %v, want %v", got, tt.castlingFlag != 0)
 			}
-			// ... similar checks for other components
-		})
-	}
-}
-
-// TestMoveString tests the String() method for move representation
-func TestMoveString(t *testing.T) {
-	testCases := []struct {
-		name    string
-		move    Move
-		wantStr string
-	}{
-		{
-			name:    "E2 to E4",
-			move:    EncodeMove(E2, E4, 1, 0, 0, 1, 0, 0),
-			wantStr: "e2e4",
-		},
-		{
-			name:    "G1 to F3",
-			move:    EncodeMove(G1, F3, 2, 0, 0, 0, 0, 0),
-			wantStr: "g1f3",
-		},
-		{
-			name:    "E7 to E8 with promotion",
-			move:    EncodeMove(E7, E8, 1, 5, 0, 0, 0, 0),
-			wantStr: "e7e8",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := tc.move.String(); got != tc.wantStr {
-				t.Errorf("Move.String() = %v, want %v", got, tc.wantStr)
+			if tt.castlingFlag != 0 {
+				if got := move.GetCastleType(); got != CastleType(tt.castlingType) {
+					t.Errorf("GetCastleType() = %v, want %v", got, CastleType(tt.castlingType))
+				}
 			}
 		})
 	}
 }
 
-// TestNoMove tests the NoMove constant
 func TestNoMove(t *testing.T) {
-	if NoMove != Move(0) {
-		t.Errorf("NoMove should be 0, got %v", NoMove)
+	if NoMove.GetSourceSquare() != 0 || NoMove.GetTargetSquare() != 0 {
+		t.Errorf("NoMove should have source and target as 0, got %v, %v",
+			NoMove.GetSourceSquare(), NoMove.GetTargetSquare())
 	}
 
-	// Test all getters return 0 for NoMove
-	if got := NoMove.GetSource(); got != 0 {
-		t.Errorf("NoMove.GetSource() = %v, want 0", got)
-	}
-	if got := NoMove.GetTarget(); got != 0 {
-		t.Errorf("NoMove.GetTarget() = %v, want 0", got)
-	}
-	if got := NoMove.GetPiece(); got != 0 {
-		t.Errorf("NoMove.GetPiece() = %v, want 0", got)
-	}
-	if got := NoMove.GetPromoted(); got != 0 {
-		t.Errorf("NoMove.GetPromoted() = %v, want 0", got)
-	}
-	if got := NoMove.GetCapture(); got != 0 {
-		t.Errorf("NoMove.GetCapture() = %v, want 0", got)
-	}
-	if got := NoMove.GetDoublePush(); got != 0 {
-		t.Errorf("NoMove.GetDoublePush() = %v, want 0", got)
-	}
-	if got := NoMove.GetEnpassant(); got != 0 {
-		t.Errorf("NoMove.GetEnpassant() = %v, want 0", got)
-	}
-	if got := NoMove.GetCastling(); got != 0 {
-		t.Errorf("NoMove.GetCastling() = %v, want 0", got)
+	if NoMove.String() != "0000" {
+		t.Errorf("NoMove.String() = %v, want 0000", NoMove.String())
 	}
 }
 
-// BenchmarkMoveEncoding benchmarks the move encoding process
-func BenchmarkMoveEncoding(b *testing.B) {
-	source := 12    // e2
-	target := 28    // e4
-	piece := 1      // pawn
-	promoted := 0   // no promotion
-	capture := 0    // no capture
-	doublePush := 1 // double push
-	enpassant := 0  // no en passant
-	castling := 0   // no castling
+func TestString(t *testing.T) {
+	tests := []struct {
+		name     string
+		move     Move
+		expected string
+	}{
+		{
+			name:     "e2 to e4",
+			move:     EncodeMove(E2, E4, WP, 0, 0, 0, 1, 0, 0, 0),
+			expected: "e2e4",
+		},
+		{
+			name:     "e7 to e8 queen promotion",
+			move:     EncodeMove(E7, E8, WP, WQ, 0, 0, 0, 0, 0, 0),
+			expected: "e7e8q",
+		},
+		{
+			name:     "e7 to f8 queen promotion capture",
+			move:     EncodeMove(E7, F8, WP, WQ, BR, 1, 0, 0, 0, 0),
+			expected: "e7f8q",
+		},
+		{
+			name:     "e7 to e8 rook promotion",
+			move:     EncodeMove(E7, E8, WP, WR, 0, 0, 0, 0, 0, 0),
+			expected: "e7e8r",
+		},
+		{
+			name:     "e7 to e8 bishop promotion",
+			move:     EncodeMove(E7, E8, WP, WB, 0, 0, 0, 0, 0, 0),
+			expected: "e7e8b",
+		},
+		{
+			name:     "e7 to e8 knight promotion",
+			move:     EncodeMove(E7, E8, WP, WN, 0, 0, 0, 0, 0, 0),
+			expected: "e7e8n",
+		},
+	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		EncodeMove(source, target, piece, promoted, capture, doublePush, enpassant, castling)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.move.String(); got != tt.expected {
+				t.Errorf("Move.String() = %v, want %v", got, tt.expected)
+			}
+		})
 	}
 }
 
-// BenchmarkMoveGetters benchmarks the move getter methods
-func BenchmarkMoveGetters(b *testing.B) {
-	move := EncodeMove(12, 28, 1, 0, 0, 1, 0, 0) // e2e4 double push
+func TestIsQueenCastle(t *testing.T) {
+	tests := []struct {
+		name     string
+		move     Move
+		expected bool
+	}{
+		{
+			name:     "white kingside castling - not queenside",
+			move:     EncodeMove(E1, G1, WK, 0, 0, 0, 0, 0, 1, int(WhiteKingCastle)),
+			expected: false,
+		},
+		{
+			name:     "white queenside castling",
+			move:     EncodeMove(E1, C1, WK, 0, 0, 0, 0, 0, 1, int(WhiteQueenCastle)),
+			expected: true,
+		},
+		{
+			name:     "black kingside castling - not queenside",
+			move:     EncodeMove(E8, G8, BK, 0, 0, 0, 0, 0, 1, int(BlackKingCastle)),
+			expected: false,
+		},
+		{
+			name:     "black queenside castling",
+			move:     EncodeMove(E8, C8, BK, 0, 0, 0, 0, 0, 1, int(BlackQueenCastle)),
+			expected: true,
+		},
+		{
+			name:     "regular move - not castling",
+			move:     EncodeMove(E1, E2, WK, 0, 0, 0, 0, 0, 0, 0),
+			expected: false,
+		},
+	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		move.GetSource()
-		move.GetTarget()
-		move.GetPiece()
-		move.GetPromoted()
-		move.GetCapture()
-		move.GetDoublePush()
-		move.GetEnpassant()
-		move.GetCastling()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.move.IsQueenCastle(); got != tt.expected {
+				t.Errorf("IsQueenCastle() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestBitMasks(t *testing.T) {
+	// Test all masks to ensure they correctly extract values
+	source := E2      // e2
+	target := E4      // e4
+	piece := WP       // white pawn
+	promoted := WQ    // white queen
+	captured := BP    // black pawn
+	captureFlag := 1  // is capture
+	doublePush := 1   // is double push
+	enpassant := 1    // is en passant
+	castlingFlag := 1 // is castling
+	castlingType := int(WhiteKingCastle)
+
+	move := EncodeMove(
+		source, target, piece, promoted, captured,
+		captureFlag, doublePush, enpassant, castlingFlag, castlingType,
+	)
+
+	// Test bit manipulation directly
+	if int(move&SourceMask) != source {
+		t.Errorf("Source mask extraction failed: got %v, want %v", int(move&SourceMask), source)
+	}
+	if int(move&TargetMask)>>TargetShift != target {
+		t.Errorf(
+			"Target mask extraction failed: got %v, want %v",
+			int(move&TargetMask)>>TargetShift,
+			target,
+		)
+	}
+	if int(move&PieceMask)>>PieceShift != piece {
+		t.Errorf(
+			"Piece mask extraction failed: got %v, want %v",
+			int(move&PieceMask)>>PieceShift,
+			piece,
+		)
+	}
+	if int(move&PromotedPieceMask)>>PromotedShift != promoted {
+		t.Errorf(
+			"Promoted piece mask extraction failed: got %v, want %v",
+			int(move&PromotedPieceMask)>>PromotedShift,
+			promoted,
+		)
+	}
+	if int(move&CapturedPieceMask)>>CapturedPieceShift != captured {
+		t.Errorf(
+			"Captured piece mask extraction failed: got %v, want %v",
+			int(move&CapturedPieceMask)>>CapturedPieceShift,
+			captured,
+		)
+	}
+	if int(move&CaptureFlagMask)>>CaptureFlagShift != captureFlag {
+		t.Errorf(
+			"Capture flag mask extraction failed: got %v, want %v",
+			int(move&CaptureFlagMask)>>CaptureFlagShift,
+			captureFlag,
+		)
+	}
+	if int(move&DoublePushMask)>>DoublePushFlagShift != doublePush {
+		t.Errorf(
+			"Double push mask extraction failed: got %v, want %v",
+			int(move&DoublePushMask)>>DoublePushFlagShift,
+			doublePush,
+		)
+	}
+	if int(move&EnPasssantMask)>>EnPassantShift != enpassant {
+		t.Errorf(
+			"En passant mask extraction failed: got %v, want %v",
+			int(move&EnPasssantMask)>>EnPassantShift,
+			enpassant,
+		)
+	}
+	if int(move&CastlingFlagMask)>>CastlingFlagShift != castlingFlag {
+		t.Errorf(
+			"Castling flag mask extraction failed: got %v, want %v",
+			int(move&CastlingFlagMask)>>CastlingFlagShift,
+			castlingFlag,
+		)
+	}
+	if int(move&CastlingTypeMask)>>CastlingTypeShift != castlingType {
+		t.Errorf(
+			"Castling type mask extraction failed: got %v, want %v",
+			int(move&CastlingTypeMask)>>CastlingTypeShift,
+			castlingType,
+		)
+	}
+}
+
+// This test ensures that maximum values for each field don't interfere with each other
+func TestBoundaryValues(t *testing.T) {
+	// Maximum possible values for each field
+	source := 63      // Maximum 6-bit value
+	target := 63      // Maximum 6-bit value
+	piece := 15       // Maximum 4-bit value
+	promoted := 15    // Maximum 4-bit value
+	captured := 15    // Maximum 4-bit value
+	captureFlag := 1  // 1-bit value
+	doublePush := 1   // 1-bit value
+	enpassant := 1    // 1-bit value
+	castlingFlag := 1 // 1-bit value
+	castlingType := 3 // 2-bit value
+
+	move := EncodeMove(
+		source, target, piece, promoted, captured,
+		captureFlag, doublePush, enpassant, castlingFlag, castlingType,
+	)
+
+	// Verify all fields are correctly preserved
+	if got := move.GetSourceSquare(); got != source {
+		t.Errorf("GetSourceSquare() with max values = %v, want %v", got, source)
+	}
+	if got := move.GetTargetSquare(); got != target {
+		t.Errorf("GetTargetSquare() with max values = %v, want %v", got, target)
+	}
+	if got := move.GetMovingPiece(); got != piece {
+		t.Errorf("GetMovingPiece() with max values = %v, want %v", got, piece)
+	}
+	if got := move.GetPromotedPiece(); got != promoted {
+		t.Errorf("GetPromotedPiece() with max values = %v, want %v", got, promoted)
+	}
+	if got := move.GetCapturedPiece(); got != captured {
+		t.Errorf("GetCapturedPiece() with max values = %v, want %v", got, captured)
+	}
+	if !move.IsCapture() {
+		t.Errorf("IsCapture() with max values = %v, want true", move.IsCapture())
+	}
+	if !move.IsDoublePush() {
+		t.Errorf("IsDoublePush() with max values = %v, want true", move.IsDoublePush())
+	}
+	if !move.IsEnPassant() {
+		t.Errorf("IsEnPassant() with max values = %v, want true", move.IsEnPassant())
+	}
+	if !move.IsCastle() {
+		t.Errorf("IsCastle() with max values = %v, want true", move.IsCastle())
+	}
+	if got := move.GetCastleType(); got != CastleType(castlingType) {
+		t.Errorf("GetCastleType() with max values = %v, want %v", got, CastleType(castlingType))
 	}
 }
