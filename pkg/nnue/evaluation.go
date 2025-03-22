@@ -1,3 +1,5 @@
+// File: evaluation.go
+
 // Package nnue keeps the NNUE (Efficiently Updated Neural Network) responsible for
 // evaluation the current position
 package nnue

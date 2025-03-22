@@ -22,7 +22,7 @@ func init() {
 
 	hash.Init()
 
-	err := LoadWeights("../../default.net")
+	err := InitializeNNUE()
 	if err != nil {
 		// This will cause the tests to fail immediately if weights don't load
 		panic(fmt.Sprintf("Failed to load NNUE weights: %v", err))

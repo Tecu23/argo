@@ -1,5 +1,5 @@
 # Build variables
-VERSION ?= 0.7.0
+VERSION ?= 0.7.1
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 CGO_ENABLED ?= 0
@@ -18,7 +18,7 @@ else
 endif
 
 # Build tags & flags
-BUILD_TAGS := 
+BUILD_TAGS := embed 
 LDFLAGS := -w -s \
     -X 'main.version=$(VERSION)' \
     -X 'main.buildDate=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")' \
@@ -67,7 +67,6 @@ build-all: build-linux build-windows build-darwin
 build-linux:
 	@echo "Building for Linux..."
 	@GOOS=linux GOARCH=amd64 $(MAKE) build
-	@GOOS=linux GOARCH=arm64 $(MAKE) build
 
 build-windows:
 	@echo "Building for Windows..."

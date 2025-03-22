@@ -2,6 +2,10 @@
 package util
 
 import (
+	"os"
+	"os/user"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Tecu23/argov2/pkg/color"
@@ -35,6 +39,77 @@ func PcColor(pc int) color.Color {
 		return color.WHITE
 	}
 	return color.BLACK
+}
+
+// GetTimeInMiliseconds returns current time in milliseconds since Unix epoch.
+// Used for timing operations like perft tests.
+func GetTimeInMiliseconds() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
+}
+
+// OppositeColorPiece returns the opposite color piece.
+func OppositeColorPiece(piece int) int {
+	// Handle the empty case
+	if piece == Empty {
+		return Empty
+	}
+
+	// Determine if the piece is white (0-5) or black (6-11)
+	if piece >= WP && piece <= WK {
+		return piece + 6 // Convert white to black
+	} else if piece >= BP && piece <= BK {
+		return piece - 6 // Convert black to white
+	}
+
+	// Return Empty for invalid input
+	return Empty
+}
+
+func GetPieceType(piece int) int {
+	if piece == Empty {
+		return -1
+	}
+
+	if piece == WP || piece == BP {
+		return Pawn
+	} else if piece == WN || piece == BN {
+		return Knight
+	} else if piece == WB || piece == BB {
+		return Bishop
+	} else if piece == WR || piece == BR {
+		return Rook
+	} else if piece == WQ || piece == BQ {
+		return Queen
+	}
+
+	return King
+}
+
+// 0 for white and 1 for black
+func GetPieceColor(piece int) int {
+	if piece == WP || piece == WN || piece == WB || piece == WR || piece == WQ || piece == WK {
+		return 0
+	}
+
+	return 1
+}
+
+func MapPath(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		curUser, err := user.Current()
+		if err != nil {
+			return path
+		}
+		return filepath.Join(curUser.HomeDir, strings.TrimPrefix(path, "~/"))
+	}
+	if strings.HasPrefix(path, "./") {
+		exePath, err := os.Executable()
+		if err != nil {
+			return path
+		}
+		return filepath.Join(filepath.Dir(exePath), strings.TrimPrefix(path, "./"))
+	}
+	return path
 }
 
 // Fen2Sq and Sq2Fen convert between algebraic notation (e.g., "e4") and internal square indices.
@@ -191,57 +266,4 @@ func InitFen2Sq() {
 	Sq2Fen[H7] = "h7"
 	Sq2Fen[H8] = "h8"
 	Sq2Fen[-1] = "-"
-}
-
-// GetTimeInMiliseconds returns current time in milliseconds since Unix epoch.
-// Used for timing operations like perft tests.
-func GetTimeInMiliseconds() int64 {
-	return time.Now().UnixNano() / int64(time.Millisecond)
-}
-
-// OppositeColorPiece returns the opposite color piece.
-func OppositeColorPiece(piece int) int {
-	// Handle the empty case
-	if piece == Empty {
-		return Empty
-	}
-
-	// Determine if the piece is white (0-5) or black (6-11)
-	if piece >= WP && piece <= WK {
-		return piece + 6 // Convert white to black
-	} else if piece >= BP && piece <= BK {
-		return piece - 6 // Convert black to white
-	}
-
-	// Return Empty for invalid input
-	return Empty
-}
-
-func GetPieceType(piece int) int {
-	if piece == Empty {
-		return -1
-	}
-
-	if piece == WP || piece == BP {
-		return Pawn
-	} else if piece == WN || piece == BN {
-		return Knight
-	} else if piece == WB || piece == BB {
-		return Bishop
-	} else if piece == WR || piece == BR {
-		return Rook
-	} else if piece == WQ || piece == BQ {
-		return Queen
-	}
-
-	return King
-}
-
-// 0 for white and 1 for black
-func GetPieceColor(piece int) int {
-	if piece == WP || piece == WN || piece == WB || piece == WR || piece == WQ || piece == WK {
-		return 0
-	}
-
-	return 1
 }

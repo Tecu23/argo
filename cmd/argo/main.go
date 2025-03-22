@@ -3,14 +3,12 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"runtime/pprof"
 
 	"github.com/Tecu23/argov2/internal/hash"
 	"github.com/Tecu23/argov2/pkg/attacks"
-	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/engine"
 	"github.com/Tecu23/argov2/pkg/nnue"
@@ -45,47 +43,6 @@ func main() {
 
 	defer pprof.StopCPUProfile()
 
-	if debug {
-		b, _ := board.ParseFEN(
-			"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-		)
-
-		evaluator := nnue.NewEvaluator()
-		evaluator.Reset(&b)
-
-		score := evaluator.Evaluate(&b)
-		fmt.Println("Initial Score", score)
-
-		moves := b.GenerateMoves()
-		for _, move := range moves {
-			copy1 := b.CopyBoard()
-			if !copy1.MakeMove(move, board.AllMoves) {
-				continue
-			}
-			evaluator.ProcessMove(&copy1, move)
-
-			score := evaluator.Evaluate(&copy1)
-			fmt.Printf("Score After moves: %s, %d\n", move.String(), score)
-
-			mvs := copy1.GenerateMoves()
-			for _, m := range mvs {
-				copy2 := copy1.CopyBoard()
-				if !copy2.MakeMove(m, board.AllMoves) {
-					continue
-				}
-				evaluator.ProcessMove(&copy2, m)
-
-				score := evaluator.Evaluate(&copy2)
-				fmt.Printf("Score After moves: %s %s, %d\n", move.String(), m.String(), score)
-
-				evaluator.PopAccumulation()
-			}
-
-			evaluator.PopAccumulation()
-		}
-		return
-	}
-
 	options := engine.NewOptions()
 	engine := engine.NewEngine(options)
 
@@ -104,9 +61,7 @@ func initHelpers() {
 
 	hash.Init()
 
-	err := nnue.LoadWeights("./default.net")
-	if err != nil {
-		fmt.Printf("Error loading weights: %v\n", err)
-		return
+	if err := nnue.InitializeNNUE(); err != nil {
+		log.Fatalf("Error initializing NNUE: %v", err)
 	}
 }
