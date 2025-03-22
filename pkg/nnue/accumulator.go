@@ -74,8 +74,8 @@ func (a *AccumulatorTable) Use(view int, b *board.Board, evaluator *Evaluator) {
 	entry := &a.Entries[view][entryIdx]
 
 	// Loop over both colors and each piece type to update the accumulator based on changes in piece occupancy
-	for c := 0; c < 2; c++ {
-		for pt := 0; pt < 6; pt++ {
+	for c := range 2 {
+		for pt := range 6 {
 			boardBB := b.GetPieceBB(c, pt)   // Current board bitboard for this color and piece type
 			entryBB := entry.PieceOcc[c][pt] // Cached bitboard from the previous state
 
@@ -125,14 +125,18 @@ func (a *AccumulatorTable) Use(view int, b *board.Board, evaluator *Evaluator) {
 // AddWeightsToAccumulator adds (or subtracts) network input weights to/from the accumulator.
 // The 'add' flag determines if weights are added (true) or substracted (false)
 func AddWeightsToAccumulator(add bool, idx int, src, target []int16) {
-	for i := 0; i < len(src); i++ {
-		if add {
-			target[i] = src[i] + InputWeights[idx][i]
-		} else {
-			target[i] = src[i] - InputWeights[idx][i]
-		}
-	}
+	// for i := 0; i < len(src); i++ {
+	// 	if add {
+	// 		target[i] = src[i] + InputWeights[idx][i]
+	// 	} else {
+	// 		target[i] = src[i] - InputWeights[idx][i]
+	// 	}
+	// }
+
+	addWeightsToAccumulatorASM(add, src, target, InputWeights[idx][:])
 }
+
+func addWeightsToAccumulatorASM(add bool, src, target, weights []int16)
 
 // SetUnsetPieceBothColors applies the piece move update for both White and Black perspective
 func SetUnsetPieceBothColors(input, output *Accumulator, set, unset FeatureIndex) {
