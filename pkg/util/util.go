@@ -274,3 +274,11 @@ func InitFen2Sq() {
 	Sq2Fen[H8] = "h8"
 	Sq2Fen[-1] = "-"
 }
+
+func FenToSq(fen string) int {
+	return Fen2Sq[fen]
+}
+
+func SqToFen(sq int) string {
+	return Sq2Fen[sq]
+}

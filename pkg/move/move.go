@@ -131,7 +131,7 @@ func (m Move) GetMovingPieceType() int {
 // GetMovingPieceColor extracts the color information from the moving piece field.
 // It uses the bit that represents the color (e.g., white or black) – here assumed to be bit 3.
 func (m Move) GetMovingPieceColor() int {
-	return int(m>>MovingPieceShift) & 0x8
+	return int((m>>MovingPieceShift)&0x8) >> 3
 }
 
 // GetCapturedPiece extracts the captured piece (if any) by applying the CapturedPieceMask
@@ -167,7 +167,7 @@ func (m Move) GetPromotionPieceType() int {
 // Note: It multiplies the move by MoveTypeMask and then shifts right by MoveTypeShift,
 // which is intended to isolate the move type bits.
 func (m Move) GetMoveType() Type {
-	return Type(m*MoveTypeMask) >> MoveTypeShift
+	return Type(m & MoveTypeMask >> MoveTypeShift)
 }
 
 // IsCapture checks whether the move is a capture by testing the capture flag bit in the move type field.
@@ -200,7 +200,6 @@ func (m Move) IsEnPassant() bool {
 // and then inserts the new score shifted left by ScoreInfoShift.
 func (m *Move) SetScore(score int) {
 	scoreMask := createMask(8) << ScoreInfoShift
-
 	*m = Move(uint32(*m) & ^scoreMask)  // Clear score bits
 	*m |= Move(score << ScoreInfoShift) // Set new score bits
 }
@@ -220,7 +219,7 @@ func (m Move) String() string {
 	sPromotion := ""
 	// Determine if the move includes a promotion and select the appropriate piece letter.
 	prom := m.GetPromotionPiece()
-	if prom != 0 {
+	if m.IsPromotion() {
 		if prom == WQ || prom == BQ {
 			sPromotion = "q"
 		} else if prom == WR || prom == BR {
