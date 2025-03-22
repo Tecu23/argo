@@ -1,100 +1,13 @@
+// Package engine keeps the running the search and engine logic
 package engine
 
 import (
 	"context"
-	"sort"
 
 	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/move"
-	"github.com/Tecu23/argov2/pkg/nnue"
 )
-
-const (
-	MaxDepth   = 64
-	Infinity   = 50_000
-	MateScore  = 49_000
-	MateDepth  = 48_000
-	MaxKillers = 2
-)
-
-type MoveScore struct {
-	move  move.Move
-	score int
-}
-
-func (e *Engine) updateKillers(mv move.Move, ply int) {
-	if ply >= MaxDepth {
-		return
-	}
-	// Don't store captures as killer moves
-	if mv.IsCapture() {
-		return
-	}
-
-	// Don't store a move that's already a killer at this ply
-	for i := 0; i < MaxKillers; i++ {
-		if e.killerMoves[ply][i] == mv {
-			return
-		}
-	}
-
-	// Shift existing killers and insert new one at first position
-	for i := MaxKillers - 1; i > 0; i-- {
-		e.killerMoves[ply][i] = e.killerMoves[ply][i-1]
-	}
-	e.killerMoves[ply][0] = mv
-}
-
-func (e *Engine) orderMoves(
-	moves []move.Move,
-	b *board.Board,
-	ttMove move.Move,
-	ply int,
-) []move.Move {
-	scores := make([]MoveScore, len(moves))
-	stm := b.Side
-
-	for i, mv := range moves {
-		score := 0
-
-		// TT move gets highest priority
-		if mv == ttMove {
-			score = 2_000_000
-		} else if mv.IsCapture() {
-			// MVV-LVA scoring
-			victim := b.GetPieceAt(mv.GetTargetSquare())
-			aggressor := b.GetPieceAt(mv.GetSourceSquare())
-			score = 1_000_000 + (nnue.GetPieceValue(victim) - nnue.GetPieceValue(aggressor)/10)
-		} else {
-			for j := 0; j < MaxKillers; j++ {
-				if mv == e.killerMoves[ply][j] {
-					score = 900_000 - j*1000
-					break
-				}
-			}
-
-			if score == 0 {
-				score = e.historyTable.Get(stm, mv.GetSourceSquare(), mv.GetTargetSquare())
-			}
-		}
-
-		scores[i] = MoveScore{mv, score}
-	}
-
-	// Sort moves by score
-	sort.Slice(scores, func(i, j int) bool {
-		return scores[i].score > scores[j].score
-	})
-
-	// Extract sorted moves
-	sortedMoves := make([]move.Move, len(moves))
-	for i, ms := range scores {
-		sortedMoves[i] = ms.move
-	}
-
-	return sortedMoves
-}
 
 // search performs the actual search logic
 func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) SearchInfo {
@@ -118,6 +31,13 @@ func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) Se
 	for depth := 1; depth <= maxDepth; depth++ {
 		if tm.IsDone() || ctx.Err() != nil {
 			break
+		}
+
+		// Report current search depth
+		if e.progress != nil {
+			info := e.createSearchInfo()
+			info.Depth = depth
+			e.progress(info)
 		}
 
 		score, mv := e.searchRoot(ctx, b, depth, tm)
@@ -145,6 +65,11 @@ func (e *Engine) search(ctx context.Context, b *board.Board, tm *timeManager) Se
 
 		// Update time manager
 		tm.OnNodesChanged(int(e.nodes))
+
+		// If we found a forced mate, no need to search deeper
+		if bestScore > MateScore-MaxDepth || bestScore < -MateScore+MaxDepth {
+			break
+		}
 	}
 
 	searchInfo := e.createSearchInfo()
@@ -171,6 +96,17 @@ func (e *Engine) searchRoot(
 	// Generate moves at root
 	moves := b.GenerateMoves()
 
+	// Check for single legal move - if only 1 move is available, return it immediately
+	if len(moves) == 1 {
+		cpy := b.CopyBoard()
+		if cpy.MakeMove(moves[0], board.AllMoves) {
+			e.evaluator.ProcessMove(&cpy, moves[0])
+			score := e.evaluator.Evaluate(&cpy)
+			e.evaluator.PopAccumulation()
+			return score, moves[0]
+		}
+	}
+
 	var ttMove move.Move
 	if entry, ok := e.tt.Probe(b.Hash()); ok {
 		ttMove = entry.BestMove
@@ -178,16 +114,32 @@ func (e *Engine) searchRoot(
 
 	moves = e.orderMoves(moves, b, ttMove, 0)
 
-	for _, mv := range moves {
+	bestScore := -Infinity
+	moveCount := 0
+
+	for i, mv := range moves {
 		copyB := b.CopyBoard()
 		if !copyB.MakeMove(mv, board.AllMoves) {
 			continue
 		}
 
 		e.evaluator.ProcessMove(&copyB, mv)
+		moveCount++
 
-		// Search this position
-		score := -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, 1, tm)
+		var score int
+
+		// For the first move or promising moves, do a full-window search
+		if i == 0 {
+			score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, 1, tm)
+		} else {
+			// Use zero-window search for other moves
+			score = -e.alphaBeta(ctx, &copyB, depth-1, -alpha-1, -alpha, 1, tm)
+
+			// If the score exceeds alpha but is below beta, re-search with full window
+			if score > alpha && score < beta {
+				score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, 1, tm)
+			}
+		}
 
 		e.evaluator.PopAccumulation()
 
@@ -197,28 +149,50 @@ func (e *Engine) searchRoot(
 		}
 
 		// Update best score if we found a better score
-		if score > alpha {
-			alpha = score
+		if score > bestScore {
+			bestScore = score
 			bestMove = mv
-			if alpha >= beta {
-				break
+
+			if score > alpha {
+				alpha = score
+
+				// For the main variation, we store the move in the PV
+				if e.mainLine.moves == nil {
+					e.mainLine.moves = make([]move.Move, 1)
+					e.mainLine.moves[0] = mv
+				} else if len(e.mainLine.moves) > 0 {
+					e.mainLine.moves[0] = mv
+				}
+
+				if alpha >= beta {
+					break
+				}
 			}
 		}
-
 	}
+
+	// If no legal moves were found
+	if moveCount == 0 {
+		if b.InCheck() {
+			return -MateScore, move.NoMove
+		}
+
+		return 0, move.NoMove
+	}
+
 	// Store in TT
 	flag := TTExact
-	if alpha <= originalAlpha {
+	if bestScore <= originalAlpha {
 		flag = TTAlpha
-	} else if alpha >= beta {
+	} else if bestScore >= beta {
 		flag = TTBeta
 	}
 	e.tt.Store(b.Hash(), alpha, depth, flag, bestMove)
 
-	return alpha, bestMove
+	return bestScore, bestMove
 }
 
-// alphaBeta performs the main alpha-beta search
+// alphaBeta performs the main alpha-beta search with Principal Variation Search
 func (e *Engine) alphaBeta(
 	ctx context.Context,
 	b *board.Board,
@@ -240,11 +214,16 @@ func (e *Engine) alphaBeta(
 	e.nodes++
 
 	originalAlpha := alpha
+	isPV := beta > alpha+1 // Check if this is a PV node
 
 	// TT Lookup
 	hash := b.Hash()
+	var ttMove move.Move
 	if entry, ok := e.tt.Probe(hash); ok {
-		if entry.Depth >= depth {
+		ttMove = entry.BestMove
+
+		// We can use TT cutoffs in non-PV nodes when depth is sufficient
+		if !isPV && entry.Depth >= depth {
 			score := adjustScore(entry.Score, ply)
 			switch entry.Flag {
 			case TTExact:
@@ -282,12 +261,6 @@ func (e *Engine) alphaBeta(
 
 	// Generate moves
 	moves := b.GenerateMoves()
-	var ttMove move.Move
-
-	if entry, ok := e.tt.Probe(hash); ok {
-		ttMove = entry.BestMove
-	}
-
 	moves = e.orderMoves(moves, b, ttMove, ply)
 
 	hasLegalMoves := false
@@ -297,7 +270,7 @@ func (e *Engine) alphaBeta(
 	inCheck := b.InCheck()
 
 	// Search all moves {
-	for _, mv := range moves {
+	for i, mv := range moves {
 		copyB := b.CopyBoard()
 		if !copyB.MakeMove(mv, board.AllMoves) {
 			continue
@@ -318,14 +291,25 @@ func (e *Engine) alphaBeta(
 			reduction = 1
 		}
 
-		if reduction > 0 {
-			score = -e.alphaBeta(ctx, &copyB, depth-1-reduction, -(alpha + 1), -alpha, ply+1, tm)
+		// PVS logic
+		if i == 0 {
+			// Full window search for first move
+			score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, ply+1, tm)
+		} else {
+			// Try with zero window for non-first moves
+			if reduction > 0 {
+				// Reduced depth zero window search
+				score = -e.alphaBeta(ctx, &copyB, depth-1-reduction, -alpha-1, -alpha, ply+1, tm)
+			} else {
+				// Normal depth zero window search
+				score = -e.alphaBeta(ctx, &copyB, depth-1, -alpha-1, -alpha, ply+1, tm)
+			}
 
 			if score > alpha {
+				// If the score is promising, do a full-window search
+				// This handles the case where a move is better than expected
 				score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, ply+1, tm)
 			}
-		} else {
-			score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, ply+1, tm)
 		}
 
 		e.evaluator.PopAccumulation()
@@ -440,14 +424,4 @@ func (e *Engine) quiescence(
 	}
 
 	return alpha
-}
-
-func adjustScore(score, ply int) int {
-	if score >= MateScore-MaxDepth {
-		return score - ply
-	}
-	if score <= -MateScore+MaxDepth {
-		return score + ply
-	}
-	return score
 }
