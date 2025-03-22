@@ -177,7 +177,6 @@ func (e *Evaluator) SetPieceOnSquareAccumulator(
 // It determines the move type (normal, capture, castling, en passant, promotion)
 // and applies the appropriate update to the accumulator history.
 func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
-	// fmt.Println("Called process move", m)
 	from := m.GetSourceSquare()
 	to := m.GetTargetSquare()
 	piece := m.GetMovingPiece()

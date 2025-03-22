@@ -66,8 +66,6 @@ func (f *FeatureIndex) Get(side int) int {
 		kingSq = f.BKingSq
 	}
 
-	kingSq = kingSq
-
 	// Use the global Index function with the proper king square
 	return Index(f.PieceType, f.PieceColor, f.Square, side, kingSq)
 }

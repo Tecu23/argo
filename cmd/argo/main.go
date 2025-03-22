@@ -5,7 +5,6 @@ import (
 	"flag"
 	"log"
 	"os"
-	"runtime/pprof"
 
 	"github.com/Tecu23/argov2/internal/hash"
 	"github.com/Tecu23/argov2/pkg/attacks"
@@ -31,17 +30,6 @@ func main() {
 	initHelpers()
 
 	logger := log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)
-
-	file, err := os.Create("cpu.prof")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := pprof.StartCPUProfile(file); err != nil {
-		log.Fatal(err)
-	}
-
-	defer pprof.StopCPUProfile()
 
 	options := engine.NewOptions()
 	engine := engine.NewEngine(options)

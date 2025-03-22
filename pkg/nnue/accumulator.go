@@ -136,7 +136,6 @@ func AddWeightsToAccumulator(add bool, idx int, src, target []int16) {
 
 // SetUnsetPieceBothColors applies the piece move update for both White and Black perspective
 func SetUnsetPieceBothColors(input, output *Accumulator, set, unset FeatureIndex) {
-	// fmt.Println("Called SetUnset Piece")
 	SetUnsetPiece(input, output, White, set, unset)
 	SetUnsetPiece(input, output, Black, set, unset)
 }
@@ -178,7 +177,6 @@ func setUnsetUnsetPieceASM(input, output []int16, set, unset1, unset2 []int16)
 
 // SetUnsetUnsetPieceBothColors applies the above update for both colors.
 func SetUnsetUnsetPieceBothColors(input, output *Accumulator, set, unset1, unset2 FeatureIndex) {
-	// fmt.Println("Called SetUnsetUnset Piece")
 	SetUnsetUnsetPiece(input, output, White, set, unset1, unset2)
 	SetUnsetUnsetPiece(input, output, Black, set, unset1, unset2)
 }
@@ -195,7 +193,6 @@ func SetSetUnsetUnsetPiece(
 	idx3 := unset1.Get(side)
 	idx4 := unset2.Get(side)
 
-	// fmt.Println("Set Set Unset Unset Piece")
 	for i := 0; i < HiddenSize; i++ {
 		output.Summation[side][i] = input.Summation[side][i] +
 			InputWeights[idx1][i] +
