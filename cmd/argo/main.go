@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"runtime/pprof"
 
 	"github.com/Tecu23/argov2/internal/hash"
 	"github.com/Tecu23/argov2/pkg/attacks"
@@ -33,6 +34,17 @@ func main() {
 
 	options := engine.NewOptions()
 	engine := engine.NewEngine(options)
+
+	f, err := os.Create("cpu.prof")
+	if err != nil {
+		logger.Fatalf("cpu profiling file could not be created: %v", err)
+	}
+
+	if err := pprof.StartCPUProfile(f); err != nil {
+		logger.Fatalf("could not start profiling: %v", err)
+	}
+
+	defer pprof.StopCPUProfile()
 
 	protocol := uci.New(name, author, version, engine, []uci.Option{})
 	protocol.Run(logger)

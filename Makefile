@@ -67,6 +67,7 @@ build-all: build-linux build-windows build-darwin
 build-linux:
 	@echo "Building for Linux..."
 	@GOOS=linux GOARCH=amd64 $(MAKE) build
+	# @GOOS=linux GOARCH=arm64 $(MAKE) build
 
 build-windows:
 	@echo "Building for Windows..."

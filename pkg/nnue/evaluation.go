@@ -98,9 +98,7 @@ func (e *Evaluator) eval(activePlayer int) int {
 	// 	}
 	// }
 
-	hiddenWeightsFlat := HiddenWeights[0]
-
-	sum := computeScoreASM(accActive, accInactive, hiddenWeightsFlat[:], HiddenBias[0])
+	sum := computeScoreASM(accActive, accInactive, HiddenWeights[0][:], HiddenBias[0])
 
 	// Scale the sum based on the weight multipliers to obtain the final evaluation score
 	result := int(
