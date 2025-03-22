@@ -15,8 +15,15 @@ import (
 // PcFen contains pieces in Fen format for validation
 const (
 	PcFen    = "PpNnBbRrQqKk     "
-	PieceFen = "PNBRQK     "
+	PieceFen = "PNBRQK"
 )
+
+var (
+	FileIdentifier = []byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'}
+	RankIdentifier = []byte{'1', '2', '3', '4', '5', '6', '7', '8'}
+)
+
+var PieceIdentifier = []byte{'P', 'N', 'B', 'R', 'Q', 'K', ' ', ' ', 'p', 'n', 'b', 'r', 'q', 'k'}
 
 // ASCIIPieces maps piece indices to ASCII representation for printing.
 const (
