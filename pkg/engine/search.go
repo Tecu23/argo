@@ -4,6 +4,7 @@ package engine
 import (
 	"context"
 
+	"github.com/Tecu23/argov2/internal/reduction"
 	. "github.com/Tecu23/argov2/internal/types"
 	"github.com/Tecu23/argov2/pkg/board"
 	"github.com/Tecu23/argov2/pkg/move"
@@ -285,10 +286,29 @@ func (e *Engine) alphaBeta(
 		isCapture := mv.IsCapture()
 		givesCheck := copyB.InCheck()
 
-		reduction := 0
-		if depth >= 3 && moveCount > 4 && !inCheck && !isCapture && !givesCheck {
-			// reduction = e.reductionTable.Get(depth, moveCount)
-			reduction = 1
+		reduct := 0
+		if depth >= reduction.MinDepthForReduction &&
+			moveCount > reduction.MinMovesBeforeReduction &&
+			!inCheck && !isCapture &&
+			mv.GetPromotedPiece() == 0 && !givesCheck {
+
+			// Get history score for this move
+			historyScore := e.historyTable.Get(b.Side, mv.GetSourceSquare(), mv.GetTargetSquare())
+
+			// Calculate reduction with adjustments
+			reduct = e.reductionTable.GetWithAdjustments(depth, moveCount, isPV, historyScore)
+
+			// Additional dynamic adjustments
+
+			// 1. Reduce less for killer moves
+			if mv == e.killerMoves[ply][0] || mv == e.killerMoves[ply][1] {
+				reduct = max(0, reduct-1)
+			}
+
+			// 2. Ensure we don't reduce into the quiescence search
+			if depth-reduct <= 0 {
+				reduct = max(0, depth-1)
+			}
 		}
 
 		// PVS logic
@@ -297,17 +317,20 @@ func (e *Engine) alphaBeta(
 			score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, ply+1, tm)
 		} else {
 			// Try with zero window for non-first moves
-			if reduction > 0 {
+			if reduct > 0 {
 				// Reduced depth zero window search
-				score = -e.alphaBeta(ctx, &copyB, depth-1-reduction, -alpha-1, -alpha, ply+1, tm)
+				score = -e.alphaBeta(ctx, &copyB, depth-1-reduct, -alpha-1, -alpha, ply+1, tm)
 			} else {
 				// Normal depth zero window search
 				score = -e.alphaBeta(ctx, &copyB, depth-1, -alpha-1, -alpha, ply+1, tm)
 			}
 
-			if score > alpha {
-				// If the score is promising, do a full-window search
-				// This handles the case where a move is better than expected
+			if score > alpha && reduct > 0 {
+				score = -e.alphaBeta(ctx, &copyB, depth-1, -alpha-1, -alpha, ply+1, tm)
+			}
+
+			// If still promising, do a full-window search
+			if score > alpha && score < beta {
 				score = -e.alphaBeta(ctx, &copyB, depth-1, -beta, -alpha, ply+1, tm)
 			}
 		}
