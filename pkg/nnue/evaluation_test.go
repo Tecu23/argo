@@ -126,10 +126,10 @@ func TestProcessMoveAndEvaluate(t *testing.T) {
 			},
 			ExpectedEvals: []int{
 				-605,
-				1098,
-				-949,
+				607,
+				-630,
 				618,
-				-952,
+				-306,
 			},
 		},
 		{
@@ -146,9 +146,9 @@ func TestProcessMoveAndEvaluate(t *testing.T) {
 				-106,
 				67,
 				288,
-				816,
-				877,
-				56,
+				-354,
+				375,
+				-804,
 			},
 		},
 	}

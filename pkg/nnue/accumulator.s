@@ -64,7 +64,7 @@ TEXT ·setUnsetUnsetPieceASM(SB), NOSPLIT, $0
 	MOVQ output+24(FP), DI  // output slice data pointer
 	MOVQ set+48(FP), AX     // weights to add
 	MOVQ unset1+72(FP), BX  // weights to subtract 1
-	MOVQ unset2+72(FP), R11 // weights to subtract 2
+	MOVQ unset2+96(FP), R11 // weights to subtract 2
 	MOVQ input+8(FP), CX    // input slice length
 
 	XORQ R8, R8 // index = 0

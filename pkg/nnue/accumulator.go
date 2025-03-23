@@ -187,8 +187,6 @@ func SetSetUnsetUnsetPiece(
 	idx3 := unset1.Get(side)
 	idx4 := unset2.Get(side)
 
-	// fmt.Println("set set unset unset piece")
-
 	for i := 0; i < HiddenSize; i++ {
 		output.Summation[side][i] = input.Summation[side][i] +
 			InputWeights[idx1][i] +
