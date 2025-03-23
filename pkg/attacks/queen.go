@@ -1,3 +1,6 @@
+// Copyright (C) 2025 Tecu23
+// Licensed under GNU GPL v3
+
 // Package attacks contains the pre-computed attack tables for all pieces.
 // For sliding pieces (bishop, rook, queens) it uses magic numbers for indexing
 package attacks

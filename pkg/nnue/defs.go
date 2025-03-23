@@ -1,3 +1,6 @@
+// Copyright (C) 2025 Tecu23
+// Port of Koivisto evaluation, licensed under GNU GPL v3
+
 // Package nnue keeps the NNUE (Efficiently Updated Neural Network) responsible for
 // evaluation the current position
 package nnue

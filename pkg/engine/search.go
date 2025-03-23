@@ -1,3 +1,6 @@
+// Copyright (C) 2025 Tecu23
+// Licensed under GNU GPL v3
+
 // Package engine keeps the running the search and engine logic
 package engine
 

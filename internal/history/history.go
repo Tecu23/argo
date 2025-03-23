@@ -1,3 +1,7 @@
+// Copyright (C) 2025 Tecu23
+// Licensed under GNU GPL v3
+
+// Package history
 package history
 
 import "github.com/Tecu23/argov2/pkg/color"

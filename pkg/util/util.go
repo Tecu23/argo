@@ -1,3 +1,6 @@
+// Copyright (C) 2025 Tecu23
+// Licensed under GNU GPL v3
+
 // Package util contains utility functions for piece conversion, timing, and square indexing.
 package util
 

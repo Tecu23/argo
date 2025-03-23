@@ -1,3 +1,6 @@
+// Copyright (C) 2025 Tecu23
+// Licensed under GNU GPL v3
+
 // Package bitboard contains the Bitboard type and all helper functions
 // for manipulating and querying bitboards. A bitboard is a 64-bit integer
 // where each bit represents a square on a chessboard (or any 8x8 grid).

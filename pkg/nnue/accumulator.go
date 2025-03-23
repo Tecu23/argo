@@ -1,3 +1,6 @@
+// Copyright (C) 2025 Tecu23
+// Port of Koivisto evaluation, licensed under GNU GPL v3
+
 // File: accumulator.go
 
 // Package nnue keeps the NNUE (Efficiently Updated Neural Network) responsible for

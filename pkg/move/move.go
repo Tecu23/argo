@@ -1,3 +1,6 @@
+// Copyright (C) 2025 Tecu23
+// Licensed under GNU GPL v3
+
 // Package move contains the move and move list representation with
 // all move helper functions. Move is represented as 32 bit unsigned integer
 package move

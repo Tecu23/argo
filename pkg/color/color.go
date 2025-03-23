@@ -1,3 +1,6 @@
+// Copyright (C) 2025 Tecu23
+// Licensed under GNU GPL v3
+
 // Package color defines the representation of chess piece colors and
 // provides utility functions to work with them. The main colors are
 // WHITE and BLACK, with an optional BOTh state for special scenarios.

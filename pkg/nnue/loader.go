@@ -1,3 +1,6 @@
+// Copyright (C) 2025 Tecu23
+// Port of Koivisto evaluation, licensed under GNU GPL v3
+
 //go:build embed
 // +build embed
 
