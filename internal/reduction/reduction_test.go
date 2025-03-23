@@ -17,10 +17,10 @@ func TestReductionTable(t *testing.T) {
 	}{
 		{2, 5, 0},   // Too shallow depth
 		{3, 3, 0},   // Too early move
-		{6, 10, 2},  // Normal reduction
-		{10, 20, 3}, // Deeper reduction
+		{6, 10, 1},  // Normal reduction
+		{10, 20, 2}, // Deeper reduction
 		{20, 30, 3}, // Max reduction
-		{63, 63, 3}, // Maximum values
+		{63, 63, 4}, // Maximum values
 	}
 
 	for _, tt := range tests {

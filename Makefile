@@ -76,7 +76,7 @@ build-windows:
 build-darwin:
 	@echo "Building for macOS..."
 	@GOOS=darwin GOARCH=amd64 $(MAKE) build
-	@GOOS=darwin GOARCH=arm64 $(MAKE) build
+	# @GOOS=darwin GOARCH=arm64 $(MAKE) build
 
 # Release target
 release: build-all
@@ -87,12 +87,12 @@ release: build-all
 # Test targets
 test:
 	@echo "Running tests..."
-	@go test -race -timeout $(TEST_TIMEOUT) ./...
+	@go test -tags=embed -race -timeout $(TEST_TIMEOUT) ./...
 
 coverage:
 	@echo "Generating coverage report..."
 	@mkdir -p $(COVERAGE_DIR)
-	@go test -race -coverprofile=$(COVERAGE_FILE) -covermode=atomic ./...
+	@go test -tags=embed -race -coverprofile=$(COVERAGE_FILE) -covermode=atomic ./...
 	@go tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_HTML)
 	@echo "Coverage report generated at $(COVERAGE_HTML)"
 
@@ -130,4 +130,4 @@ install: build
 
 # Quick test target for development
 quick-test:
-	@go test -short ./...
+	@go test -tags=embed -short ./...
