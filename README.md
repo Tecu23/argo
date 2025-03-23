@@ -1,154 +1,121 @@
-# Go Chess Engine Project
+# ArGO Chess Engine
 
-This project is a Go-based chess engine that implements core
-functionalities such as board representation, move generation,
-and attack precomputation using bitboards and magic bitboards for
-fast sliding piece move lookups. It supports various chess concepts,
-including castling, en passant, and pawn promotions, and is designed with
-a modular architecture that makes it easy to extend and improve.
+ArGO is a powerful chess engine written in Go, implementing modern chess
+AI techniques including a Neural Network Efficiently Updated (NNUE) evaluation function.
 
 ## Features
 
-- **Bitboard Representation**:  
-   Every piece placement and occupancy is represented using 64-bit integers
-  (bitboards), allowing efficient bitwise operations to check, set, and clear squares.
-- **Magic Bitboards for Sliding Pieces**:  
-   Rooks, bishops, and queens use magic numbers and precomputed tables for O(1)
-  attack generation. This significantly speeds up move generation, particularly in
-  complex positions.
-- **Precomputed Attacks**:  
-   Static arrays store precomputed attacks for knights, kings, and pawns.
-  Sliding pieces (rooks, bishops, queens) leverage magic bitboard indexing.
-  This allows constant-time retrieval of attack patterns.
-- **Comprehensive Move Generation**:  
-   The engine can generate all pseudo-legal moves for both sides,
-  including special moves:
-  - **Pawn Moves**: Single and double pushes, captures, en passant, and promotions.
-  - **Castling**: Detects available castling rights and generates castling moves
-    if king and rook haven’t moved and squares are not attacked.
-  - **Promotions**: Automatically generates all promotion piece options
-    (Q, R, B, N) when a pawn reaches the last rank.
-- **Legality Checks**:  
-   While the engine primarily generates pseudo-legal moves, it does integrate
-  checks to ensure that the king is not placed in check by a move. Moves that
-  would leave one’s own king in check are rejected.
-- **FEN Parsing**:  
-   The engine can initialize board states from Forsyth-Edwards Notation (FEN)
-  strings, enabling easy testing and integration with other chess tools.
-- **Performance Testing (Perft)**:  
-   A perft (performance test) method is included, allowing validation of
-  move generation correctness and performance tuning. Perft counts the total
-  number of leaf nodes (positions) reached at a given search depth.
+- UCI protocol compliant for compatibility with chess GUIs
+- Advanced move ordering and search techniques
+  - Alpha-beta pruning with principal variation search
+  - Transposition table
+  - Move ordering heuristics (MVV-LVA, killer moves, history heuristics)
+  - Late move reduction
+- Neural network evaluation (NNUE)
+  - Efficient incremental updates
+  - Assembly-optimized for maximum performance on AMD64
+- Magic bitboards for fast move generation
+- Time management with dynamic adjustment based on position complexity
 
-## Project Structure
+## System Requirements
+
+- **Platform**: Linux AMD64 only
+- The NNUE evaluation system uses custom assembly code optimized
+  specifically for x86-64 instruction set on Linux.
+
+## Building from Source
 
 ```bash
-.
-├── cmd/
-│   └── engine/        # Main application entry point (e.g., a UCI loop)
-├── pkg/
-│   ├── attacks/       # Precomputed attacks and magic bitboards logic
-│   ├── bitboard/      # Bitboard type and basic bit manipulation helpers
-│   ├── board/         # Board state representation, move generation, FEN parsing
-│   ├── color/         # Color enumeration (white, black, both)
-│   ├── constants/     # Chess constants (piece indices, directions, squares)
-│   ├── move/          # Move encoding, move lists, and utility functions
-│   ├── util/          # Miscellaneous utilities (timing, indexing maps)
-│   └── ... (other optional packages)
-└── go.mod             # Go module file
+# Clone the repository
+git clone https://github.com/Tecu23/argov2.git
 
-```
+# Navigate to the directory
+cd argov2
 
-## Key Concepts
-
-### Bitboards
-
-A 64-bit integer represents the 8x8 chessboard, with one bit per square.
-This structure makes checking occupancy, attacks, and legal moves very efficient
-through bitwise operations.
-
-### Magic Bitboards
-
-Magic bitboards use carefully chosen constants (magic numbers) to map
-board occupancy configurations to unique indices, enabling O(1) lookup of
-sliding piece attacks. This allows fast generation of rook, bishop, and
-queen moves by simply indexing into precomputed arrays.
-
-### Move Generation
-
-The engine iterates over the pieces of the side to move, calculates their
-attack squares using the precomputed tables, and generates moves based on
-current occupancy. Special rules like en passant and castling are integrated
-into this process.
-
-### Testing & Validation
-
-- **Perft**: By running `PerftTest` at various depths and comparing results
-  to known correct perft values, we validate the correctness of move generation.
-- **Unit Tests**: Although not explicitly shown, you can add unit tests to verify
-  bitboard operations, move legality checks, and specific edge cases in code.
-
-## Building
-
-You can build the project using `go build` commands or a provided `Makefile`.
-For example, to build a binary for your platform:
-
-```sh
-make
-```
-
-To specify a version or target OS/ARCH:
-
-```sh
-make VERSION=1.0.0
-make GOOS=windows GOARCH=amd64 build
+# Build the project
+make build-linux
 ```
 
 ## Usage
 
-- **FEN Parsing**:  
-   Use `ParseFEN` to set the board to a given position:
+### Basic Usage
 
-```go
-  b := board.Board{}
-  b.ParseFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+```bash
+# Start ArGO in UCI mode
+./argo
 ```
 
-- **Move Generation**:  
-   Create a `Movelist` and call `GenerateMoves`:
+### Debug Mode
 
-  ```go
-  var moves move.Movelist
-  b.GenerateMoves(&moves)
-  for _, mv := range moves {
-     fmt.Println(mv.String())
-  }
-  ```
+```bash
+# Start with debug output, does not do anything at the moment
+./argo -debug
+```
 
-- **Checking Attacks**:
+### UCI Commands
 
-  ```go
-  attacked := b.IsSquareAttacked(constants.E4, color.BLACK)
-  fmt.Println("Is E4 attacked by Black?", attacked)
-  ```
+ArGO implements the standard Universal Chess Interface (UCI) protocol.
+Here are some common commands:
 
-## Roadmap
+- `uci` - Identify the engine
+- `isready` - Check if the engine is ready to receive commands
+- `position [fen <fenstring> | startpos] [moves <move1> <move2> ...]` - Set
+  up a position
+- `go [depth <x> | movetime <x> | wtime <x> btime <x> winc <x> binc <x>]` -
+  Start searching
+- `stop` - Stop the current search
+- `quit` - Exit the program
 
-- **UCI Interface**:  
-   Integrate a UCI (Universal Chess Interface) loop to allow external GUIs
-  to communicate with the engine.
-- **Search & Evaluation**:  
-   Implement alpha-beta search with iterative deepening, transposition tables,
-  and evaluation heuristics to make the engine play competitive chess.
-- **Optimizations**:  
-   Add parallel search, advanced evaluation terms, and opening books or endgame tablebases.
+Example:
 
-## Contributing
+```sh
+position startpos moves e2e4 e7e5
+go depth 10
+```
 
-Contributions are welcome! If you find a bug or have a suggestion,
-please open an issue or submit a pull request. Before contributing,
-ensure your code is tested and formatted with standard Go tools (`go fmt`).
+## Architecture
+
+ArGO's source code is organized into several key packages:
+
+- `attacks` - Contains pre-computed attack tables for all pieces
+- `bitboard` - Implements bitboard operations for efficient board representation
+- `board` - Chess board representation and move generation
+- `engine` - Search algorithms and engine control
+- `nnue` - Neural network position evaluation
+- `move` - Move encoding and manipulation
+- `uci` - UCI protocol implementation
+
+## Chess Engine Evaluation Package
+
+The NNUE (Efficiently Updated Neural Network) evaluation system is a
+port of the [Koivisto](https://github.com/Luecx/Koivisto) chess engine's
+evaluation function, translated from C++ to Go with assembly optimizations for AMD64.
+
+### Implementation Details
+
+The evaluation function uses a two-layer neural network with:
+
+- Input features based on piece positions relative to king locations
+- Hidden layer with 512 neurons
+- Efficient incremental updates that avoid recomputing the entire network
+- Assembly-optimized critical calculations for maximum performance
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the GNU General Public License v3.0. As this is
+a derivative work based on a GPL-licensed chess engine, the entire codebase must
+remain under the GPL v3 license. This means:
+
+1. You are free to use, modify, and distribute this software
+2. If you distribute this software, you must provide the complete source code
+3. Any modifications must also be released under the GPL v3
+4. The full license text must be included with any distribution
+
+## Acknowledgments
+
+The NNUE evaluation function is based on the work of Kim Kahre and Finn Eggers,
+creators of the Koivisto UCI chess engine. This port maintains the spirit and
+structure of their implementation while adapting it for the Go language with
+platform-specific optimizations.
+
+The original source code can be found at: [Koivisto](https://github.com/Luecx/Koivisto)
