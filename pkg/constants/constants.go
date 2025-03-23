@@ -20,22 +20,22 @@ const (
 
 // Constants for piece encoding, castling, etc. Provided here for completeness.
 const (
-	WP     = iota // 0
-	WN            // 1
-	WB            // 2
-	WR            // 3
-	WQ            // 4
-	WK            // 5
-	_             // skip (6)
-	_             // skip (7)
-	BP            // 8
-	BN            // 9
-	BB            // 10
-	BR            // 11
-	BQ            // 12
-	BK            // 13
-	Pieces        // 14
-	Empty         // 15
+	WP = iota // 0
+	WN        // 1
+	WB        // 2
+	WR        // 3
+	WQ        // 4
+	WK        // 5
+	// _             // skip (6)
+	// _             // skip (7)
+	BP          // 8
+	BN          // 9
+	BB          // 10
+	BR          // 11
+	BQ          // 12
+	BK          // 13
+	Pieces      // 14
+	Empty  = 15 // 15
 )
 
 // The constants below define row (rank) and file bitboards.

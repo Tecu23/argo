@@ -125,13 +125,15 @@ func (m Move) GetMovingPiece() int {
 // GetMovingPieceType extracts the type (e.g., pawn, knight, etc.) of the moving piece.
 // It assumes that the piece type is stored in the lower 3 bits of the moving piece field.
 func (m Move) GetMovingPieceType() int {
-	return int(m>>MovingPieceShift) & int(createMask(3))
+	// return int(m>>MovingPieceShift) & int(createMask(3))
+	return util.GetPieceType(m.GetMovingPiece())
 }
 
 // GetMovingPieceColor extracts the color information from the moving piece field.
 // It uses the bit that represents the color (e.g., white or black) – here assumed to be bit 3.
 func (m Move) GetMovingPieceColor() int {
-	return int((m>>MovingPieceShift)&0x8) >> 3
+	// return int((m>>MovingPieceShift)&0x8) >> 3
+	return util.GetPieceColor(m.GetMovingPiece())
 }
 
 // GetCapturedPiece extracts the captured piece (if any) by applying the CapturedPieceMask
@@ -143,7 +145,8 @@ func (m Move) GetCapturedPiece() int {
 // GetCapturedPieceType extracts the type of the captured piece (e.g., pawn, knight, etc.).
 // It assumes that the piece type is stored in the lower 3 bits of the captured piece field.
 func (m Move) GetCapturedPieceType() int {
-	return int(m>>CapturedPieceShift) & int(createMask(3))
+	// return int(m>>CapturedPieceShift) & int(createMask(3))
+	return util.GetPieceType(m.GetCapturedPiece())
 }
 
 // IsPromotion checks if the move is a promotion by testing the promotion flag bit in the move type field.
@@ -160,7 +163,8 @@ func (m Move) GetPromotionPiece() int {
 // GetPromotionPieceType returns the type of piece the pawn is promoted to by isolating the promotion bits
 // and applying the proper offset.
 func (m Move) GetPromotionPieceType() int {
-	return int((m&0x30000)>>MoveTypeShift) + 1
+	// return int((m&0x30000)>>MoveTypeShift) + 1
+	return util.GetPieceType(m.GetPromotionPiece())
 }
 
 // GetMoveType extracts the move type from the encoded move.
