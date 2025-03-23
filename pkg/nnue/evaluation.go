@@ -73,7 +73,7 @@ func (e *Evaluator) Evaluate(b *board.Board) int {
 
 	return int(
 		(evaluationMgScalar - phase*(evaluationMgScalar-evaluationEgScalar)) * float64(
-			e.eval(int(b.Side)),
+			e.eval(int(b.SideToMove)),
 		),
 	)
 }
@@ -192,7 +192,7 @@ func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 		capturedPiece = m.GetCapturedPiece()
 	}
 
-	promPc := m.GetPromotedPiece()
+	promPc := m.GetPromotionPiece()
 	c := util.GetPieceColor(piece)
 
 	wKingBB := b.Bitboards[WK]

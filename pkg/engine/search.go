@@ -286,10 +286,14 @@ func (e *Engine) alphaBeta(
 		if depth >= reduction.MinDepthForReduction &&
 			moveCount > reduction.MinMovesBeforeReduction &&
 			!inCheck && !isCapture &&
-			mv.GetPromotedPiece() == 0 && !givesCheck {
+			mv.GetPromotionPiece() == 0 && !givesCheck {
 
 			// Get history score for this move
-			historyScore := e.historyTable.Get(b.Side, mv.GetSourceSquare(), mv.GetTargetSquare())
+			historyScore := e.historyTable.Get(
+				b.SideToMove,
+				mv.GetSourceSquare(),
+				mv.GetTargetSquare(),
+			)
 
 			// Calculate reduction with adjustments
 			reduct = e.reductionTable.GetWithAdjustments(depth, moveCount, isPV, historyScore)
@@ -338,14 +342,19 @@ func (e *Engine) alphaBeta(
 			bestMove = mv
 			if score > alpha {
 				if !isCapture && ply < MaxDepth {
-					e.historyTable.Update(copyB.Side, mv.GetSourceSquare(), mv.GetTargetSquare(), 1)
+					e.historyTable.Update(
+						copyB.SideToMove,
+						mv.GetSourceSquare(),
+						mv.GetTargetSquare(),
+						1,
+					)
 				}
 				alpha = score
 				if alpha >= beta {
 					if !isCapture && ply < MaxDepth {
 						e.updateKillers(mv, ply)
 						e.historyTable.Update(
-							copyB.Side,
+							copyB.SideToMove,
 							mv.GetSourceSquare(),
 							mv.GetTargetSquare(),
 							depth,

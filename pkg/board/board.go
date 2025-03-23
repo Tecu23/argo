@@ -26,12 +26,19 @@ const (
 type Board struct {
 	Bitboards   [12]bitboard.Bitboard
 	Occupancies [3]bitboard.Bitboard
-	Side        color.Color
-	EnPassant   int
-	Rule50      uint8
-	Castlings   Castlings
-	MoveNumber  int
-	hash        uint64
+
+	Castlings Castlings
+
+	EnPassant int
+
+	SideToMove color.Color
+
+	HalfMoveClock   uint8
+	FullMoveCounter int
+
+	hash uint64
+
+	// should keep some history to fix threefold repetition
 }
 
 // Reset restores the board to an initial empty state and sets defaults.
@@ -174,42 +181,6 @@ func (b *Board) IsSquareAttacked(sq int, side color.Color) bool {
 	return false
 }
 
-// MakeMoveV2 applies a move to the board and updates all relevant state.
-// Returns ture is the move was legal (doesn't leave the king in check).
-func (b *Board) MakeMoveV2(m move.Move) bool {
-	from, to := m.GetSource(), m.GetTarget()
-	piece := m.GetPiece()
-
-	// move flags
-	isCaptureMove := m.GetCapture()
-	isEnPassantMove := m.GetEnpassant()
-	isDoublePushMove := m.GetDoublePush()
-	isPromotionMove := m.GetPromoted()
-
-	// Store the current board state for potential undo
-	oldBoard := b.CopyBoard()
-
-	// Update half-move clock
-	if piece == WP || piece == BP || isCaptureMove != 0 {
-		b.HalfMoveClock = 0 // Reset on pawn move or capture
-	} else {
-		b.HalfMoveClock++
-	}
-
-	// Clear en passant square by default (may be set later for double pawn pushes)
-	oldEnPassant := b.EnPassant
-	b.EnPassant = -1
-
-	// Handle the piece movement on bitboards
-	// Clear the piece from the source target
-	b.SetSq(Empty, from)
-
-	// Handle captures - remove captured piece from destination square if any
-	if isCaptureMove != 0 && isEnPassantMove != 0 {
-		b.SetSq(Empty, to)
-	}
-}
-
 // TODO: REDO THIS for better performance
 
 // MakeMove attempts to make a move on the board. It updates board state (bitboards,
@@ -225,12 +196,16 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 
 		src := m.GetSourceSquare()
 		tgt := m.GetTargetSquare()
+
 		pc := m.GetMovingPiece()
 		clr := util.PcColor(pc)
-		prom := m.GetPromotedPiece()
-		// capt := m.GetCapture()
-		dblPwn := m.IsDoublePush()
+
+		prom := m.GetPromotionPiece()
+
+		dblPwn := m.IsDoublePawnPush()
+
 		ep := m.IsEnPassant()
+
 		cast := m.IsCastle()
 
 		// If there was an en passant square, remove it from hash
@@ -252,11 +227,11 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 			b.SetSq(pc, tgt)
 
 			b.hash ^= hash.HashTable.Side
-			b.Side = b.Side.Opp()
+			b.SideToMove = b.SideToMove.Opp()
 
 			// Check for checks to ensure move legality
 			var kingPos int
-			if b.Side == color.WHITE {
+			if b.SideToMove == color.WHITE {
 				if b.Bitboards[BK] == 0 {
 					b.TakeBack(copyB)
 					return false
@@ -269,19 +244,19 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 				}
 				kingPos = b.Bitboards[WK].FirstOne()
 			}
-			if b.IsSquareAttacked(kingPos, b.Side) {
+			if b.IsSquareAttacked(kingPos, b.SideToMove) {
 				// take back
 				b.TakeBack(copyB)
 				return false
 			}
-			if b.Side == color.WHITE {
+			if b.SideToMove == color.WHITE {
 				b.Bitboards[BK].Set(kingPos)
 			} else {
 				b.Bitboards[WK].Set(kingPos)
 			}
 
-			if b.Side == color.BLACK {
-				b.MoveNumber++
+			if b.SideToMove == color.BLACK {
+				b.FullMoveCounter++
 			}
 			return true
 		}
@@ -321,7 +296,7 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 
 		b.SetSq(Empty, src)
 
-		if prom != 0 {
+		if m.IsPromotion() {
 			b.SetSq(prom, tgt)
 		} else {
 			b.SetSq(pc, tgt)
@@ -350,11 +325,11 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 
 		// change side
 		b.hash ^= hash.HashTable.Side
-		b.Side = b.Side.Opp()
+		b.SideToMove = b.SideToMove.Opp()
 
 		// Check if own king is in check after the move
 		var kingPos int
-		if b.Side == color.WHITE {
+		if b.SideToMove == color.WHITE {
 			if b.Bitboards[BK] == 0 {
 				b.TakeBack(copyB)
 				return false
@@ -367,12 +342,12 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 			}
 			kingPos = b.Bitboards[WK].FirstOne()
 		}
-		if b.IsSquareAttacked(kingPos, b.Side) {
+		if b.IsSquareAttacked(kingPos, b.SideToMove) {
 			// take back
 			b.TakeBack(copyB)
 			return false
 		}
-		if b.Side == color.WHITE {
+		if b.SideToMove == color.WHITE {
 			b.Bitboards[BK].Set(kingPos)
 		} else {
 			b.Bitboards[WK].Set(kingPos)
@@ -384,15 +359,15 @@ func (b *Board) MakeMove(m move.Move, moveFlag int) bool {
 		return false // 0 means don't make it
 	}
 
-	if b.Side == color.BLACK {
-		b.MoveNumber++
+	if b.SideToMove == color.BLACK {
+		b.FullMoveCounter++
 	}
 	return true
 }
 
 // MakeNullMove switches the side to move without making any actual move
 func (b *Board) MakeNullMove() {
-	b.Side = b.Side.Opp() // Switch side (0->1 or 1->0)
+	b.SideToMove = b.SideToMove.Opp() // Switch side (0->1 or 1->0)
 	// Update hash for side change
 	b.hash ^= hash.HashTable.Side
 
@@ -420,9 +395,9 @@ func (b *Board) ParseMove(moveString string) (Board, bool) {
 		mv := moves[cnt]
 
 		if mv.GetSourceSquare() == src && mv.GetTargetSquare() == tgt {
-			prom := mv.GetPromotedPiece()
+			prom := mv.GetPromotionPiece()
 
-			if prom != 0 {
+			if mv.IsPromotion() {
 				// Check if promotion matches requested piece
 				if (prom == WQ || prom == BQ) && moveString[4] == 'q' {
 					tmpMove = mv
@@ -484,9 +459,9 @@ func (b Board) PrintBoard() {
 
 	fmt.Printf("\n    a b c d e f g h\n\n")
 
-	fmt.Printf("   Side:          %s\n", b.Side.String())
+	fmt.Printf("   Side:          %s\n", b.SideToMove.String())
 	fmt.Printf("   Enpassant:     %s\n", util.Sq2Fen[b.EnPassant])
-	fmt.Printf("   Half Moves:    %d\n", b.Rule50)
+	fmt.Printf("   Half Moves:    %d\n", b.HalfMoveClock)
 	fmt.Printf("   Castling:   %s\n\n", b.Castlings.String())
 	// fmt.Printf(" HashKey: 0x%X\n\n", b.Key)
 }
@@ -497,7 +472,7 @@ func (b *Board) InCheck() bool {
 	var kingBB bitboard.Bitboard
 
 	// Find king position for the side to move
-	if b.Side == color.WHITE {
+	if b.SideToMove == color.WHITE {
 		if b.Bitboards[WK] == 0 {
 			return false
 		}
@@ -636,7 +611,7 @@ func (b *Board) calculateHash() uint64 {
 	}
 
 	// Hash side to move
-	if b.Side == color.WHITE {
+	if b.SideToMove == color.WHITE {
 		tmpHash ^= hash.HashTable.Side
 	}
 
@@ -649,7 +624,7 @@ func (b *Board) updateHashForMove(m move.Move) {
 	to := m.GetTargetSquare()
 	piece := m.GetMovingPiece()
 	capture := m.IsCapture()
-	promotion := m.GetPromotedPiece()
+	promotion := m.GetPromotionPiece()
 
 	// Remove piece from source square
 	b.hash ^= hash.HashTable.PieceSquare[piece*64+from]
@@ -674,7 +649,7 @@ func (b *Board) updateHashForMove(m move.Move) {
 	}
 
 	// Handle new en passant
-	if m.IsDoublePush() {
+	if m.IsDoublePawnPush() {
 		file := to % 8
 		b.hash ^= hash.HashTable.EnPassant[file]
 	}

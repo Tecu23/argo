@@ -23,7 +23,8 @@ var (
 	RankIdentifier = []byte{'1', '2', '3', '4', '5', '6', '7', '8'}
 )
 
-var PieceIdentifier = []byte{'P', 'N', 'B', 'R', 'Q', 'K', ' ', ' ', 'p', 'n', 'b', 'r', 'q', 'k'}
+// var PieceIdentifier = []byte{'P', 'N', 'B', 'R', 'Q', 'K', ' ', ' ', 'p', 'n', 'b', 'r', 'q', 'k'}
+var PieceIdentifier = []byte{'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k'}
 
 // ASCIIPieces maps piece indices to ASCII representation for printing.
 const (

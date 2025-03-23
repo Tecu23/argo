@@ -51,7 +51,7 @@ func (e *Engine) orderMoves(
 	ply int,
 ) []move.Move {
 	scores := make([]MoveScore, len(moves))
-	stm := b.Side
+	stm := b.SideToMove
 
 	for i, mv := range moves {
 		score := 0

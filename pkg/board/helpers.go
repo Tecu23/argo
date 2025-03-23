@@ -59,11 +59,11 @@ func ParseFEN(FEN string) (Board, error) {
 	// Set side to move
 	if len(remaining) > 0 {
 		if remaining[0] == "w" {
-			b.Side = color.WHITE
+			b.SideToMove = color.WHITE
 		} else if remaining[0] == "b" {
-			b.Side = color.BLACK
+			b.SideToMove = color.BLACK
 		} else {
-			b.Side = color.WHITE
+			b.SideToMove = color.WHITE
 			return Board{}, fmt.Errorf(
 				"parse fen failed: %s",
 				fmt.Sprintf("%s invalid side to move color", remaining[0]),
@@ -86,14 +86,14 @@ func ParseFEN(FEN string) (Board, error) {
 	}
 
 	// Set halfmove clock (for 50-move rule)
-	b.Rule50 = 0
+	b.HalfMoveClock = 0
 	if len(remaining) > 3 {
 		cnt, err := strconv.Atoi(remaining[3])
 		if err != nil {
-			b.Rule50 = 0
+			b.HalfMoveClock = 0
 		}
 
-		b.Rule50 = uint8(cnt)
+		b.HalfMoveClock = uint8(cnt)
 	}
 
 	b.calculateHash()
@@ -106,8 +106,8 @@ func (b *Board) Mirror() *Board {
 	// Create a new board
 	mirrored := &Board{}
 
-	mirrored.Rule50 = b.Rule50
-	mirrored.MoveNumber = b.MoveNumber
+	mirrored.HalfMoveClock = b.HalfMoveClock
+	mirrored.FullMoveCounter = b.FullMoveCounter
 
 	mirroredHash := uint64(0)
 	for pc := WP; pc <= BK; pc++ {
@@ -156,8 +156,8 @@ func (b *Board) Mirror() *Board {
 	}
 
 	// Switch side to move
-	mirrored.Side = b.Side.Opp()
-	if mirrored.Side == color.WHITE {
+	mirrored.SideToMove = b.SideToMove.Opp()
+	if mirrored.SideToMove == color.WHITE {
 		mirroredHash ^= hash.HashTable.Side
 	}
 
@@ -172,223 +172,36 @@ func (b *Board) GetPieceCountForSide(piece int, clr color.Color) int {
 	case Pawn:
 		if clr == color.BLACK {
 			return b.Bitboards[BP].Count()
-		} else {
-			return b.Bitboards[WP].Count()
 		}
+		return b.Bitboards[WP].Count()
 	case Knight:
 		if clr == color.BLACK {
 			return b.Bitboards[BN].Count()
-		} else {
-			return b.Bitboards[WN].Count()
 		}
+		return b.Bitboards[WN].Count()
 	case Bishop:
 		if clr == color.BLACK {
 			return b.Bitboards[BB].Count()
-		} else {
-			return b.Bitboards[WB].Count()
 		}
+		return b.Bitboards[WB].Count()
 	case Rook:
 		if clr == color.BLACK {
 			return b.Bitboards[BR].Count()
-		} else {
-			return b.Bitboards[WR].Count()
 		}
+		return b.Bitboards[WR].Count()
 	case Queen:
 		if clr == color.BLACK {
 			return b.Bitboards[BQ].Count()
-		} else {
-			return b.Bitboards[WQ].Count()
 		}
+		return b.Bitboards[WQ].Count()
 	case King:
 		if clr == color.BLACK {
 			return b.Bitboards[BK].Count()
-		} else {
-			return b.Bitboards[WK].Count()
 		}
+		return b.Bitboards[WK].Count()
 	}
 
 	return 0
-}
-
-func (b *Board) OppositeBishops() bool {
-	bishopCount := b.GetPieceCountForSide(Bishop, color.WHITE)
-	oppBishopCount := b.GetPieceCountForSide(Bishop, color.BLACK)
-
-	if bishopCount != 1 || oppBishopCount != 1 {
-		return false
-	}
-
-	c := []int{0, 0}
-
-	bishopBB := b.Bitboards[WB]
-	for bishopBB != 0 {
-		sq := bishopBB.FirstOne()
-		rank := sq / 8
-		file := sq % 8
-		c[0] = (rank + file) % 2
-	}
-
-	bishopBB = b.Bitboards[BB]
-	for bishopBB != 0 {
-		sq := bishopBB.FirstOne()
-		rank := sq / 8
-		file := sq % 8
-		c[1] = (rank + file) % 2
-	}
-
-	return c[0] != c[1]
-}
-
-// Candidate passed checks if pawn is passed or candidate passer. A pawn is passed
-// if one of the three following conditions is true:
-//
-//	(a) there is no stoppers except some levers
-//	(b) the only stoppers are the leverPush, but we outnumber them
-//	(c) there is only one front stopper which can be levered.
-//
-// If there is a pawn of our color in the same file in front of a current pawn
-// it's no longer counts as passed.
-func (b *Board) CandidatePassed() int {
-	count := 0
-	pawns := b.Bitboards[WP]
-
-	// Iterate through all squares
-	for sq := 0; sq < 64; sq++ {
-		if !pawns.Test(sq) {
-			continue
-		}
-
-		if b.IsPassedPawn(sq) {
-			count++
-		}
-	}
-
-	return count
-}
-
-// IsPassedPawn checks if a white pawn on a given square is passed
-func (b *Board) IsPassedPawn(square int) bool {
-	file := square % 8
-	rank := square / 8
-
-	// Must be a white pawn
-	if !b.Bitboards[WP].Test(square) {
-		return false
-	}
-	ty1 := 8
-	ty2 := 8
-
-	// Loop over the remaining ranks to check for other pawns
-	for y := rank - 1; y >= 0; y-- {
-
-		sq := y*8 + file
-		if b.Bitboards[WP].Test(sq) {
-			return false
-		}
-
-		if b.Bitboards[BP].Test(sq) {
-			ty1 = y
-		}
-
-		if file > 0 {
-			sq := y*8 + (file - 1)
-			if b.Bitboards[BP].Test(sq) {
-				ty2 = y
-			}
-		}
-		// Check right file if it exists
-		if file < 7 {
-			sq := y*8 + (file + 1)
-			if b.Bitboards[BP].Test(sq) {
-				ty2 = y
-			}
-		}
-	}
-
-	if ty1 == 8 && ty2 >= rank-1 {
-		return true
-	}
-
-	if ty2 < rank-2 || ty1 < rank-1 {
-		return false
-	}
-
-	if ty2 >= rank && ty1 == rank-1 && rank < 4 {
-		if b.Bitboards[WP].Test((rank+1)*8+file-1) &&
-			!b.Bitboards[BP].Test(rank*8+file-1) &&
-			!b.Bitboards[BP].Test((rank-1)*8+file-2) {
-			return true
-		}
-
-		if b.Bitboards[WP].Test((rank+1)*8+file+1) &&
-			!b.Bitboards[BP].Test(rank*8+file+1) &&
-			!b.Bitboards[BP].Test((rank-1)*8+file+2) {
-			return true
-		}
-	}
-
-	if b.Bitboards[BP].Test((rank-1)*8 + file) {
-		return false
-	}
-
-	lever := 0
-	if b.Bitboards[BP].Test((rank-1)*8 + file - 1) {
-		lever++
-	}
-	if b.Bitboards[BP].Test((rank-1)*8 + file + 1) {
-		lever++
-	}
-
-	leverpush := 0
-	if b.Bitboards[BP].Test((rank-2)*8 + file - 1) {
-		leverpush++
-	}
-	if b.Bitboards[BP].Test((rank-2)*8 + file + 1) {
-		leverpush++
-	}
-
-	phalanx := 0
-	if b.Bitboards[WP].Test(rank*8 + file - 1) {
-		phalanx++
-	}
-	if b.Bitboards[WP].Test(rank*8 + file + 1) {
-		phalanx++
-	}
-
-	if lever-countSupportingPawns(b, rank*8+file) > 1 {
-		return false
-	}
-
-	if leverpush-phalanx > 0 {
-		return false
-	}
-
-	if lever > 0 && leverpush > 0 {
-		return false
-	}
-
-	return true
-}
-
-// Helper function to count pawns supporting a square
-func countSupportingPawns(b *Board, square int) int {
-	file := square % 8
-	rank := square / 8
-	count := 0
-
-	// Check bottom-left supporter
-	if file > 0 && rank < 7 {
-		if b.Bitboards[WP].Test(square + 7) {
-			count++
-		}
-	}
-	// Check bottom-right supporter
-	if file < 7 && rank < 7 {
-		if b.Bitboards[WP].Test(square + 9) {
-			count++
-		}
-	}
-	return count
 }
 
 func (b *Board) PieceCount(side color.Color) int {

@@ -106,7 +106,7 @@ func TestCopyAndTakeBack(t *testing.T) {
 			},
 			modify: func(b *Board) {
 				b.SetSq(WP, E4)
-				b.Side = color.BLACK
+				b.SideToMove = color.BLACK
 				b.EnPassant = E3
 			},
 		},
@@ -182,13 +182,13 @@ func verifyBoardsMatch(b *Board, copy *Board) error {
 			return fmt.Errorf("occupancy bitboard %d mismatch", i)
 		}
 	}
-	if b.Side != copy.Side {
+	if b.SideToMove != copy.SideToMove {
 		return fmt.Errorf("side mismatch")
 	}
 	if b.EnPassant != copy.EnPassant {
 		return fmt.Errorf("en passant mismatch")
 	}
-	if b.Rule50 != copy.Rule50 {
+	if b.HalfMoveClock != copy.HalfMoveClock {
 		return fmt.Errorf("rule 50 mismatch")
 	}
 	if b.Castlings != copy.Castlings {

@@ -44,7 +44,7 @@ func newTimeManager(
 	tm := &timeManager{
 		start:      start,
 		limits:     limits,
-		side:       b.Side == color.WHITE,
+		side:       b.SideToMove == color.WHITE,
 		difficulty: 1, // Start with a neutral difficulty factor
 	}
 
