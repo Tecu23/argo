@@ -630,7 +630,7 @@ func (b *Board) updateHashForMove(m move.Move) {
 	b.hash ^= hash.HashTable.PieceSquare[piece*64+from]
 
 	// Add piece to destination square
-	if promotion != 0 {
+	if m.IsPromotion() {
 		b.hash ^= hash.HashTable.PieceSquare[promotion*64+to]
 	} else {
 		b.hash ^= hash.HashTable.PieceSquare[piece*64+to]

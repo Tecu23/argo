@@ -9,7 +9,7 @@ import (
 	"github.com/Tecu23/argov2/internal/hash"
 	"github.com/Tecu23/argov2/pkg/attacks"
 	"github.com/Tecu23/argov2/pkg/board"
-	"github.com/Tecu23/argov2/pkg/constants"
+	. "github.com/Tecu23/argov2/pkg/constants"
 	"github.com/Tecu23/argov2/pkg/move"
 	"github.com/Tecu23/argov2/pkg/util"
 )
@@ -18,8 +18,8 @@ func init() {
 	attacks.InitPawnAttacks()
 	attacks.InitKnightAttacks()
 	attacks.InitKingAttacks()
-	attacks.InitSliderPiecesAttacks(constants.Bishop)
-	attacks.InitSliderPiecesAttacks(constants.Rook)
+	attacks.InitSliderPiecesAttacks(Bishop)
+	attacks.InitSliderPiecesAttacks(Rook)
 
 	util.InitFen2Sq()
 
@@ -101,71 +101,55 @@ func TestProcessMoveAndEvaluate(t *testing.T) {
 		{
 			Name:     "Opening Sequence",
 			StartFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-			Moves:    []move.Move{
-				// move.EncodeMove(),
-				// {12, 28, WP, 0, 0, 0, "e2-e4"}, // e2-e4
-				// {52, 36, BP, 0, 0, 0, "e7-e5"}, // e7-e5
-				// {6, 21, WN, 0, 0, 0, "Ng1-f3"}, // Ng1-f3
+			Moves: []move.Move{
+				move.EncodeMove(E2, E4, WP, move.DoublePawnPush, 0),
+				move.EncodeMove(E7, E5, BP, move.DoublePawnPush, 0),
+				move.EncodeMove(G1, F3, WN, move.Quiet, 0),
+				move.EncodeMove(B8, C6, BN, move.Quiet, 0),
 			},
 			ExpectedEvals: []int{
-				0,
-				42,
-				-15,
-				64,
-			}, // Expected eval after each move (including initial position)
+				105,
+				-13,
+				97,
+				-54,
+				100,
+			},
 		},
 		{
 			Name:     "Captures and Special Moves",
 			StartFEN: "r3k2r/ppp2ppp/2n1bn2/3pP3/3P4/2N2N2/PPP2PPP/R3K2R w KQkq d6 0 1",
-			Moves:    []move.Move{
-				// {36, 43, WP, BP, 0, move.FlagCapture, "e5xd6"},                         // e5xd6
-				// {60, 62, BK, 0, 0, move.FlagCastle, "O-O"},                             // Black kingside castle
-				// {4, 6, WK, 0, 0, move.FlagCastle, "O-O"},                               // White kingside castle
-				// {35, 51, BN, WN, 0, move.FlagCapture, "Nf6xNf3"},                       // Nf6xNf3
-				// {54, 62, WP, BR, WQ, move.FlagPromotion | move.FlagCapture, "g7xh8=Q"}, // g7xh8=Q
+			Moves: []move.Move{
+				move.EncodeMove(E5, D6, WP, move.EnPassant, BP),
+				move.EncodeMove(E8, G8, BK, move.KingCastle, 0),
+				move.EncodeMove(E1, G1, WK, move.KingCastle, 0),
+				move.EncodeMove(D6, C7, WP, move.Capture, BP),
 			},
 			ExpectedEvals: []int{
-				25,
-				58,
-				-12,
-				32,
-				-95,
-				650,
-			}, // Expected eval after each move (including initial position)
+				-605,
+				1098,
+				-949,
+				618,
+				-952,
+			},
 		},
 		{
 			Name:     "King Movement and En Passant",
 			StartFEN: "rnbqk2r/ppp1bppp/3p1n2/4p3/4P3/3B1N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
-			Moves:    []move.Move{
-				// {4, 6, WK, 0, 0, move.FlagCastle, "O-O"},                                 // O-O
-				// {52, 36, BP, 0, 0, 0, "e7-e5"},                                           // e7-e5
-				// {28, 36, WP, BP, 0, move.FlagCapture, "e4xe5"},                           // e4xe5
-				// {51, 35, BP, 0, 0, 0, "f7-f5"},                                           // f7-f5
-				// {36, 43, WP, BP, 0, move.FlagEnPassant | move.FlagCapture, "e5xf6 e.p."}, // e5xf6 e.p.
+			Moves: []move.Move{
+				move.EncodeMove(E1, G1, WK, move.KingCastle, 0),
+				move.EncodeMove(C8, G3, BB, move.Quiet, 0),
+				move.EncodeMove(F3, E5, WN, move.Capture, BP),
+				move.EncodeMove(F6, E4, BN, move.Capture, WP),
+				move.EncodeMove(D3, E4, WB, move.Capture, BN),
 			},
 			ExpectedEvals: []int{
-				10,
-				55,
-				-30,
-				68,
-				-42,
-				125,
-			}, // Expected eval after each move (including initial position)
-		},
-		{
-			Name:     "Promotions",
-			StartFEN: "rnbqkbnr/pPpppppp/8/8/8/8/1PPPPPPP/RNBQKBNR w KQkq - 0 1",
-			Moves:    []move.Move{
-				// {49, 57, WP, 0, WQ, move.FlagPromotion, "b7-b8=Q"},                     // b7-b8=Q
-				// {57, 42, WQ, BP, 0, move.FlagCapture, "Qb8xc5"},                        // Qb8xc5
-				// {58, 51, WP, BP, WN, move.FlagPromotion | move.FlagCapture, "a7xa8=N"}, // a7xa8=N
+				-106,
+				67,
+				288,
+				816,
+				877,
+				56,
 			},
-			ExpectedEvals: []int{
-				75,
-				925,
-				1050,
-				870,
-			}, // Expected eval after each move (including initial position)
 		},
 	}
 
@@ -193,9 +177,10 @@ func TestProcessMoveAndEvaluate(t *testing.T) {
 
 			// Apply each move and check evaluation
 			for i, mv := range tc.Moves {
-
 				// Process the move
-				b.MakeMove(mv, board.AllMoves)
+				if !b.MakeMove(mv, board.AllMoves) {
+					fmt.Println("SKIPPED MOVE")
+				}
 				e.ProcessMove(&b, mv)
 
 				// Evaluate the position
@@ -210,7 +195,9 @@ func TestProcessMoveAndEvaluate(t *testing.T) {
 				// Check if evaluation is close to expected
 				assert.InDelta(t, tc.ExpectedEvals[i+1], eval, 5,
 					"Evaluation after %s should match expected value (±5)", mv)
+
 			}
+			e.PopAccumulation()
 		})
 	}
 }

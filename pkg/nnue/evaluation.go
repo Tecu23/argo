@@ -84,20 +84,6 @@ func (e *Evaluator) eval(activePlayer int) int {
 	accActive := e.History[e.HistoryIndex].Summation[activePlayer][:]
 	accInactive := e.History[e.HistoryIndex].Summation[1-activePlayer][:]
 
-	// // Compute the output score
-	// var sum int32
-	//
-	// // Apply ReLU (max(0, x)) and compute the dot product for the active side
-	// for i := 0; i < HiddenSize; i++ {
-	// 	// ReLU: max(0, x)
-	// 	if accActive[i] > 0 {
-	// 		sum += int32(accActive[i]) * int32(HiddenWeights[0][i])
-	// 	}
-	// 	if accInactive[i] > 0 {
-	// 		sum += int32(accInactive[i]) * int32(HiddenWeights[0][i+HiddenSize])
-	// 	}
-	// }
-
 	sum := computeScoreASM(accActive, accInactive, HiddenWeights[0][:], HiddenBias[0])
 
 	// Scale the sum based on the weight multipliers to obtain the final evaluation score
@@ -177,10 +163,12 @@ func (e *Evaluator) SetPieceOnSquareAccumulator(
 func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 	from := m.GetSourceSquare()
 	to := m.GetTargetSquare()
-	piece := m.GetMovingPiece()
 
 	from = ConvertSquare(from)
 	to = ConvertSquare(to)
+
+	piece := m.GetMovingPiece()
+	c := m.GetMovingPieceColor()
 
 	isCapture := m.IsCapture()
 	isCastling := m.IsCastle()
@@ -193,7 +181,7 @@ func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 	}
 
 	promPc := m.GetPromotionPiece()
-	c := util.GetPieceColor(piece)
+	isPromotion := m.IsPromotion()
 
 	wKingBB := b.Bitboards[WK]
 	wKingSq := wKingBB.FirstOne()
@@ -304,7 +292,7 @@ func (e *Evaluator) ProcessMove(b *board.Board, m move.Move) {
 	} else {
 		// Handle non-king moves
 		movingPiece := piece
-		if promPc != 0 {
+		if isPromotion {
 			movingPiece = promPc
 		}
 

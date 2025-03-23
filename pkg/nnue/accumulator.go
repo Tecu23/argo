@@ -52,7 +52,6 @@ func (a *AccumulatorTable) Use(view int, b *board.Board, evaluator *Evaluator) {
 	} else {
 		kingBB := b.Bitboards[BK]
 		kingSq = kingBB.FirstOne()
-
 	}
 
 	// Convert from engine square representation to NNUE expected format
@@ -109,7 +108,6 @@ func (a *AccumulatorTable) Use(view int, b *board.Board, evaluator *Evaluator) {
 					entry.Accumulator.Summation[view][:],
 				)
 			}
-
 			// Update the cached piece occupancy to match the current board
 			entry.PieceOcc[c][pt] = boardBB
 		}
@@ -125,14 +123,6 @@ func (a *AccumulatorTable) Use(view int, b *board.Board, evaluator *Evaluator) {
 // AddWeightsToAccumulator adds (or subtracts) network input weights to/from the accumulator.
 // The 'add' flag determines if weights are added (true) or substracted (false)
 func AddWeightsToAccumulator(add bool, idx int, src, target []int16) {
-	// for i := 0; i < len(src); i++ {
-	// 	if add {
-	// 		target[i] = src[i] + InputWeights[idx][i]
-	// 	} else {
-	// 		target[i] = src[i] - InputWeights[idx][i]
-	// 	}
-	// }
-
 	addWeightsToAccumulatorASM(add, src, target, InputWeights[idx][:])
 }
 
@@ -197,6 +187,8 @@ func SetSetUnsetUnsetPiece(
 	idx3 := unset1.Get(side)
 	idx4 := unset2.Get(side)
 
+	// fmt.Println("set set unset unset piece")
+
 	for i := 0; i < HiddenSize; i++ {
 		output.Summation[side][i] = input.Summation[side][i] +
 			InputWeights[idx1][i] +
@@ -211,7 +203,6 @@ func SetSetUnsetUnsetPieceBothColors(
 	input, output *Accumulator,
 	set1, set2, unset1, unset2 FeatureIndex,
 ) {
-	// fmt.Println("Called SetSetUnsetUnset Piece")
 	SetSetUnsetUnsetPiece(input, output, White, set1, set2, unset1, unset2)
 	SetSetUnsetUnsetPiece(input, output, Black, set1, set2, unset1, unset2)
 }

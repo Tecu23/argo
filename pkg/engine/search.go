@@ -286,7 +286,7 @@ func (e *Engine) alphaBeta(
 		if depth >= reduction.MinDepthForReduction &&
 			moveCount > reduction.MinMovesBeforeReduction &&
 			!inCheck && !isCapture &&
-			mv.GetPromotionPiece() == 0 && !givesCheck {
+			!mv.IsPromotion() && !givesCheck {
 
 			// Get history score for this move
 			historyScore := e.historyTable.Get(
